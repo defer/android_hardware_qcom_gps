@@ -1,28 +1,30 @@
-/******************************************************************************
-  @file:  loc_api_fixup.h
-  @brief:  Loc API Android RPC amendment header
-
-  DESCRIPTION
-     Loc API Android RPC amendment header
-
-  INITIALIZATION AND SEQUENCING REQUIREMENTS
-
-  -----------------------------------------------------------------------------
-Copyright (c) 2009, QUALCOMM USA, INC.
-
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
-
-·         Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer. 
-
-·         Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution. 
-
-·         Neither the name of the QUALCOMM USA, INC.  nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission. 
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-  -----------------------------------------------------------------------------
- ******************************************************************************/
+/* Copyright (c) 2011, Code Aurora Forum. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above
+ *       copyright notice, this list of conditions and the following
+ *       disclaimer in the documentation and/or other materials provided
+ *       with the distribution.
+ *     * Neither the name of Code Aurora Forum, Inc. nor the names of its
+ *       contributors may be used to endorse or promote products derived
+ *       from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
+ * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+ * BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+ * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+ * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 
 #ifndef  LOC_API_FIXUP_H
 #define LOC_API_FIXUP_H
@@ -84,7 +86,6 @@ extern bool_t xdr_bool(XDR *__xdrs, int *__bp);
 #define RPC_LOC_EVENT_LOCATION_SERVER_REQUEST            0x00000040 // Request for location server
 #define RPC_LOC_EVENT_IOCTL_REPORT                       0x00000080 // Callback report for loc_ioctl
 #define RPC_LOC_EVENT_STATUS_REPORT                      0x00000100 // Misc status report: eg, engine state
-
 
 #define RPC_LOC_POS_VALID_SESSION_STATUS                 0x00000001
 #define RPC_LOC_POS_VALID_TIMESTAMP_CALENDAR             0x00000002
@@ -162,6 +163,7 @@ extern bool_t xdr_bool(XDR *__xdrs, int *__bp);
 #define RPC_LOC_ASSIST_POS_VALID_VERT_UNC                     0x00000040
 #define RPC_LOC_ASSIST_POS_VALID_CONFIDENCE_HORIZONTAL        0x00000080
 #define RPC_LOC_ASSIST_POS_VALID_CONFIDENCE_VERTICAL          0x00000100
+#define RPC_LOC_ASSIST_POS_VALID_TIMESTAMP_AGE                0x00000200
 
 #define RPC_LOC_ASSIST_DATA_ALL         0xFFFFFFFF
 
@@ -171,6 +173,25 @@ extern bool_t xdr_bool(XDR *__xdrs, int *__bp);
 #define RPC_LOC_NMEA_MASK_GSV    0x0004
 #define RPC_LOC_NMEA_MASK_GSA    0x0008
 #define RPC_LOC_NMEA_MASK_VTG    0x0010
+
+/* EFS data access */
+#define RPC_LOC_EFS_MAX_PATH_LEN_BYTES  64     /* Max file name length in bytes that can be written*/
+#define RPC_LOC_EFS_MAX_FILE_LEN_BYTES  2000   /* Max file size in bytes that can be written */
+
+/* WIPER valid information flag in log report */
+#define RPC_LOC_WIPER_LOG_TIME_VALID 0x01
+#define RPC_LOC_WIPER_LOG_POS_VALID 0x02
+#define RPC_LOC_WIPER_LOG_AP_SET_VALID 0x04
+
+/* General WIPER defines */
+#define RPC_LOC_WIPER_MAC_ADDR_LENGTH  6              // Do not change this number since it affects RPC and log packet sizes
+#define RPC_LOC_WIPER_MAX_REPORTED_APS_PER_LOG_MSG 50 // Do not change this number since it affects RPC and log packet sizes
+
+/* WIPER AP Qualifier */
+#define RPC_LOC_WIPER_AP_QUALIFIER_BEING_USED 0x1  /* AP is being used by WPS */
+#define RPC_LOC_WIPER_AP_QUALIFIER_HIDDEN_SSID 0x2 /* AP does not broadcast SSID */
+#define RPC_LOC_WIPER_AP_QUALIFIER_PRIVATE 0x4     /* AP has encryption turned on */
+#define RPC_LOC_WIPER_AP_QUALIFIER_INFRASTRUCTURE_MODE 0x8     /* AP is in infrastructure mode and not in ad-hoc/unknown mode */
 
 /* flags for notification */
 #define  RPC_LOC_NI_CLIENT_NAME_PRESENT             0x0001

@@ -11,13 +11,11 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE := gps.$(BOARD_VENDOR_QCOM_GPS_LOC_API_HARDWARE)
 
-LOCAL_STATIC_LIBRARIES:= \
-    libloc_api-rpc 
-
 LOCAL_SHARED_LIBRARIES := \
     librpc \
     libutils \
-    libcutils
+    libcutils \
+    libloc_api-rpc-qc
 
 LOCAL_SRC_FILES += \
     loc_eng.cpp \
@@ -28,13 +26,17 @@ LOCAL_SRC_FILES += \
 
 LOCAL_CFLAGS += \
     -fno-short-enums \
-    -DAMSS_VERSION=$(BOARD_VENDOR_QCOM_GPS_LOC_API_AMSS_VERSION)
+    -DAMSS_VERSION=$(BOARD_VENDOR_QCOM_GPS_LOC_API_AMSS_VERSION) \
+    -DUSE_QCOM_AUTO_RPC
 
 LOCAL_C_INCLUDES:= \
-	$(TARGET_OUT_HEADERS)/libloc_api-rpc \
-	$(TARGET_OUT_HEADERS)/libloc_api-rpc/inc \
+	$(TARGET_OUT_HEADERS)/libloc_api-rpc-qc \
+	$(TARGET_OUT_HEADERS)/libloc_api-rpc-qc/rpc_inc \
 	$(TARGET_OUT_HEADERS)/libcommondefs-rpc/inc \
-	$(TARGET_OUT_HEADERS)/librpc
+	$(TARGET_OUT_HEADERS)/librpc \
+	$(TARGET_OUT_HEADERS)/loc_api/rpcgen/inc \
+	$(TARGET_OUT_HEADERS)/libcommondefs/rpcgen/inc \
+	hardware/msm7k/librpc
 
 LOCAL_PRELINK_MODULE := false
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
