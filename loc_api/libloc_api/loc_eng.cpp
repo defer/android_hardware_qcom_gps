@@ -209,9 +209,18 @@ SIDE EFFECTS
    N/A
 
 ===========================================================================*/
+// fully shutting down the GPS is temporarily disabled to avoid intermittent BP crash
+#define DISABLE_CLEANUP 1
+
 static int loc_eng_init(GpsCallbacks* callbacks)
 {
    LOC_LOGD("loc_eng_init entering");
+#if DISABLE_CLEANUP
+    if (loc_eng_data.deferred_action_thread) {
+        LOC_LOGD("loc_eng_init. already initialized so return SUCCESS\n");
+        return 0;
+    }
+#endif
 
    // Start the LOC api RPC service (if not started yet)
    loc_api_glue_init();
@@ -261,7 +270,6 @@ static int loc_eng_init(GpsCallbacks* callbacks)
    // Create threads (if not yet created)
    if (!loc_eng_inited)
    {
-      loc_eng_data.deferred_action_thread = NULL;
       loc_eng_data.deferred_action_thread = callbacks->create_thread_cb("loc_api",loc_eng_deferred_action_thread, NULL);
 #ifdef FEATURE_GNSS_BIT_API
       gpsone_loc_api_server_launch(NULL, NULL);
@@ -351,6 +359,9 @@ SIDE EFFECTS
 ===========================================================================*/
 static void loc_eng_cleanup()
 {
+#if DISABLE_CLEANUP
+    return;
+#else
    // clean up
    loc_eng_deinit();
 
@@ -371,6 +382,7 @@ static void loc_eng_cleanup()
 
    pthread_mutex_destroy (&loc_eng_data.deferred_action_mutex);
    pthread_cond_destroy  (&loc_eng_data.deferred_action_cond);
+#endif
 }
 
 
