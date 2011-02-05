@@ -33,19 +33,13 @@
 #include <hardware/gps.h>
 
 extern const GpsXtraInterface sLocEngXTRAInterface;
-extern int loc_eng_inject_xtra_data_in_buffer();
 
 // Module data
 typedef struct
 {
-   pthread_mutex_t                lock;
+    // loc_eng_ioctl_cb_data_s_type   ioctl_cb_data;
+    gps_xtra_download_request      download_request_cb;
 
-   // loc_eng_ioctl_cb_data_s_type   ioctl_cb_data;
-   gps_xtra_download_request      download_request_cb;
-
-   // XTRA data buffer
-   char                          *xtra_data_for_injection;  // NULL if no pending data
-   int                            xtra_data_len;
 } loc_eng_xtra_data_s_type;
 
 #endif // LOC_ENG_XTRA_H

@@ -27,30 +27,69 @@
  *
  */
 
-#ifndef LOC_ENG_NI_H
-#define LOC_ENG_NI_H
+#define LOG_NDDEBUG 0
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <unistd.h>
+#include <ctype.h>
+#include <math.h>
+#include <pthread.h>
+
+#include <rpc/rpc.h>
+#include <loc_api_rpc_glue.h>
 
 #include <hardware/gps.h>
 
-#define LOC_NI_NO_RESPONSE_TIME            20                      /* secs */
+#include <loc_eng.h>
 
-extern const GpsNiInterface sLocEngNiInterface;
+#define LOG_TAG "libloc"
+#include <utils/Log.h>
 
-typedef struct {
-    pthread_mutex_t         loc_ni_lock;
-    int                     response_time_left;       /* examine time for NI response */
-    boolean                 notif_in_progress;        /* NI notification/verification in progress */
-    rpc_loc_ni_event_s_type loc_ni_request;
-    int                     current_notif_id;         /* ID to check against response */
-} loc_eng_ni_data_s_type;
+// comment this out to enable logging
+// #undef LOGD
+// #define LOGD(...) {}
 
-// Functions for sLocEngNiInterface
-extern void loc_eng_ni_init(GpsNiCallbacks *callbacks);
-extern void loc_eng_ni_respond(int notif_id, GpsUserResponseType user_response);
+/*===========================================================================
 
-extern int loc_eng_ni_callback (
-        rpc_loc_event_mask_type               loc_event,              /* event mask           */
-        const rpc_loc_event_payload_u_type*   loc_event_payload       /* payload              */
-);
+FUNCTION    loc_eng_ioctl
 
-#endif /* LOC_ENG_NI_H */
+DESCRIPTION
+   This function calls loc_ioctl and waits for the callback result before
+   returning back to the user.
+
+DEPENDENCIES
+   N/A
+
+RETURN VALUE
+   TRUE                 if successful
+   FALSE                if failed
+
+SIDE EFFECTS
+   N/A
+
+===========================================================================*/
+boolean loc_eng_ioctl
+(
+      rpc_loc_client_handle_type           handle,
+      rpc_loc_ioctl_e_type                 ioctl_type,
+      rpc_loc_ioctl_data_u_type*           ioctl_data_ptr,
+      uint32                               timeout_msec,
+      rpc_loc_ioctl_callback_s_type       *cb_data_ptr
+)
+{
+   int ret_val = RPC_LOC_API_SUCCESS;
+
+   LOC_LOGD("loc_eng_ioctl called: client = %d, ioctl_type = %s\n", (int32) handle,
+         loc_get_ioctl_type_name(ioctl_type));
+
+   ret_val = loc_api_sync_ioctl(handle, ioctl_type, ioctl_data_ptr, timeout_msec, cb_data_ptr);
+
+   LOC_LOGD("loc_eng_ioctl result: client = %d, ioctl_type = %s, %s\n",
+         (int32) handle,
+         loc_get_ioctl_type_name(ioctl_type),
+         loc_get_ioctl_status_name(ret_val) );
+
+   return ret_val == RPC_LOC_API_SUCCESS;
+}

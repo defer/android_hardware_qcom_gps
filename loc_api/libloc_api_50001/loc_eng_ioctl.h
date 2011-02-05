@@ -27,30 +27,16 @@
  *
  */
 
-#ifndef LOC_ENG_NI_H
-#define LOC_ENG_NI_H
+#ifndef LOC_ENG_IOCTL_H
+#define LOC_ENG_IOCTL_H
 
-#include <hardware/gps.h>
-
-#define LOC_NI_NO_RESPONSE_TIME            20                      /* secs */
-
-extern const GpsNiInterface sLocEngNiInterface;
-
-typedef struct {
-    pthread_mutex_t         loc_ni_lock;
-    int                     response_time_left;       /* examine time for NI response */
-    boolean                 notif_in_progress;        /* NI notification/verification in progress */
-    rpc_loc_ni_event_s_type loc_ni_request;
-    int                     current_notif_id;         /* ID to check against response */
-} loc_eng_ni_data_s_type;
-
-// Functions for sLocEngNiInterface
-extern void loc_eng_ni_init(GpsNiCallbacks *callbacks);
-extern void loc_eng_ni_respond(int notif_id, GpsUserResponseType user_response);
-
-extern int loc_eng_ni_callback (
-        rpc_loc_event_mask_type               loc_event,              /* event mask           */
-        const rpc_loc_event_payload_u_type*   loc_event_payload       /* payload              */
+extern boolean loc_eng_ioctl
+(
+      rpc_loc_client_handle_type           handle,
+      rpc_loc_ioctl_e_type                 ioctl_type,
+      rpc_loc_ioctl_data_u_type*           ioctl_data_ptr,
+      uint32                               timeout_msec,
+      rpc_loc_ioctl_callback_s_type       *cb_data_ptr
 );
 
-#endif /* LOC_ENG_NI_H */
+#endif // LOC_ENG_IOCTL_H

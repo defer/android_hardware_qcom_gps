@@ -1,4 +1,4 @@
-/* Copyright (c) 2009,2011 Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2011 Code Aurora Forum. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -27,30 +27,42 @@
  *
  */
 
-#ifndef LOC_ENG_NI_H
-#define LOC_ENG_NI_H
-
 #include <hardware/gps.h>
 
-#define LOC_NI_NO_RESPONSE_TIME            20                      /* secs */
+#include <stdlib.h>
 
-extern const GpsNiInterface sLocEngNiInterface;
+extern const GpsInterface* get_gps_interface();
 
-typedef struct {
-    pthread_mutex_t         loc_ni_lock;
-    int                     response_time_left;       /* examine time for NI response */
-    boolean                 notif_in_progress;        /* NI notification/verification in progress */
-    rpc_loc_ni_event_s_type loc_ni_request;
-    int                     current_notif_id;         /* ID to check against response */
-} loc_eng_ni_data_s_type;
+const GpsInterface* gps__get_gps_interface(struct gps_device_t* dev)
+{
+    return get_gps_interface();
+}
 
-// Functions for sLocEngNiInterface
-extern void loc_eng_ni_init(GpsNiCallbacks *callbacks);
-extern void loc_eng_ni_respond(int notif_id, GpsUserResponseType user_response);
+static int open_gps(const struct hw_module_t* module, char const* name,
+        struct hw_device_t** device)
+{
+    struct gps_device_t *dev = malloc(sizeof(struct gps_device_t));
+    memset(dev, 0, sizeof(*dev));
 
-extern int loc_eng_ni_callback (
-        rpc_loc_event_mask_type               loc_event,              /* event mask           */
-        const rpc_loc_event_payload_u_type*   loc_event_payload       /* payload              */
-);
+    dev->common.tag = HARDWARE_DEVICE_TAG;
+    dev->common.version = 0;
+    dev->common.module = (struct hw_module_t*)module;
+    dev->get_gps_interface = gps__get_gps_interface;
 
-#endif /* LOC_ENG_NI_H */
+    *device = (struct hw_device_t*)dev;
+    return 0;
+}
+
+static struct hw_module_methods_t gps_module_methods = {
+    .open = open_gps
+};
+
+const struct hw_module_t HAL_MODULE_INFO_SYM = {
+    .tag = HARDWARE_MODULE_TAG,
+    .version_major = 1,
+    .version_minor = 0,
+    .id = GPS_HARDWARE_MODULE_ID,
+    .name = "loc_api GPS Module",
+    .author = "Qualcomm USA, Inc.",
+    .methods = &gps_module_methods,
+};

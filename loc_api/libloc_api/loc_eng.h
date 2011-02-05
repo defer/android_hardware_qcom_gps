@@ -30,9 +30,6 @@
 #ifndef LOC_ENG_H
 #define LOC_ENG_H
 
-// Uncomment to keep all LOG messages (LOGD, LOGI, LOGV, etc.)
-// #define LOG_NDEBUG 0
-
 // Define boolean type to be used by libgps on loc api module
 typedef unsigned char boolean;
 
@@ -46,25 +43,9 @@ typedef unsigned char boolean;
 
 #include <loc_eng_ioctl.h>
 #include <loc_eng_xtra.h>
-#include <loc_eng_ni.h>
-#include <loc_eng_log.h>
-#include <loc_eng_cfg.h>
+#include <hardware/gps.h>
 
 #define LOC_IOCTL_DEFAULT_TIMEOUT 1000 // 1000 milli-seconds
-
-// The data connection minimal open time
-#define DATA_OPEN_MIN_TIME        1  /* sec */
-
-// The system sees GPS engine turns off after inactive for this period of time
-#define GPS_AUTO_OFF_TIME         2  /* secs */
-//To signify that when requesting a data connection HAL need not specify whether CDMA or UMTS
-#define DONT_CARE                 0
-
-enum loc_mute_session_e_type {
-   LOC_MUTE_SESS_NONE,
-   LOC_MUTE_SESS_WAIT,
-   LOC_MUTE_SESS_IN_SESSION
-};
 
 enum {
     DEFERRED_ACTION_EVENT               = 0x01,
@@ -79,81 +60,56 @@ enum {
 // Module data
 typedef struct
 {
-   rpc_loc_client_handle_type     client_handle;
+    rpc_loc_client_handle_type  client_handle;
 
-   gps_location_callback          location_cb;
-   gps_status_callback            status_cb;
-   gps_sv_status_callback         sv_status_cb;
-   agps_status_callback           agps_status_cb;
-   gps_nmea_callback              nmea_cb;
-   gps_ni_notify_callback         ni_notify_cb;
-   gps_acquire_wakelock           acquire_wakelock_cb;
-   gps_release_wakelock           release_wakelock_cb;
-   AGpsStatusValue                agps_status;
-   // used to defer stopping the GPS engine until AGPS data calls are done
-   boolean                         agps_request_pending;
-   boolean                         stop_request_pending;
-   pthread_mutex_t                 deferred_stop_mutex;
-   loc_eng_xtra_data_s_type       xtra_module_data;
-   // data from loc_event_cb
-   rpc_loc_event_mask_type        loc_event;
-   rpc_loc_event_payload_u_type   loc_event_payload;
+    gps_location_callback           location_cb;
+    gps_status_callback             status_cb;
+    gps_sv_status_callback          sv_status_cb;
+    agps_status_callback            agps_status_cb;
+    gps_nmea_callback               nmea_cb;
+    gps_ni_notify_callback          ni_notify_cb;
+    gps_acquire_wakelock            acquire_wakelock_cb;
+    gps_release_wakelock            release_wakelock_cb;
+    int                             agps_status;
 
-   boolean                        client_opened;
-   boolean                        navigating;
-   boolean                        data_connection_is_on;
+    // used to defer stopping the GPS engine until AGPS data calls are done
+    boolean                         agps_request_pending;
+    boolean                         stop_request_pending;
+    pthread_mutex_t                 deferred_stop_mutex;
 
-   // ATL variables
-   char                           apn_name[100];
-   rpc_loc_server_connection_handle  conn_handle;
-   time_t                         data_conn_open_time;
+    loc_eng_xtra_data_s_type        xtra_module_data;
 
-   // GPS engine status
-   GpsStatusValue                 engine_status;
-   GpsStatusValue                 fix_session_status;
+    loc_eng_ioctl_data_s_type       ioctl_data;
 
-   // Aiding data information to be deleted, aiding data can only be deleted when GPS engine is off
-   GpsAidingData                  aiding_data_for_deletion;
+    // data from loc_event_cb
+    rpc_loc_event_mask_type         loc_event;
+    rpc_loc_event_payload_u_type    loc_event_payload;
 
-   // IOCTL CB lock
-   pthread_mutex_t                ioctl_cb_lock;
+    // TBD:
+    char                            agps_server_host[256];
+    int                             agps_server_port;
+    uint32                          agps_server_address;
+    char                            apn_name[100];
+    int                             position_mode;
+    rpc_loc_server_connection_handle  conn_handle;
 
-   // Data variables used by deferred action thread
-   pthread_t                      deferred_action_thread;
+    // GPS engine status
+    GpsStatusValue                  engine_status;
 
-   // Timer thread (wakes up every second)
-   pthread_t                      timer_thread;
+    // Aiding data information to be deleted, aiding data can only be deleted when GPS engine is off
+    GpsAidingData                   aiding_data_for_deletion;
 
-   // Mutex used by deferred action thread
-   pthread_mutex_t                deferred_action_mutex;
-   // Condition variable used by deferred action thread
-   pthread_cond_t                 deferred_action_cond;
-   // flags for pending events for deferred action thread
-   int                             deferred_action_flags;
-   // For muting session broadcast
-   pthread_mutex_t                mute_session_lock;
-   loc_mute_session_e_type        mute_session_state;
+    // Data variables used by deferred action thread
+    pthread_t                       deferred_action_thread;
+    // Mutex used by deferred action thread
+    pthread_mutex_t                 deferred_action_mutex;
+    // Condition variable used by deferred action thread
+    pthread_cond_t                  deferred_action_cond;
 
+    // flags for pending events for deferred action thread
+    int                             deferred_action_flags;
 } loc_eng_data_s_type;
-
+   
 extern loc_eng_data_s_type loc_eng_data;
-
-extern void loc_eng_mute_one_session();
-
-/* LOGGING MACROS */
-#define LOC_LOGE(...) \
-if (gps_conf.DEBUG_LEVEL >= 1) { LOGE(__VA_ARGS__); }
-
-#define LOC_LOGW(...) \
-if (gps_conf.DEBUG_LEVEL >= 2) { LOGW(__VA_ARGS__); }
-
-#define LOC_LOGI(...) \
-if (gps_conf.DEBUG_LEVEL >= 3) { LOGI(__VA_ARGS__); }
-
-#define LOC_LOGD(...) \
-if (gps_conf.DEBUG_LEVEL >= 4) { LOGD(__VA_ARGS__); }
-
-#define LOC_LOGV(...) \
-if (gps_conf.DEBUG_LEVEL >= 5) { LOGV(__VA_ARGS__); }
 
 #endif // LOC_ENG_H

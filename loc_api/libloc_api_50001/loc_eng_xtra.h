@@ -27,30 +27,25 @@
  *
  */
 
-#ifndef LOC_ENG_NI_H
-#define LOC_ENG_NI_H
+#ifndef LOC_ENG_XTRA_H
+#define LOC_ENG_XTRA_H
 
 #include <hardware/gps.h>
 
-#define LOC_NI_NO_RESPONSE_TIME            20                      /* secs */
+extern const GpsXtraInterface sLocEngXTRAInterface;
+extern int loc_eng_inject_xtra_data_in_buffer();
 
-extern const GpsNiInterface sLocEngNiInterface;
+// Module data
+typedef struct
+{
+   pthread_mutex_t                lock;
 
-typedef struct {
-    pthread_mutex_t         loc_ni_lock;
-    int                     response_time_left;       /* examine time for NI response */
-    boolean                 notif_in_progress;        /* NI notification/verification in progress */
-    rpc_loc_ni_event_s_type loc_ni_request;
-    int                     current_notif_id;         /* ID to check against response */
-} loc_eng_ni_data_s_type;
+   // loc_eng_ioctl_cb_data_s_type   ioctl_cb_data;
+   gps_xtra_download_request      download_request_cb;
 
-// Functions for sLocEngNiInterface
-extern void loc_eng_ni_init(GpsNiCallbacks *callbacks);
-extern void loc_eng_ni_respond(int notif_id, GpsUserResponseType user_response);
+   // XTRA data buffer
+   char                          *xtra_data_for_injection;  // NULL if no pending data
+   int                            xtra_data_len;
+} loc_eng_xtra_data_s_type;
 
-extern int loc_eng_ni_callback (
-        rpc_loc_event_mask_type               loc_event,              /* event mask           */
-        const rpc_loc_event_payload_u_type*   loc_event_payload       /* payload              */
-);
-
-#endif /* LOC_ENG_NI_H */
+#endif // LOC_ENG_XTRA_H
