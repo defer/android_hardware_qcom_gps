@@ -48,4 +48,6 @@ LOCAL_COPY_HEADERS:= \
 
 LOCAL_MODULE:= libloc_api-rpc-qc
 
+LOCAL_MODULE_TAGS := optional
+
 include $(BUILD_SHARED_LIBRARY)
