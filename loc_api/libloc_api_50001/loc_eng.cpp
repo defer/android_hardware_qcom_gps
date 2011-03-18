@@ -51,6 +51,7 @@
 #include <string.h>
 
 #include <loc_eng.h>
+#include <loc_eng_dmn_conn.h>
 
 #define LOG_TAG "libloc"
 #include <utils/Log.h>
@@ -230,8 +231,8 @@ static int loc_eng_init(GpsCallbacks* callbacks)
    {
       loc_eng_deinit();       /* stop the active client */
 #ifdef FEATURE_GNSS_BIT_API
-      gpsone_loc_api_server_unblock();
-      gpsone_loc_api_server_join();
+      loc_eng_dmn_conn_loc_api_server_unblock();
+      loc_eng_dmn_conn_loc_api_server_join();
 #endif /* FEATURE_GNSS_BIT_API */
       loc_eng_inited = 0;
    }
@@ -272,7 +273,7 @@ static int loc_eng_init(GpsCallbacks* callbacks)
    {
       loc_eng_data.deferred_action_thread = callbacks->create_thread_cb("loc_api",loc_eng_deferred_action_thread, NULL);
 #ifdef FEATURE_GNSS_BIT_API
-      gpsone_loc_api_server_launch(NULL, NULL);
+      loc_eng_dmn_conn_loc_api_server_launch(NULL, NULL);
 #endif /* FEATURE_GNSS_BIT_API */
    }
 
@@ -1372,7 +1373,7 @@ SIDE EFFECTS
 static void loc_eng_process_loc_event (rpc_loc_event_mask_type loc_event,
         rpc_loc_event_payload_u_type* loc_event_payload)
 {
-   LOC_LOGD("loc_eng_process_loc_event: %x\n", loc_event);
+   LOC_LOGD("loc_eng_process_loc_event: %x\n", (int) loc_event);
    // Parsed report
    if ( (loc_event & RPC_LOC_EVENT_PARSED_POSITION_REPORT) &&
          loc_eng_data.mute_session_state != LOC_MUTE_SESS_IN_SESSION)
@@ -1983,7 +1984,7 @@ SIDE EFFECTS
    N/A
 
 ===========================================================================*/
-static void loc_eng_report_agps_status(AGpsType type, AGpsStatusValue status)
+static void loc_eng_report_agps_status(AGpsType type, AGpsStatusValue status, int ipaddr)
 {
    if (loc_eng_data.agps_status_cb == NULL)
    {
@@ -1991,10 +1992,10 @@ static void loc_eng_report_agps_status(AGpsType type, AGpsStatusValue status)
       return;
    }
 
-   LOC_LOGD("loc_eng_report_agps_status, type = %d, status = %d\n",
-         (int) type, (int) status);
+   LOC_LOGD("loc_eng_report_agps_status, type = %d, status = %d, ipaddr = %d\n",
+         (int) type, (int) status,  ipaddr);
 
-   AGpsStatus agpsStatus = {sizeof(agpsStatus),type, status};
+   AGpsStatus agpsStatus = {sizeof(agpsStatus),type, status, ipaddr};
    switch (status)
    {
       case GPS_REQUEST_AGPS_DATA_CONN:
@@ -2044,7 +2045,8 @@ static void loc_eng_process_atl_action(AGpsStatusValue status)
      // Inform GpsLocationProvider (subject to cancellation if data call should not be bring down)
       loc_eng_report_agps_status(
             agps_type,
-            GPS_RELEASE_AGPS_DATA_CONN
+            GPS_RELEASE_AGPS_DATA_CONN,
+            INADDR_NONE
       );
    }
    else if (status == GPS_REQUEST_AGPS_DATA_CONN)
@@ -2052,7 +2054,8 @@ static void loc_eng_process_atl_action(AGpsStatusValue status)
       // Use GpsLocationProvider to bring up the data call if not yet open
       loc_eng_report_agps_status(
             agps_type,
-            GPS_REQUEST_AGPS_DATA_CONN
+            GPS_REQUEST_AGPS_DATA_CONN,
+            INADDR_NONE
       );
    }
 }
@@ -2203,6 +2206,49 @@ static void loc_eng_deferred_action_thread(void* arg)
    LOC_LOGD("loc_eng_deferred_action_thread exiting\n");
    loc_eng_data.release_wakelock_cb();
    loc_eng_data.deferred_action_thread = 0;
+}
+
+/*===========================================================================
+FUNCTION loc_eng_if_wakeup
+
+DESCRIPTION
+   For loc_eng_dmn_conn_handler.c to call to bring up or down
+   network interface
+
+DEPENDENCIES
+   None
+
+RETURN VALUE
+   None
+
+SIDE EFFECTS
+   N/A
+
+===========================================================================*/
+void loc_eng_if_wakeup(int if_req, int ipaddr)
+{
+   AGpsType                            agps_type;
+
+   agps_type = 1? AGPS_TYPE_SUPL : AGPS_TYPE_C2K;  // XXX consider C2k
+
+   if (if_req)
+   {
+      // Inform GpsLocationProvider (subject to cancellation if data call should not be bring down)
+      loc_eng_report_agps_status(
+            agps_type,
+            GPS_RELEASE_AGPS_DATA_CONN,
+            ipaddr
+      );
+   }
+   else
+   {
+      // Use GpsLocationProvider to bring up the data call if not yet open
+      loc_eng_report_agps_status(
+            agps_type,
+            GPS_REQUEST_AGPS_DATA_CONN,
+            ipaddr
+      );
+   }
 }
 
 // for gps.c

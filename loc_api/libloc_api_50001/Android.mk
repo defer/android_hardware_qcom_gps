@@ -27,11 +27,11 @@ LOCAL_SRC_FILES += \
 
 ifeq ($(FEATURE_GNSS_BIT_API), true)
 LOCAL_SRC_FILES += \
-    loc_eng_data_server.cpp \
-    loc_eng_data_server_handler.cpp \
-    ../../daemon/gpsone_thread_helper.c \
-    ../../daemon/gpsone_glue_msg.c \
-    ../../daemon/gpsone_glue_pipe.c
+    loc_eng_dmn_conn.cpp \
+    loc_eng_dmn_conn_handler.cpp \
+    loc_eng_dmn_conn_thread_helper.c \
+    loc_eng_dmn_conn_glue_msg.c \
+    loc_eng_dmn_conn_glue_pipe.c
 endif # FEATURE_GNSS_BIT_API
 
 ## Check if GPS is unsupported
@@ -66,14 +66,10 @@ LOCAL_C_INCLUDES += \
 endif
 
 ifeq ($(FEATURE_GNSS_BIT_API), true)
-GPSONE_BIT_API_DIR = ../../../modem-apis/$(QCOM_TARGET_PRODUCT)/api/libs/remote_apis/gpsone_bit_api
 LOCAL_C_INCLUDES += \
         $(LOCAL_PATH)/../../../common/inc \
         $(LOCAL_PATH)/../../../oncrpc/inc \
-        $(LOCAL_PATH)/../../../diag/include \
-        $(LOCAL_PATH)/$(GPSONE_BIT_API_DIR)/rpc/inc \
-        $(LOCAL_PATH)/$(GPSONE_BIT_API_DIR)/inc \
-	$(LOCAL_PATH)/../../daemon
+        $(LOCAL_PATH)/../../../diag/include
 endif # FEATURE_GNSS_BIT_API
 
 LOCAL_PRELINK_MODULE := false
