@@ -1222,31 +1222,39 @@ SIDE EFFECTS
 ===========================================================================*/
 static void loc_eng_report_status (const rpc_loc_status_event_s_type *status_report_ptr)
 {
-   GpsStatusValue status,status_internal;
+   GpsStatusValue status;
 
-   // LOC_LOGD("loc_eng_report_status: event = %d\n", status_report_ptr->event);
+   LOC_LOGD("loc_eng_report_status: event = %d engine_state = %d\n",
+            status_report_ptr->event, status_report_ptr->payload.rpc_loc_status_event_payload_u_type_u.engine_state);
+
    status = GPS_STATUS_NONE;
 
+   if (status_report_ptr->event == RPC_LOC_STATUS_EVENT_ENGINE_STATE)
+   {
+      if (status_report_ptr->payload.rpc_loc_status_event_payload_u_type_u.engine_state == RPC_LOC_ENGINE_STATE_ON)
+      {
+         status = GPS_STATUS_ENGINE_ON;
+      }
+      else if (status_report_ptr->payload.rpc_loc_status_event_payload_u_type_u.engine_state == RPC_LOC_ENGINE_STATE_OFF)
+      {
+         status = GPS_STATUS_ENGINE_OFF;
+      }
+   }
 
-  if (status_report_ptr->event == RPC_LOC_STATUS_EVENT_ENGINE_STATE)
-    {
-        if (status_report_ptr->payload.rpc_loc_status_event_payload_u_type_u.engine_state == RPC_LOC_ENGINE_STATE_ON)
-        {
-            // GPS_STATUS_SESSION_BEGIN implies GPS_STATUS_ENGINE_ON
-            status = GPS_STATUS_SESSION_BEGIN;
-            status_internal = GPS_STATUS_ENGINE_ON;
-            loc_inform_gps_status(status);
-        }
-        else if (status_report_ptr->payload.rpc_loc_status_event_payload_u_type_u.engine_state == RPC_LOC_ENGINE_STATE_OFF)
-        {
-            // GPS_STATUS_SESSION_END implies GPS_STATUS_ENGINE_OFF
-            status = GPS_STATUS_ENGINE_OFF;
-            status_internal = GPS_STATUS_ENGINE_OFF;
-            loc_inform_gps_status(status);
-        }
-    }
+   if (status_report_ptr->event == RPC_LOC_STATUS_EVENT_FIX_SESSION_STATE)
+   {
+      if (status_report_ptr->payload.rpc_loc_status_event_payload_u_type_u.fix_session_state == RPC_LOC_FIX_SESSION_STATE_BEGIN)
+      {
+         status = GPS_STATUS_SESSION_BEGIN;
 
-#if 0
+      }
+      else if (status_report_ptr->payload.rpc_loc_status_event_payload_u_type_u.fix_session_state == RPC_LOC_FIX_SESSION_STATE_END)
+      {
+         status = GPS_STATUS_SESSION_END;
+
+      }
+   }
+
    pthread_mutex_lock(&loc_eng_data.mute_session_lock);
 
    // Switch from WAIT to MUTE, for "engine on" or "session begin" event
@@ -1283,17 +1291,17 @@ static void loc_eng_report_status (const rpc_loc_status_event_s_type *status_rep
    }
 
    pthread_mutex_unlock(&loc_eng_data.mute_session_lock);
-#endif
+
    // Only keeps ENGINE ON/OFF in engine_status
-   if (status_internal == GPS_STATUS_ENGINE_ON || status_internal == GPS_STATUS_ENGINE_OFF)
+   if (status == GPS_STATUS_ENGINE_ON || status == GPS_STATUS_ENGINE_OFF)
    {
-      loc_eng_data.engine_status = status_internal;
+      loc_eng_data.engine_status = status;
    }
 
    // Only keeps SESSION BEGIN/END in fix_session_status
-   if (status_internal == GPS_STATUS_SESSION_BEGIN || status_internal == GPS_STATUS_SESSION_END)
+   if (status == GPS_STATUS_SESSION_BEGIN || status == GPS_STATUS_SESSION_END)
    {
-      loc_eng_data.fix_session_status = status_internal;
+      loc_eng_data.fix_session_status = status;
    }
 
    pthread_mutex_lock (&loc_eng_data.deferred_action_mutex);
