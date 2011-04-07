@@ -44,12 +44,13 @@ struct ctrl_msg_response {
 };
 
 struct ctrl_msg_unblock {
-    struct in_addr   sin_addr;
-    unsigned short   sin_port;
+    int reserved;
 };
 
 struct ctrl_msg_if_request {
-    int ipaddr;
+    unsigned is_supl; /* 1: use Android SUPL connection; 0: use Android default internet connection */
+    unsigned long ipv4_addr;
+    unsigned char ipv6_addr[16];
 };
 
 /* do not change this structure */
@@ -58,7 +59,7 @@ struct ctrl_msgbuf {
     uint16_t reserved1;
     uint32_t reserved2;
     uint8_t ctrl_type;
-    union cmsg {
+    union {
         struct ctrl_msg_response   cmsg_response;
         struct ctrl_msg_unblock    cmsg_unblock;
         struct ctrl_msg_if_request cmsg_if_request;

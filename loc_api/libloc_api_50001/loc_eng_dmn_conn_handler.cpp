@@ -36,14 +36,17 @@
 #include "loc_eng_dmn_conn_handler.h"
 
 #ifndef DEBUG_DMN_LOC_API
-void loc_eng_if_wakeup(int if_req, int ipaddr);
+void loc_eng_if_wakeup(int if_req, unsigned is_supl, unsigned long ipv4_addr, unsigned char ipv6_addr[16]);
 #endif
 
 int loc_eng_dmn_conn_loc_api_server_if_request_handler(struct ctrl_msgbuf *pmsg, int len)
 {
     LOC_LOGD("%s:%d]\n", __func__, __LINE__);
 #ifndef DEBUG_DMN_LOC_API
-    loc_eng_if_wakeup(1, pmsg->cmsg.cmsg_if_request.ipaddr);
+    loc_eng_if_wakeup( 1,
+                       pmsg->cmsg.cmsg_if_request.is_supl,
+                       pmsg->cmsg.cmsg_if_request.ipv4_addr,
+                       pmsg->cmsg.cmsg_if_request.ipv6_addr);
 #endif
     return 0;
 }
@@ -52,7 +55,10 @@ int loc_eng_dmn_conn_loc_api_server_if_release_handler(struct ctrl_msgbuf *pmsg,
 {
     LOC_LOGD("%s:%d]\n", __func__, __LINE__);
 #ifndef DEBUG_DMN_LOC_API
-    loc_eng_if_wakeup(0, INADDR_NONE);
+    loc_eng_if_wakeup( 0,
+                       pmsg->cmsg.cmsg_if_request.is_supl,
+                       pmsg->cmsg.cmsg_if_request.ipv4_addr,
+                       pmsg->cmsg.cmsg_if_request.ipv6_addr);
 #endif
     return 0;
 }

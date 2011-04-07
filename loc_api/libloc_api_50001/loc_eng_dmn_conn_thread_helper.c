@@ -227,6 +227,13 @@ static void * thelper_main(void *data)
     return NULL;
 }
 
+static void thelper_main_2(void *data)
+{
+    thelper_main(data);
+    return;
+}
+
+
 /*===========================================================================
 FUNCTION    loc_eng_dmn_conn_launch_thelper
 
@@ -255,6 +262,7 @@ int loc_eng_dmn_conn_launch_thelper(struct loc_eng_dmn_conn_thelper * thelper,
     int (*thread_proc_pre) (void * context),
     int (*thread_proc) (void * context),
     int (*thread_proc_post) (void * context),
+    thelper_create_thread   create_thread_cb,
     void * context)
 {
     int result;
@@ -272,8 +280,14 @@ int loc_eng_dmn_conn_launch_thelper(struct loc_eng_dmn_conn_thelper * thelper,
     thelper->thread_proc_post  = thread_proc_post;
 
     LOC_LOGD("%s:%d] 0x%lx call pthread_create\n", __func__, __LINE__, (long) thelper);
-    result = pthread_create(&thelper->thread_id, NULL,
-        thelper_main, (void *)thelper);
+    if (create_thread_cb) {
+        result = 0;
+        thelper->thread_id = create_thread_cb("loc_eng_dmn_conn",
+            thelper_main_2, (void *)thelper);
+    } else {
+        result = pthread_create(&thelper->thread_id, NULL,
+            thelper_main, (void *)thelper);
+    }
 
     if (result != 0) {
         LOC_LOGE("%s:%d] 0x%lx\n", __func__, __LINE__, (long) thelper);

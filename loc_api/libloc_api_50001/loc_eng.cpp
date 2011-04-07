@@ -303,7 +303,7 @@ static int loc_eng_init(GpsCallbacks* callbacks)
           property_get("ro.baseband", baseband, "msm");
           if ((strcmp(baseband,"svlte2a") == 0))
           {
-              loc_eng_dmn_conn_loc_api_server_launch(NULL, NULL);
+              loc_eng_dmn_conn_loc_api_server_launch(callbacks->create_thread_cb, NULL, NULL);
           }
       }
 #endif /* FEATURE_GNSS_BIT_API */
@@ -2090,7 +2090,10 @@ SIDE EFFECTS
    N/A
 
 ===========================================================================*/
-static void loc_eng_report_agps_status(AGpsType type, AGpsStatusValue status, int ipaddr)
+static void loc_eng_report_agps_status(AGpsType type,
+                                       AGpsStatusValue status,
+                                       unsigned long ipv4_addr,
+                                       unsigned char ipv6_addr[16])
 {
    if (loc_eng_data.agps_status_cb == NULL)
    {
@@ -2098,10 +2101,10 @@ static void loc_eng_report_agps_status(AGpsType type, AGpsStatusValue status, in
       return;
    }
 
-   LOC_LOGD("loc_eng_report_agps_status, type = %d, status = %d, ipaddr = %d\n",
-         (int) type, (int) status,  ipaddr);
+   LOC_LOGD("loc_eng_report_agps_status, type = %d, status = %d, ipv4_addr = %d\n",
+         (int) type, (int) status,  (int) ipv4_addr);
 
-   AGpsStatus agpsStatus = {sizeof(agpsStatus),type, status, ipaddr};
+   AGpsStatus agpsStatus = {sizeof(agpsStatus),type, status, ipv4_addr, {ipv6_addr[16]}};
    switch (status)
    {
       case GPS_REQUEST_AGPS_DATA_CONN:
@@ -2144,7 +2147,7 @@ static void loc_eng_process_atl_action(AGpsStatusValue status)
          status,loc_eng_data.data_connection_is_on, loc_eng_data.apn_name);
 
    // Pass a dont care as the AGPS type as it is in any case discarded by GpsLocationProvider
-   agps_type = DONT_CARE;
+   agps_type = AGPS_TYPE_ANY;
 
    if (status == GPS_RELEASE_AGPS_DATA_CONN)
    {
@@ -2152,7 +2155,8 @@ static void loc_eng_process_atl_action(AGpsStatusValue status)
       loc_eng_report_agps_status(
             agps_type,
             GPS_RELEASE_AGPS_DATA_CONN,
-            INADDR_NONE
+            INADDR_NONE,
+            NULL
       );
    }
    else if (status == GPS_REQUEST_AGPS_DATA_CONN)
@@ -2161,7 +2165,8 @@ static void loc_eng_process_atl_action(AGpsStatusValue status)
       loc_eng_report_agps_status(
             agps_type,
             GPS_REQUEST_AGPS_DATA_CONN,
-            INADDR_NONE
+            INADDR_NONE,
+            NULL
       );
    }
 }
@@ -2331,11 +2336,11 @@ SIDE EFFECTS
    N/A
 
 ===========================================================================*/
-void loc_eng_if_wakeup(int if_req, int ipaddr)
+void loc_eng_if_wakeup(int if_req, unsigned is_supl, unsigned long ipv4_addr, unsigned char ipv6_addr[16])
 {
    AGpsType                            agps_type;
 
-   agps_type = 1? AGPS_TYPE_SUPL : AGPS_TYPE_C2K;  // XXX consider C2k
+   agps_type = is_supl? AGPS_TYPE_SUPL : AGPS_TYPE_ANY;  // No C2k?
 
    if (if_req)
    {
@@ -2343,7 +2348,8 @@ void loc_eng_if_wakeup(int if_req, int ipaddr)
       loc_eng_report_agps_status(
             agps_type,
             GPS_RELEASE_AGPS_DATA_CONN,
-            ipaddr
+            ipv4_addr,
+            ipv6_addr
       );
    }
    else
@@ -2352,7 +2358,8 @@ void loc_eng_if_wakeup(int if_req, int ipaddr)
       loc_eng_report_agps_status(
             agps_type,
             GPS_REQUEST_AGPS_DATA_CONN,
-            ipaddr
+            ipv4_addr,
+            ipv6_addr
       );
    }
 }

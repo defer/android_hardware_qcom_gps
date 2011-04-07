@@ -29,6 +29,8 @@
 #ifndef LOC_ENG_DATA_SERVER_H
 #define LOC_ENG_DATA_SERVER_H
 
+#include "loc_eng_dmn_conn_thread_helper.h"
+
 #ifdef _ANDROID_
 
 #define GPSONE_LOC_API_Q_PATH "/etc/gpsone_d/gpsone_loc_api_q"
@@ -41,7 +43,8 @@
 
 #endif
 
-int loc_eng_dmn_conn_loc_api_server_launch(const char * loc_api_q_path, const char * ctrl_q_path);
+int loc_eng_dmn_conn_loc_api_server_launch(thelper_create_thread   create_thread_cb,
+    const char * loc_api_q_path, const char * ctrl_q_path);
 int loc_eng_dmn_conn_loc_api_server_unblock(void);
 int loc_eng_dmn_conn_loc_api_server_join(void);
 

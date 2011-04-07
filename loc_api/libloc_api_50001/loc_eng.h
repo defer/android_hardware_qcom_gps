@@ -57,8 +57,6 @@ typedef unsigned char boolean;
 
 // The system sees GPS engine turns off after inactive for this period of time
 #define GPS_AUTO_OFF_TIME         2  /* secs */
-//To signify that when requesting a data connection HAL need not specify whether CDMA or UMTS
-#define DONT_CARE                 0
 #define MIN_POSSIBLE_FIX_INTERVAL 1000 /* msec */
 enum loc_mute_session_e_type {
    LOC_MUTE_SESS_NONE,

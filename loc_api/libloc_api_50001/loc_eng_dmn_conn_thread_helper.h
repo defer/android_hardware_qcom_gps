@@ -48,11 +48,13 @@ struct loc_eng_dmn_conn_thelper {
     int             (*thread_proc_post) (void * context);
 };
 
+typedef pthread_t (* thelper_create_thread)(const char* name, void (*start)(void *), void* arg);
 int loc_eng_dmn_conn_launch_thelper(struct loc_eng_dmn_conn_thelper * thelper,
     int (*thread_proc_init) (void * context),
     int (*thread_proc_pre)  (void * context),
     int (*thread_proc)      (void * context),
     int (*thread_proc_post) (void * context),
+    thelper_create_thread   create_thread_cb,
     void * context);
 
 int loc_eng_dmn_conn_unblock_thelper(struct loc_eng_dmn_conn_thelper * thelper);

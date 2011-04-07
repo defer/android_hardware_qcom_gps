@@ -37,7 +37,6 @@
 #include "loc_eng_dbg.h"
 
 #include "loc_eng_dmn_conn_glue_msg.h"
-#include "loc_eng_dmn_conn_thread_helper.h"
 #include "loc_eng_dmn_conn_handler.h"
 #include "loc_eng_dmn_conn.h"
 
@@ -52,7 +51,7 @@ static int loc_api_server_proc_init(void *context)
     loc_api_server_msgqid = loc_eng_dmn_conn_glue_msgget(global_loc_api_q_path, O_RDWR);
 
     /* share the ctrl q.
-     * @todo what if the buffer is full? Non atomic may cause message mess up in the q */
+     * message has to be less than 4k. Non atomic may cause message mess up in the q */
     daemon_manager_msgqid = loc_eng_dmn_conn_glue_msgget(global_ctrl_q_path, O_RDWR);
     LOC_LOGD("%s:%d] loc_api_server_msgqid = %d\n", __func__, __LINE__, loc_api_server_msgqid);
     return 0;
@@ -136,7 +135,8 @@ static int loc_eng_dmn_conn_unblock_proc(void)
 
 static struct loc_eng_dmn_conn_thelper thelper;
 
-int loc_eng_dmn_conn_loc_api_server_launch(const char * loc_api_q_path, const char * ctrl_q_path)
+int loc_eng_dmn_conn_loc_api_server_launch(thelper_create_thread   create_thread_cb,
+    const char * loc_api_q_path, const char * ctrl_q_path)
 {
     int result;
 
@@ -148,6 +148,7 @@ int loc_eng_dmn_conn_loc_api_server_launch(const char * loc_api_q_path, const ch
         loc_api_server_proc_pre,
         loc_api_server_proc,
         loc_api_server_proc_post,
+        create_thread_cb,
         (char *) global_loc_api_q_path);
     if (result != 0) {
         LOC_LOGE("%s:%d]\n", __func__, __LINE__);
