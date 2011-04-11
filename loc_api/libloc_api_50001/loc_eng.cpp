@@ -101,6 +101,13 @@ static void loc_eng_process_atl_action(AGpsStatusValue status);
 static void loc_eng_delete_aiding_data_action(void);
 static void loc_eng_ioctl_data_close_status(int is_succ);
 
+static void loc_eng_agps_ril_init( AGpsRilCallbacks* callbacks );
+static void loc_eng_agps_ril_set_ref_location(const AGpsRefLocation *agps_reflocation, size_t sz_struct);
+static void loc_eng_agps_ril_set_set_id(AGpsSetIDType type, const char* setid);
+static void loc_eng_agps_ril_ni_message(uint8_t *msg, size_t len);
+static void loc_eng_agps_ril_update_network_state(int connected, int type, int roaming, const char* extra_info);
+static void loc_eng_agps_ril_update_network_vailability(int avaiable);
+
 // Defines the GpsInterface in gps.h
 static const GpsInterface sLocEngInterface =
 {
@@ -124,6 +131,17 @@ static const AGpsInterface sLocEngAGpsInterface =
    loc_eng_data_conn_closed,
    loc_eng_data_conn_failed,
    loc_eng_set_server_proxy
+};
+
+static const AGpsRilInterface sLocEngAGpsRilInterface =
+{
+   sizeof(AGpsRilInterface),
+   loc_eng_agps_ril_init,
+   loc_eng_agps_ril_set_ref_location,
+   loc_eng_agps_ril_set_set_id,
+   loc_eng_agps_ril_ni_message,
+   loc_eng_agps_ril_update_network_state,
+   loc_eng_agps_ril_update_network_vailability
 };
 
 // Global data structure for location engine
@@ -786,6 +804,11 @@ static const void* loc_eng_get_extension(const char* name)
    else if (strcmp(name, GPS_NI_INTERFACE) == 0)
    {
       return &sLocEngNiInterface;
+   }
+
+   else if (strcmp(name, AGPS_RIL_INTERFACE) == 0)
+   {
+      return &sLocEngAGpsRilInterface;
    }
 
    return NULL;
@@ -1926,6 +1949,42 @@ static int loc_eng_set_server_proxy(AGpsType type, const char* hostname, int por
       }
    }
    return 0;
+}
+
+// Below stub functions are members of sLocEngAGpsRilInterface
+static void loc_eng_agps_ril_init( AGpsRilCallbacks* callbacks ) {}
+static void loc_eng_agps_ril_set_ref_location(const AGpsRefLocation *agps_reflocation, size_t sz_struct) {}
+static void loc_eng_agps_ril_set_set_id(AGpsSetIDType type, const char* setid) {}
+static void loc_eng_agps_ril_ni_message(uint8_t *msg, size_t len) {}
+static void loc_eng_agps_ril_update_network_state(int connected, int type, int roaming, const char* extra_info) {}
+
+/*===========================================================================
+FUNCTION    loc_eng_agps_ril_update_network_vailability
+
+DESCRIPTION
+   Sets data call allow vs disallow flag to modem
+   This is the only member of sLocEngAGpsRilInterface implemented.
+
+DEPENDENCIES
+   None
+
+RETURN VALUE
+   0: success
+
+SIDE EFFECTS
+   N/A
+
+===========================================================================*/
+static void loc_eng_agps_ril_update_network_vailability(int available)
+{
+    rpc_loc_ioctl_data_u_type ioctl_data = {RPC_LOC_IOCTL_SET_DATA_ENABLE, {0}};
+
+    ioctl_data.rpc_loc_ioctl_data_u_type_u.data_enable = available;
+    loc_eng_ioctl (loc_eng_data.client_handle,
+                   RPC_LOC_IOCTL_SET_DATA_ENABLE,
+                   &ioctl_data,
+                   LOC_IOCTL_DEFAULT_TIMEOUT,
+                   NULL);
 }
 
 /*===========================================================================

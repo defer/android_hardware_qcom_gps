@@ -45,7 +45,7 @@ typedef struct
 {
   char                           param_name[LOC_MAX_PARAM_NAME];
   void                          *param_ptr;
-  char                           param_type;  /* 's' for number; 's' for string */
+  char                           param_type;  /* 'n' for number; 's' for string */
 } loc_param_s_type;
 
 /* GPS.conf support */
@@ -55,6 +55,7 @@ typedef struct loc_gps_cfg_s
   unsigned long  ACCURACY_THRES;
   unsigned long  ENABLE_WIPER;
   unsigned long  DEBUG_LEVEL;
+  unsigned long  SUPL_VER;
   // char           string_val[LOC_MAX_PARAM_STRING + 1]; /* An example string value */
 } loc_gps_cfg_s_type;
 

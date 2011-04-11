@@ -65,6 +65,7 @@ loc_param_s_type loc_parameter_table[] =
   /* DEBUG LEVELS: 0 - none, 1 - Error, 2 - Warning, 3 - Info
                    4 - Debug, 5 - Verbose  */
   {"DEBUG_LEVEL",                 &gps_conf.DEBUG_LEVEL,          'n'},
+  {"SUPL_VER",                    &gps_conf.SUPL_VER,             'n'},
 };
 
 int loc_param_num = sizeof(loc_parameter_table) / sizeof(loc_param_s_type);
@@ -92,6 +93,7 @@ static void loc_default_parameters()
    gps_conf.ACCURACY_THRES = 0;
    gps_conf.ENABLE_WIPER = 0;
    gps_conf.DEBUG_LEVEL = 4; /* debug level */
+   gps_conf.SUPL_VER = 1;
 }
 
 /*===========================================================================

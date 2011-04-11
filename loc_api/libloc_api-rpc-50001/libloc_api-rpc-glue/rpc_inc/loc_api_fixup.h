@@ -202,6 +202,21 @@ extern bool_t xdr_bool(XDR *__xdrs, int *__bp);
 #define  RPC_LOC_NI_SERVICE_TYPE_ID_PRESENT         0x0080
 #define  RPC_LOC_NI_ENCODING_TYPE_PRESENT           0x0100
 
+/* below are for RPC_LOC_IOCTL_SET_LBS_APN_PROFILE data */
+/* values for apn_profiles[0].srv_system_type */
+#define LOC_APN_PROFILE_SRV_SYS_CDMA  0x01
+#define LOC_APN_PROFILE_SRV_SYS_HDR   0x02
+#define LOC_APN_PROFILE_SRV_SYS_GSM   0x04
+#define LOC_APN_PROFILE_SRV_SYS_WCDMA 0x08
+#define LOC_APN_PROFILE_SRV_SYS_LTE   0x10
+#define LOC_APN_PROFILE_SRV_SYS_MAX   0x1F
+/* values for apn_profiles[0].pdp_type */
+#define LOC_APN_PROFILE_PDN_TYPE_IPV4    0x01
+#define LOC_APN_PROFILE_PDN_TYPE_IPV6    0x02
+#define LOC_APN_PROFILE_PDN_TYPE_IPV4V6  0x03
+#define LOC_APN_PROFILE_PDN_TYPE_PPP     0x04
+#define LOC_APN_PROFILE_PDN_TYPE_MAX     0x04
+
 #ifdef __cplusplus
 }
 #endif
