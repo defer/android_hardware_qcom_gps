@@ -32,22 +32,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <string.h>
 #include <ctype.h>
 #include <errno.h>
 #include <math.h>
 #include <pthread.h>
 
-#include <rpc/rpc.h>
-#include <loc_api_rpc_glue.h>
-
 #include <loc_eng.h>
+#include <loc_api_v02_client.h>
+#include <qmi_loc_v02.h>
+#include <loc_api_sync_req.h>
 
-#define LOG_TAG "libloc"
-#include <utils/Log.h>
-
-// comment this out to enable logging
-// #undef LOGD
-// #define LOGD(...) {}
+#define LOG_TAG "loc_eng_v02"
+#include "loc_util_log.h"
 
 #define LOC_XTRA_INJECT_DEFAULT_TIMEOUT (3100)
 #define XTRA_BLOCK_SIZE                 (1024)
@@ -82,11 +81,17 @@ SIDE EFFECTS
 ===========================================================================*/
 static int qct_loc_eng_xtra_init (GpsXtraCallbacks* callbacks)
 {
-   rpc_loc_event_mask_type event;
    loc_eng_xtra_data_s_type *xtra_module_data_ptr;
+
+   LOC_UTIL_LOGD("qct_loc_eng_inject_xtra_init: cb_ptr =%lu \n",
+                 (unsigned long) callbacks->download_request_cb);
 
    xtra_module_data_ptr = &loc_eng_data.xtra_module_data;
    xtra_module_data_ptr->download_request_cb = callbacks->download_request_cb;
+
+   //??? Set xtra_data_for_injection to NULL in the initialization
+   // otherwise it may get injected twice.
+   xtra_module_data_ptr->xtra_data_for_injection = NULL;
 
    return 0;
 }
@@ -110,75 +115,75 @@ SIDE EFFECTS
 ===========================================================================*/
 static int qct_loc_eng_inject_xtra_data(char* data, int length)
 {
-   int     rpc_ret_val = RPC_LOC_API_GENERAL_FAILURE;
-   boolean ret_val = 0;
+   int     ret_val = 0;
+   locClientStatusEnumType status = eLOC_CLIENT_SUCCESS;
    int     total_parts;
-   uint8   part;
-   uint16  part_len;
-   uint16  len_injected;
-   rpc_loc_ioctl_data_u_type            ioctl_data;
-   rpc_loc_ioctl_e_type                 ioctl_type = RPC_LOC_IOCTL_INJECT_PREDICTED_ORBITS_DATA;
-   rpc_loc_predicted_orbits_data_s_type *predicted_orbits_data_ptr;
+   uint8_t   part;
+   uint16_t  len_injected;
 
-   LOC_LOGD("qct_loc_eng_inject_xtra_data, xtra size = %d, data ptr = 0x%x\n", length, (int) data);
+   locClientReqUnionType req_union;
+   qmiLocInjectPredictedOrbitsDataReqMsgT_v02 inject_xtra;
+   qmiLocInjectPredictedOrbitsDataIndMsgT_v02 inject_xtra_ind;
 
-   predicted_orbits_data_ptr = &ioctl_data.rpc_loc_ioctl_data_u_type_u.predicted_orbits_data;
-   predicted_orbits_data_ptr->format_type = RPC_LOC_PREDICTED_ORBITS_XTRA;
-   predicted_orbits_data_ptr->total_size = length;
-   total_parts = (length - 1) / XTRA_BLOCK_SIZE + 1;
-   predicted_orbits_data_ptr->total_parts = total_parts;
+   req_union.pInjectPredictedOrbitsDataReq = &inject_xtra;
+
+   LOC_UTIL_LOGD("qct_loc_eng_inject_xtra_data, xtra size = %d\n", length);
+
+   inject_xtra.formatType_valid = 1;
+   inject_xtra.formatType = eQMI_LOC_PREDICTED_ORBITS_XTRA_V02;
+   inject_xtra.totalSize = length;
+
+   total_parts = ((length - 1) / XTRA_BLOCK_SIZE) + 1;
+
+   inject_xtra.totalParts = total_parts;
 
    len_injected = 0; // O bytes injected
-   ioctl_data.disc = ioctl_type;
 
    // XTRA injection starts with part 1
    for (part = 1; part <= total_parts; part++)
    {
-      predicted_orbits_data_ptr->part = part;
-      predicted_orbits_data_ptr->part_len = XTRA_BLOCK_SIZE;
+      inject_xtra.partNum = part;
+
       if (XTRA_BLOCK_SIZE > (length - len_injected))
       {
-         predicted_orbits_data_ptr->part_len = length - len_injected;
+         inject_xtra.partData_len = length - len_injected;
       }
-      predicted_orbits_data_ptr->data_ptr.data_ptr_len = predicted_orbits_data_ptr->part_len;
-      predicted_orbits_data_ptr->data_ptr.data_ptr_val = data + len_injected;
+      else
+      {
+          inject_xtra.partData_len = XTRA_BLOCK_SIZE;
+      }
 
-      LOC_LOGD("qct_loc_eng_inject_xtra_data, part %d/%d, len = %d, total = %d\n",
-            predicted_orbits_data_ptr->part,
-            total_parts,
-            predicted_orbits_data_ptr->part_len,
+      // copy data into the message
+      memcpy(inject_xtra.partData, data+len_injected, inject_xtra.partData_len);
+
+ //???     predicted_orbits_data_ptr->data_ptr.data_ptr_val = data + len_injected;
+
+      LOC_UTIL_LOGD("qct_loc_eng_inject_xtra_data, part %d/%d, len = %d, total injected = %d\n",
+            inject_xtra.partNum, total_parts, inject_xtra.partData_len,
             len_injected);
 
-      if (part < total_parts)
-      {
-         // No callback in this case
-         rpc_ret_val = loc_ioctl (loc_eng_data.client_handle,
-                                  ioctl_type,
-                                  &ioctl_data);
+      status = loc_sync_send_req( loc_eng_data.client_handle,
+                                  QMI_LOC_INJECT_PREDICTED_ORBITS_DATA_REQ_V02,
+                                  req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                                  QMI_LOC_INJECT_PREDICTED_ORBITS_DATA_IND_V02,
+                                  &inject_xtra_ind);
 
-         if (rpc_ret_val != RPC_LOC_API_SUCCESS)
-         {
-            ret_val = EIO; // return error
-            LOC_LOGE("loc_ioctl for xtra error: %s\n", loc_get_ioctl_status_name(rpc_ret_val));
-            break;
-         }
-      }
-      else // part == total_parts
+      if (status != eLOC_CLIENT_SUCCESS ||
+          eQMI_LOC_SUCCESS_V02 != inject_xtra_ind.status ||
+          inject_xtra.partNum != inject_xtra_ind.partNum)
       {
-         // Last part injection, will need to wait for callback
-         if (!loc_eng_ioctl(loc_eng_data.client_handle,
-                                  ioctl_type,
-                                  &ioctl_data,
-                                  LOC_XTRA_INJECT_DEFAULT_TIMEOUT,
-                                  NULL))
-         {
-            ret_val = EIO;
-         }
-         break; // done with injection
+         LOC_UTIL_LOGE ("qct_loc_eng_inject_xtra_data failed  status = %d, "
+                        "inject_pos_ind.status = %d, part num = %d, ind.partNum = %d\n",
+                        status, inject_xtra_ind.status, inject_xtra.partNum,
+                        inject_xtra_ind.partNum);
+
+         ret_val = EIO;
+         break;
       }
 
-      len_injected += predicted_orbits_data_ptr->part_len;
-      LOC_LOGD("loc_ioctl XTRA injected length: %d\n", len_injected);
+
+      len_injected += inject_xtra.partData_len;
+      LOC_UTIL_LOGD("loc_ioctl XTRA injected length: %d\n", len_injected);
    }
 
    return ret_val;
@@ -214,7 +219,7 @@ int loc_eng_inject_xtra_data_in_buffer()
             loc_eng_data.xtra_module_data.xtra_data_len))
       {
          // FIXME gracefully handle injection error
-         LOC_LOGE("XTRA injection failed.");
+         LOC_UTIL_LOGE("XTRA injection failed.");
          rc = -1;
       }
 
@@ -262,8 +267,12 @@ static int qct_loc_eng_inject_xtra_data_proxy(char* data, int length)
 
    pthread_mutex_unlock(&loc_eng_data.xtra_module_data.lock);
 
+   //??? Why check this condition, shouldn't the signal be sent
+   // irrespective? the thread will check if gps status is not on
+
    if (loc_eng_data.engine_status != GPS_STATUS_ENGINE_ON)
    {
+
       pthread_cond_signal(&loc_eng_data.deferred_action_cond);
    }
 

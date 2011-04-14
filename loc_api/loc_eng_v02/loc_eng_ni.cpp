@@ -38,24 +38,27 @@
 #include <ctype.h>
 #include <unistd.h>
 #include <time.h>
-
-#include <rpc/rpc.h>
-#include <loc_api_rpc_glue.h>
+#include <sys/time.h>
+#include <stdbool.h>
+#include <stdint.h>
 
 #include <loc_eng.h>
+#include "loc_eng_ni.h"
+#include "loc_api_sync_req.h"
 
-#define LOG_TAG "libloc"
-#include <utils/Log.h>
+//logging
+#define LOG_TAG "loc_eng_v02"
+#include "loc_util_log.h"
 
-// comment this out to enable logging
-// #undef LOGD
-// #define LOGD(...) {}
 
 /*=============================================================================
  *
  *                             DATA DECLARATION
  *
  *============================================================================*/
+
+void loc_eng_ni_init(GpsNiCallbacks *callbacks);
+
 
 const GpsNiInterface sLocEngNiInterface =
 {
@@ -64,7 +67,7 @@ const GpsNiInterface sLocEngNiInterface =
    loc_eng_ni_respond,
 };
 
-boolean loc_eng_ni_data_init = FALSE;
+bool loc_eng_ni_data_init = false;
 loc_eng_ni_data_s_type loc_eng_ni_data;
 
 extern loc_eng_data_s_type loc_eng_data;
@@ -91,15 +94,15 @@ RETURN VALUE
    response name string
 
 ===========================================================================*/
-static const char* respond_from_enum(rpc_loc_ni_user_resp_e_type resp)
+static const char* respond_from_enum(qmiLocNiUserRespEnumT_v02 resp)
 {
    switch (resp)
    {
-   case RPC_LOC_NI_LCS_NOTIFY_VERIFY_ACCEPT:
+   case eQMI_LOC_NI_LCS_NOTIFY_VERIFY_ACCEPT_V02:
       return "accept";
-   case RPC_LOC_NI_LCS_NOTIFY_VERIFY_DENY:
+   case eQMI_LOC_NI_LCS_NOTIFY_VERIFY_DENY_V02:
       return "deny";
-   case RPC_LOC_NI_LCS_NOTIFY_VERIFY_NORESP:
+   case eQMI_LOC_NI_LCS_NOTIFY_VERIFY_NORESP_V02:
       return "no response";
    default:
       return NULL;
@@ -124,26 +127,66 @@ RETURN VALUE
 ===========================================================================*/
 static void loc_ni_respond
 (
-      rpc_loc_ni_user_resp_e_type resp,
-      const rpc_loc_ni_event_s_type *request_pass_back
+      qmiLocNiUserRespEnumT_v02 resp,
+      const qmiLocEventNiNotifyVerifyReqIndMsgT_v02 *request_pass_back
 )
 {
-   LOC_LOGD("Sending NI response: %s\n", respond_from_enum(resp));
+   locClientReqUnionType req_union;
+   locClientStatusEnumType status;
+   LOC_UTIL_LOGD("Sending NI response: %s\n", respond_from_enum(resp));
 
-   rpc_loc_ioctl_data_u_type data;
-   rpc_loc_ioctl_callback_s_type callback_payload;
+   qmiLocNiUserRespReqMsgT_v02 ni_resp;
+   qmiLocNiUserRespIndMsgT_v02 ni_resp_ind;
 
-   memcpy(&data.rpc_loc_ioctl_data_u_type_u.user_verify_resp.ni_event_pass_back,
-         request_pass_back, sizeof (rpc_loc_ni_event_s_type));
-   data.rpc_loc_ioctl_data_u_type_u.user_verify_resp.user_resp = resp;
+   memset(&ni_resp,0, sizeof(ni_resp));
 
-   loc_eng_ioctl(
-         loc_eng_data.client_handle,
-         RPC_LOC_IOCTL_INFORM_NI_USER_RESPONSE,
-         &data,
-         LOC_IOCTL_DEFAULT_TIMEOUT,
-         &callback_payload
-   );
+   ni_resp.userResp = resp;
+
+   // copy SUPL payload from request
+   if(request_pass_back->NiSuplInd_valid == 1)
+   {
+      ni_resp.NiSuplPayload_valid = 1;
+      memcpy(&(ni_resp.NiSuplPayload), &(request_pass_back->NiSuplInd),
+             sizeof(qmiLocNiSuplNotifyVerifyStructT_v02));
+
+   }
+   // should this be an "else if"?? we don't need to decide
+
+   // copy UMTS-CP payload from request
+   if( request_pass_back->NiUmtsCpInd_valid == 1 )
+   {
+      ni_resp.NiUmtsCpPayload_valid = 1;
+      memcpy(&(ni_resp.NiUmtsCpPayload), &(request_pass_back->NiUmtsCpInd),
+             sizeof(qmiLocNiUmtsCpNotifyVerifyStructT_v02));
+   }
+
+   //copy Vx payload from the request
+   if( request_pass_back->NiVxInd_valid == 1)
+   {
+      ni_resp.NiVxPayload_valid = 1;
+      memcpy(&(ni_resp.NiVxPayload), &(request_pass_back->NiVxInd),
+             sizeof(qmiLocNiVxNotifyVerifyStructT_v02));
+   }
+
+   // copy Vx service interaction payload from the request
+   if(request_pass_back->NiVxServiceInteractionInd_valid == 1)
+   {
+      ni_resp.NiVxServiceInteractionPayload_valid = 1;
+      memcpy(&(ni_resp.NiVxServiceInteractionPayload),
+             &(request_pass_back->NiVxServiceInteractionInd),
+             sizeof(qmiLocNiVxServiceInteractionStructT_v02));
+   }
+
+   req_union.pNiUserRespReq = &ni_resp;
+
+   status = loc_sync_send_req (
+      loc_eng_data.client_handle, QMI_LOC_NI_USER_RESPONSE_REQ_V02,
+      req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+      QMI_LOC_NI_USER_RESPONSE_IND_V02, &ni_resp_ind);
+
+   LOC_UTIL_LOGD("loc_ni_respond: status = %d, resp_status = %d\n",
+                 status, ni_resp_ind.status);
+
 }
 
 /*===========================================================================
@@ -157,41 +200,41 @@ RETURN VALUE
    none
 
 ===========================================================================*/
-static boolean loc_ni_fill_notif_verify_type(GpsNiNotification *notif,
-      rpc_loc_ni_notify_verify_e_type notif_priv)
+static bool loc_ni_fill_notif_verify_type(GpsNiNotification *notif,
+      qmiLocNiNotifyVerifyEnumT_v02 notif_priv)
 {
    notif->notify_flags       = 0;
    notif->default_response   = GPS_NI_RESPONSE_NORESP;
 
    switch (notif_priv)
    {
-   case RPC_LOC_NI_USER_NO_NOTIFY_NO_VERIFY:
+   case eQMI_LOC_NI_USER_NO_NOTIFY_NO_VERIFY_V02:
       notif->notify_flags = 0;
       break;
 
-   case RPC_LOC_NI_USER_NOTIFY_ONLY:
+   case eQMI_LOC_NI_USER_NOTIFY_ONLY_V02:
       notif->notify_flags = GPS_NI_NEED_NOTIFY;
       break;
 
-   case RPC_LOC_NI_USER_NOTIFY_VERIFY_ALLOW_NO_RESP:
+   case eQMI_LOC_NI_USER_NOTIFY_VERIFY_ALLOW_NO_RESP_V02:
       notif->notify_flags = GPS_NI_NEED_NOTIFY | GPS_NI_NEED_VERIFY;
       notif->default_response = GPS_NI_RESPONSE_ACCEPT;
       break;
 
-   case RPC_LOC_NI_USER_NOTIFY_VERIFY_NOT_ALLOW_NO_RESP:
+   case eQMI_LOC_NI_USER_NOTIFY_VERIFY_NOT_ALLOW_NO_RESP_V02:
       notif->notify_flags = GPS_NI_NEED_NOTIFY | GPS_NI_NEED_VERIFY;
       notif->default_response = GPS_NI_RESPONSE_DENY;
       break;
 
-   case RPC_LOC_NI_USER_PRIVACY_OVERRIDE:
+   case eQMI_LOC_NI_USER_NOTIFY_VERIFY_PRIVACY_OVERRIDE_V02:
       notif->notify_flags = GPS_NI_PRIVACY_OVERRIDE;
       break;
 
    default:
-      return FALSE;
+      return false;
    }
 
-   return TRUE;
+   return true;
 }
 
 /*===========================================================================
@@ -244,7 +287,7 @@ static int decode_address(char *addr_string, int string_size, const char *data, 
 
    if (data[0] != addr_prefix)
    {
-      LOC_LOGW("decode_address: address prefix is not 0x%x but 0x%x", addr_prefix, data[0]);
+      LOC_UTIL_LOGW("decode_address: address prefix is not 0x%x but 0x%x", addr_prefix, data[0]);
       addr_string[0] = '\0';
       return 0; // prefix not correct
    }
@@ -261,22 +304,22 @@ static int decode_address(char *addr_string, int string_size, const char *data, 
    return idxOutput;
 }
 
-static GpsNiEncodingType convert_encoding_type(int loc_encoding)
+static GpsNiEncodingType convert_encoding_type(qmiLocNiDataCodingSchemeEnumT_v02 loc_encoding)
 {
    GpsNiEncodingType enc = GPS_ENC_UNKNOWN;
 
    switch (loc_encoding)
    {
-   case RPC_LOC_NI_SUPL_UTF8:
+   case eQMI_LOC_NI_SUPL_UTF8_V02:
       enc = GPS_ENC_SUPL_UTF8;
       break;
-   case RPC_LOC_NI_SUPL_UCS2:
+   case eQMI_LOC_NI_SUPL_UCS2_V02:
       enc = GPS_ENC_SUPL_UCS2;
       break;
-   case RPC_LOC_NI_SUPL_GSM_DEFAULT:
+   case eQMI_LOC_NI_SUPL_GSM_DEFAULT_V02:
       enc = GPS_ENC_SUPL_GSM_DEFAULT;
       break;
-   case RPC_LOC_NI_SS_LANGUAGE_UNSPEC:
+   case eQMI_LOC_NI_SS_LANGUAGE_UNSPEC_V02:
       enc = GPS_ENC_SUPL_GSM_DEFAULT; // SS_LANGUAGE_UNSPEC = GSM
       break;
    default:
@@ -298,7 +341,8 @@ RETURN VALUE
    none
 
 ===========================================================================*/
-static void loc_ni_request_handler(const char *msg, const rpc_loc_ni_event_s_type *ni_req)
+static void loc_ni_request_handler(
+   const char *msg, const qmiLocEventNiNotifyVerifyReqIndMsgT_v02 *ni_req_ptr)
 {
    GpsNiNotification notif;
    char lcs_addr[32]; // Decoded LCS address for UMTS CP NI
@@ -311,111 +355,101 @@ static void loc_ni_request_handler(const char *msg, const rpc_loc_ni_event_s_typ
    if (loc_eng_ni_data.notif_in_progress)
    {
       /* XXX Consider sending a NO RESPONSE reply or queue the request */
-      LOC_LOGW("loc_ni_request_handler, notification in progress, new NI request ignored, type: %d",
-            ni_req->event);
+      LOC_UTIL_LOGW("loc_ni_request_handler, notification in progress, "
+                    "new NI request ignored %s\n", msg);
    }
-   else {
+   else
+   {
       /* Print notification */
-      LOC_LOGD("NI Notification: %s, event: %d", msg, ni_req->event);
+      LOC_UTIL_LOGD("NI Notification: %s \n", msg );
 
       pthread_mutex_lock(&loc_eng_ni_data.loc_ni_lock);
 
       /* Save request */
-      memcpy(&loc_eng_ni_data.loc_ni_request, ni_req, sizeof loc_eng_ni_data.loc_ni_request);
+      memcpy(&loc_eng_ni_data.loc_ni_request, ni_req_ptr, sizeof loc_eng_ni_data.loc_ni_request);
 
       /* Set up NI response waiting */
-      loc_eng_ni_data.notif_in_progress = TRUE;
+      loc_eng_ni_data.notif_in_progress = true;
       loc_eng_ni_data.current_notif_id = abs(rand());
 
       /* Fill in notification */
       notif.notification_id = loc_eng_ni_data.current_notif_id;
 
-      const rpc_loc_ni_vx_notify_verify_req_s_type *vx_req;
-      const rpc_loc_ni_supl_notify_verify_req_s_type *supl_req;
-      const rpc_loc_ni_umts_cp_notify_verify_req_s_type *umts_cp_req;
+      const qmiLocNiVxNotifyVerifyStructT_v02 *vx_req;
+      const qmiLocNiSuplNotifyVerifyStructT_v02 *supl_req;
+      const qmiLocNiUmtsCpNotifyVerifyStructT_v02 *umts_cp_req;
 
-      switch (ni_req->event)
+      if(ni_req_ptr->NiVxInd_valid == 1)
       {
-      case RPC_LOC_NI_EVENT_VX_NOTIFY_VERIFY_REQ:
-         vx_req = &ni_req->payload.rpc_loc_ni_event_payload_u_type_u.vx_req;
+         vx_req = &(ni_req_ptr->NiVxInd);
          notif.ni_type     = GPS_NI_TYPE_VOICE;
-         notif.timeout     = LOC_NI_NO_RESPONSE_TIME; // vx_req->user_resp_timer_val;
+         notif.timeout     = LOC_NI_NO_RESPONSE_TIME;
          memset(notif.extras, 0, sizeof notif.extras);
          memset(notif.text, 0, sizeof notif.text);
          memset(notif.requestor_id, 0, sizeof notif.requestor_id);
 
-         // Requestor ID
+         // Requestor ID, the requestor id recieved is NULL terminated
          hexcode(notif.requestor_id, sizeof notif.requestor_id,
-               vx_req->requester_id.requester_id,
-               vx_req->requester_id.requester_id_length);
+                 vx_req->requestorId, strlen(vx_req->requestorId));
 
          notif.text_encoding = 0; // No text and no encoding
-         notif.requestor_id_encoding = convert_encoding_type(vx_req->encoding_scheme);
+
+         // ??? makes little sense as vx encoding scheme is very different
+         // from SUPL which notif.requestor_id_encoding uses. commenting
+         // and using unknown directly here
+
+         // notif.requestor_id_encoding = convert_encoding_type(vx_req->encodingScheme);
+         notif.requestor_id_encoding = GPS_ENC_UNKNOWN;
 
          // Set default_response & notify_flags
-         loc_ni_fill_notif_verify_type(&notif, vx_req->notification_priv_type);
+         loc_ni_fill_notif_verify_type(&notif, vx_req->notificationType);
 
          // Privacy override handling
-         if (vx_req->notification_priv_type == RPC_LOC_NI_USER_PRIVACY_OVERRIDE)
+         if (vx_req->notificationType ==
+             eQMI_LOC_NI_USER_NOTIFY_VERIFY_PRIVACY_OVERRIDE_V02)
          {
             loc_eng_mute_one_session();
          }
+      } // end if ni_req_ptr->NiVxInd_valid == 1
 
-         break;
-
-      case RPC_LOC_NI_EVENT_UMTS_CP_NOTIFY_VERIFY_REQ:
-         umts_cp_req = &ni_req->payload.rpc_loc_ni_event_payload_u_type_u.umts_cp_req;
+      else if(ni_req_ptr->NiUmtsCpInd_valid == 1)
+      {
+         umts_cp_req = &ni_req_ptr->NiUmtsCpInd;
          notif.ni_type     = GPS_NI_TYPE_UMTS_CTRL_PLANE;
          notif.timeout     = LOC_NI_NO_RESPONSE_TIME; // umts_cp_req->user_response_timer;
          memset(notif.extras, 0, sizeof notif.extras);
          memset(notif.text, 0, sizeof notif.text);
          memset(notif.requestor_id, 0, sizeof notif.requestor_id);
 
-         // Stores notification text
-#if (AMSS_VERSION==3200)
-         hexcode(notif.text, sizeof notif.text,
-               umts_cp_req->notification_text.notification_text_val,
-               umts_cp_req->notification_length);
-#else
-         hexcode(notif.text, sizeof notif.text,
-               umts_cp_req->notification_text,
-               umts_cp_req->notification_length);
-#endif /* #if (AMSS_VERSION==3200) */
+           // notificationText should always be a NULL terminated string
+         hexcode(notif.text, sizeof notif.text, umts_cp_req->notificationText,
+                 strlen(umts_cp_req->notificationText));
 
-         // Stores requestor ID
-#if (AMSS_VERSION==3200)
+        // Stores requestor ID
+
          hexcode(notif.requestor_id, sizeof notif.requestor_id,
-               umts_cp_req->requestor_id.requestor_id_string.requestor_id_string_val,
-               umts_cp_req->requestor_id.string_len);
-#else
-         hexcode(notif.requestor_id, sizeof notif.requestor_id,
-               umts_cp_req->requestor_id.requestor_id_string,
-               umts_cp_req->requestor_id.string_len);
-#endif
+                 umts_cp_req->requestorId.codedString,
+                 strlen(umts_cp_req->requestorId.codedString));
 
          // Encodings
-         notif.text_encoding = convert_encoding_type(umts_cp_req->datacoding_scheme);
-         notif.requestor_id_encoding = convert_encoding_type(umts_cp_req->datacoding_scheme);
+         notif.text_encoding = convert_encoding_type(umts_cp_req->dataCodingScheme);
+         notif.requestor_id_encoding =
+            convert_encoding_type(umts_cp_req->requestorId.dataCodingScheme);
 
          // LCS address (using extras field)
-         if (umts_cp_req->ext_client_address_data.ext_client_address_len != 0)
+         if ( strlen(umts_cp_req->clientAddress) != 0)
          {
             // Copy LCS Address into notif.extras in the format: Address = 012345
             strlcat(notif.extras, LOC_NI_NOTIF_KEY_ADDRESS, sizeof notif.extras);
             strlcat(notif.extras, " = ", sizeof notif.extras);
             int addr_len = 0;
             const char *address_source = NULL;
+            address_source = umts_cp_req->clientAddress;
+            // client Address is always NULL terminated
+            addr_len = decode_address(lcs_addr, sizeof lcs_addr, address_source,
+                                     strlen(umts_cp_req->clientAddress));
 
-#if (AMSS_VERSION==3200)
-            address_source = umts_cp_req->ext_client_address_data.ext_client_address.ext_client_address_val;
-#else
-            address_source = umts_cp_req->ext_client_address_data.ext_client_address;
-#endif /* #if (AMSS_VERSION==3200) */
-
-            addr_len = decode_address(lcs_addr, sizeof lcs_addr,
-               address_source, umts_cp_req->ext_client_address_data.ext_client_address_len);
-
-            // The address is ASCII string
+           // The address is ASCII string
             if (addr_len)
             {
                strlcat(notif.extras, lcs_addr, sizeof notif.extras);
@@ -423,125 +457,114 @@ static void loc_ni_request_handler(const char *msg, const rpc_loc_ni_event_s_typ
          }
 
          // Set default_response & notify_flags
-         loc_ni_fill_notif_verify_type(&notif, umts_cp_req->notification_priv_type);
+         loc_ni_fill_notif_verify_type(&notif, umts_cp_req->notificationPrivType);
 
          // Privacy override handling
-         if (umts_cp_req->notification_priv_type == RPC_LOC_NI_USER_PRIVACY_OVERRIDE)
+         if (umts_cp_req->notificationPrivType ==
+             eQMI_LOC_NI_USER_NOTIFY_VERIFY_PRIVACY_OVERRIDE_V02)
          {
             loc_eng_mute_one_session();
          }
 
-         break;
+      }//if(ni_req_ptr->NiUmtsCpInd_valid == 1)
 
-      case RPC_LOC_NI_EVENT_SUPL_NOTIFY_VERIFY_REQ:
-         supl_req = &ni_req->payload.rpc_loc_ni_event_payload_u_type_u.supl_req;
+      else if(ni_req_ptr->NiSuplInd_valid == 1)
+      {
+         supl_req = &ni_req_ptr->NiSuplInd;
          notif.ni_type     = GPS_NI_TYPE_UMTS_SUPL;
          notif.timeout     = LOC_NI_NO_RESPONSE_TIME; // supl_req->user_response_timer;
          memset(notif.extras, 0, sizeof notif.extras);
          memset(notif.text, 0, sizeof notif.text);
          memset(notif.requestor_id, 0, sizeof notif.requestor_id);
-
          // Client name
-         if (supl_req->flags & RPC_LOC_NI_CLIENT_NAME_PRESENT)
+         if (supl_req->flags & QMI_LOC_NI_CLIENT_NAME_PRESENT_V02)
          {
-
-#if (AMSS_VERSION==3200)
             hexcode(notif.text, sizeof notif.text,
-                    supl_req->client_name.client_name_string.client_name_string_val,   /* buffer */
-                    supl_req->client_name.string_len                                   /* length */
-            );
-#else
-            hexcode(notif.text, sizeof notif.text,
-                            supl_req->client_name.client_name_string,   /* buffer */
-                            supl_req->client_name.string_len            /* length */
-            );
-#endif /* #if (AMSS_VERSION==3200) */
-
-            LOC_LOGV("SUPL NI: client_name: %s len=%d", notif.text, supl_req->client_name.string_len);
+                   supl_req->clientName.formattedString,   /* buffer */
+                   strlen(supl_req->clientName.formattedString) /* length */
+               );
+           LOC_UTIL_LOGV("SUPL NI: client_name: %s \n", notif.text);
          }
-         else {
-            LOC_LOGV("SUPL NI: client_name not present.");
+         else
+         {
+           LOC_UTIL_LOGV("SUPL NI: client_name not present.");
          }
 
          // Requestor ID
-         if (supl_req->flags & RPC_LOC_NI_REQUESTOR_ID_PRESENT)
+         if (supl_req->flags & QMI_LOC_NI_REQUESTOR_ID_PRESENT_V02)
          {
-#if (AMSS_VERSION==3200)
-            hexcode(notif.requestor_id, sizeof notif.requestor_id,
-                  supl_req->requestor_id.requestor_id_string.requestor_id_string_val,  /* buffer */
-                  supl_req->requestor_id.string_len                                    /* length */
-            );
-#else
-            hexcode(notif.requestor_id, sizeof notif.requestor_id,
-                  supl_req->requestor_id.requestor_id_string,  /* buffer */
-                  supl_req->requestor_id.string_len            /* length */
-            );
-#endif /* #if (AMSS_VERSION==3200) */
-            LOC_LOGV("SUPL NI: requestor_id: %s len=%d", notif.requestor_id, supl_req->requestor_id.string_len);
+           hexcode(notif.requestor_id, sizeof notif.requestor_id,
+                   supl_req->requestorId.formattedString,  /* buffer */
+                   strlen(supl_req->requestorId.formattedString)           /* length */
+               );
+           LOC_UTIL_LOGV("SUPL NI: requestor_id: %s \n", notif.requestor_id);
          }
-         else {
-            LOC_LOGV("SUPL NI: requestor_id not present.");
+         else
+         {
+           LOC_UTIL_LOGV("SUPL NI: requestor_id not present.");
          }
 
-         // Encoding type
-         if (supl_req->flags & RPC_LOC_NI_ENCODING_TYPE_PRESENT)
+        // Encoding type
+         if (supl_req->flags & QMI_LOC_NI_ENCODING_TYPE_PRESENT_V02)
          {
-            notif.text_encoding = convert_encoding_type(supl_req->datacoding_scheme);
-            notif.requestor_id_encoding = convert_encoding_type(supl_req->datacoding_scheme);
+           notif.text_encoding = convert_encoding_type(supl_req->dataCodingScheme);
+           notif.requestor_id_encoding = convert_encoding_type(supl_req->dataCodingScheme);
          }
-         else {
-            notif.text_encoding = notif.requestor_id_encoding = GPS_ENC_UNKNOWN;
+         else
+         {
+           notif.text_encoding = notif.requestor_id_encoding = GPS_ENC_UNKNOWN;
          }
 
          // Set default_response & notify_flags
-         loc_ni_fill_notif_verify_type(&notif, ni_req->payload.rpc_loc_ni_event_payload_u_type_u.supl_req.notification_priv_type);
+         loc_ni_fill_notif_verify_type(&notif, supl_req->notificationPrivType);
 
          // Privacy override handling
-         if (ni_req->payload.rpc_loc_ni_event_payload_u_type_u.supl_req.notification_priv_type == RPC_LOC_NI_USER_PRIVACY_OVERRIDE)
+         if (supl_req->notificationPrivType ==
+            eQMI_LOC_NI_USER_NOTIFY_VERIFY_PRIVACY_OVERRIDE_V02)
          {
-            loc_eng_mute_one_session();
+           loc_eng_mute_one_session();
          }
 
-         break;
-
-      default:
-         LOC_LOGE("loc_ni_request_handler, unknown request event: %d", ni_req->event);
+      } //ni_req_ptr->NiSuplInd_valid == 1
+      else
+      {
+         LOC_UTIL_LOGE("loc_ni_request_handler, unknown request event \n");
          return;
       }
 
-      /* Log requestor ID and text for debugging */
-      LOC_LOGI("Notification: notif_type: %d, timeout: %d, default_resp: %d", notif.ni_type, notif.timeout, notif.default_response);
-      LOC_LOGI("              requestor_id: %s (encoding: %d)", notif.requestor_id, notif.requestor_id_encoding);
-      LOC_LOGI("              text: %s text (encoding: %d)", notif.text, notif.text_encoding);
+    /* Log requestor ID and text for debugging */
+      LOC_UTIL_LOGI("Notification: notif_type: %d, timeout: %d, default_resp: %d", notif.ni_type, notif.timeout, notif.default_response);
+      LOC_UTIL_LOGI("              requestor_id: %s (encoding: %d)", notif.requestor_id, notif.requestor_id_encoding);
+      LOC_UTIL_LOGI("              text: %s text (encoding: %d)", notif.text, notif.text_encoding);
       if (notif.extras[0])
       {
-         LOC_LOGI("              extras: %s", notif.extras);
+         LOC_UTIL_LOGI("              extras: %s", notif.extras);
       }
 
       /* For robustness, spawn a thread at this point to timeout to clear up the notification status, even though
-       * the OEM layer in java does not do so.
-       **/
+     * the OEM layer in java does not do so.
+     **/
       loc_eng_ni_data.response_time_left = 5 + (notif.timeout != 0 ? notif.timeout : LOC_NI_NO_RESPONSE_TIME);
-      LOC_LOGI("Automatically sends 'no response' in %d seconds (to clear status)\n", loc_eng_ni_data.response_time_left);
+      LOC_UTIL_LOGI("Automatically sends 'no response' in %d seconds (to clear status)\n", loc_eng_ni_data.response_time_left);
 
       /* @todo may required when android framework issue is fixed
-       * loc_eng_ni_data.callbacks_ref->create_thread_cb("loc_api_ni", loc_ni_thread_proc, NULL);
-       */
+     * loc_eng_ni_data.callbacks_ref->create_thread_cb("loc_api_ni", loc_ni_thread_proc, NULL);
+     */
 
       int rc = 0;
       rc = pthread_create(&loc_eng_ni_data.loc_ni_thread, NULL, loc_ni_thread_proc, NULL);
       if (rc)
       {
-         LOC_LOGE("Loc NI thread is not created.\n");
+         LOC_UTIL_LOGE("Loc NI thread is not created.\n");
       }
       rc = pthread_detach(loc_eng_ni_data.loc_ni_thread);
       if (rc)
       {
-         LOC_LOGE("Loc NI thread is not detached.\n");
+         LOC_UTIL_LOGE("Loc NI thread is not detached.\n");
       }
       pthread_mutex_unlock(&loc_eng_ni_data.loc_ni_lock);
 
-      /* Notify callback */
+    /* Notify callback */
       if (loc_eng_data.ni_notify_cb != NULL)
       {
          loc_eng_data.ni_notify_cb(&notif);
@@ -563,27 +586,29 @@ RETURN VALUE
 int loc_ni_process_user_response(GpsUserResponseType userResponse)
 {
    int rc=0;
-   LOC_LOGD("NI response from UI: %d", userResponse);
+   LOC_UTIL_LOGD("NI response from UI: %d", userResponse);
 
-   rpc_loc_ni_user_resp_e_type resp;
+   qmiLocNiUserRespEnumT_v02 resp;
+
    switch (userResponse)
    {
    case GPS_NI_RESPONSE_ACCEPT:
-      resp = RPC_LOC_NI_LCS_NOTIFY_VERIFY_ACCEPT;
+      resp = eQMI_LOC_NI_LCS_NOTIFY_VERIFY_ACCEPT_V02;
       break;
    case GPS_NI_RESPONSE_DENY:
-      resp = RPC_LOC_NI_LCS_NOTIFY_VERIFY_DENY;
+      resp = eQMI_LOC_NI_LCS_NOTIFY_VERIFY_DENY_V02;
       break;
    case GPS_NI_RESPONSE_NORESP:
-      resp = RPC_LOC_NI_LCS_NOTIFY_VERIFY_NORESP;
+      resp = eQMI_LOC_NI_LCS_NOTIFY_VERIFY_NORESP_V02;
       break;
    default:
       return -1;
    }
    /* Turn of the timeout*/
    pthread_mutex_lock(&user_cb_data_mutex);
-   loc_eng_ni_data.resp = resp;
-   loc_eng_ni_data.user_response_received = TRUE;
+   // copy the response to loc_eng_ni_data
+   loc_eng_ni_data.loc_ni_resp.userResp = resp;
+   loc_eng_ni_data.user_response_received = true;
    rc = pthread_cond_signal(&user_cb_arrived_cond);
    pthread_mutex_unlock(&user_cb_data_mutex);
    return 0;
@@ -601,36 +626,34 @@ RETURN VALUE
 
 ===========================================================================*/
 int loc_eng_ni_callback (
-      rpc_loc_event_mask_type               loc_event,              /* event mask           */
-      const rpc_loc_event_payload_u_type*   loc_event_payload       /* payload              */
+     const qmiLocEventNiNotifyVerifyReqIndMsgT_v02  *ni_req_ptr
 )
 {
    int rc = 0;
-   const rpc_loc_ni_event_s_type *ni_req = &loc_event_payload->rpc_loc_event_payload_u_type_u.ni_request;
-   if (loc_event == RPC_LOC_EVENT_NI_NOTIFY_VERIFY_REQUEST)
+
+   if (ni_req_ptr->NiVxInd_valid == 1)
    {
-      switch (ni_req->event)
-      {
-      case RPC_LOC_NI_EVENT_VX_NOTIFY_VERIFY_REQ:
-         LOC_LOGI("VX Notification");
-         loc_ni_request_handler("VX Notify", ni_req);
-         break;
-
-      case RPC_LOC_NI_EVENT_UMTS_CP_NOTIFY_VERIFY_REQ:
-         LOC_LOGI("UMTS CP Notification\n");
-         loc_ni_request_handler("UMTS CP Notify", ni_req);
-         break;
-
-      case RPC_LOC_NI_EVENT_SUPL_NOTIFY_VERIFY_REQ:
-         LOC_LOGI("SUPL Notification\n");
-         loc_ni_request_handler("SUPL Notify", ni_req);
-         break;
-
-      default:
-         LOC_LOGE("Unknown NI event: %x\n", (int) ni_req->event);
-         break;
-      }
+      LOC_UTIL_LOGD("VX Notification");
+      loc_ni_request_handler("VX Notify", ni_req_ptr);
    }
+
+   else if(ni_req_ptr->NiUmtsCpInd_valid == 1)
+   {
+      LOC_UTIL_LOGD("UMTS CP Notification\n");
+      loc_ni_request_handler("UMTS CP Notify", ni_req_ptr);
+   }
+
+   else if(ni_req_ptr->NiSuplInd_valid == 1)
+   {
+      LOC_UTIL_LOGD("SUPL Notification\n");
+      loc_ni_request_handler("SUPL Notify", ni_req_ptr);
+   }
+
+   else
+   {
+      LOC_UTIL_LOGE("Invalid NI event \n");
+   }
+
    return rc;
 }
 
@@ -646,35 +669,36 @@ static void* loc_ni_thread_proc(void *threadid)
    struct timeval present_time;
    struct timespec expire_time;
 
-   LOC_LOGD("Starting Loc NI thread...\n");
+   LOC_UTIL_LOGD("Starting Loc NI thread...\n");
    pthread_mutex_lock(&user_cb_data_mutex);
    /* Calculate absolute expire time */
    gettimeofday(&present_time, NULL);
    expire_time.tv_sec  = present_time.tv_sec;
    expire_time.tv_nsec = present_time.tv_usec * 1000;
    expire_time.tv_sec += loc_eng_ni_data.response_time_left;
-   LOC_LOGD("loc_ni_thread_proc-Time out set for abs time %ld\n", (long) expire_time.tv_sec );
+   LOC_UTIL_LOGD("loc_ni_thread_proc-Time out set for abs time %ld\n", (long) expire_time.tv_sec );
 
    while (!loc_eng_ni_data.user_response_received)
    {
       rc = pthread_cond_timedwait(&user_cb_arrived_cond, &user_cb_data_mutex, &expire_time);
       if (rc == ETIMEDOUT)
       {
-         loc_eng_ni_data.resp = RPC_LOC_NI_LCS_NOTIFY_VERIFY_NORESP;
-         LOC_LOGD("loc_ni_thread_proc-Thread time out after valting for specified time. Ret Val %d\n",rc );
+         loc_eng_ni_data.loc_ni_resp.userResp = eQMI_LOC_NI_LCS_NOTIFY_VERIFY_NORESP_V02;
+         LOC_UTIL_LOGD("loc_ni_thread_proc-Thread time out after waiting"
+                       " for specified time. Ret Val %d\n",rc );
          break;
       }
    }
-      if (loc_eng_ni_data.user_response_received == TRUE)
-      {
-         LOC_LOGD("loc_ni_thread_proc-Java layer has sent us a user response and return value from "
-                  "pthread_cond_timedwait = %d\n",rc );
-         loc_eng_ni_data.user_response_received = FALSE; /* Reset the user response flag for the next session*/
-      }
-   loc_ni_respond(loc_eng_ni_data.resp, &loc_eng_ni_data.loc_ni_request);
+   if (loc_eng_ni_data.user_response_received == true)
+   {
+      LOC_UTIL_LOGD("loc_ni_thread_proc-Java layer has sent us a user response and return value from "
+               "pthread_cond_timedwait = %d\n",rc );
+      loc_eng_ni_data.user_response_received = false; /* Reset the user response flag for the next session*/
+   }
+   loc_ni_respond(loc_eng_ni_data.loc_ni_resp.userResp, &loc_eng_ni_data.loc_ni_request);
    pthread_mutex_unlock(&user_cb_data_mutex);
    pthread_mutex_lock(&loc_eng_ni_data.loc_ni_lock);
-   loc_eng_ni_data.notif_in_progress = FALSE;
+   loc_eng_ni_data.notif_in_progress = false;
    loc_eng_ni_data.response_time_left = 0;
    loc_eng_ni_data.current_notif_id = -1;
    pthread_mutex_unlock(&loc_eng_ni_data.loc_ni_lock);
@@ -699,18 +723,18 @@ SIDE EFFECTS
 ===========================================================================*/
 void loc_eng_ni_init(GpsNiCallbacks *callbacks)
 {
-   LOC_LOGD("loc_eng_ni_init: entered.");
+   LOC_UTIL_LOGD("loc_eng_ni_init: entered.");
 
    if (!loc_eng_ni_data_init)
    {
       pthread_mutex_init(&loc_eng_ni_data.loc_ni_lock, NULL);
-      loc_eng_ni_data_init = TRUE;
+      loc_eng_ni_data_init = true;
    }
 
-   loc_eng_ni_data.notif_in_progress = FALSE;
+   loc_eng_ni_data.notif_in_progress = false;
    loc_eng_ni_data.current_notif_id = -1;
    loc_eng_ni_data.response_time_left = 0;
-   loc_eng_ni_data.user_response_received = FALSE;
+   loc_eng_ni_data.user_response_received = false;
 
    srand(time(NULL));
    loc_eng_data.ni_notify_cb = callbacks->notify_cb;
@@ -737,11 +761,11 @@ void loc_eng_ni_respond(int notif_id, GpsUserResponseType user_response)
    if (notif_id == loc_eng_ni_data.current_notif_id &&
          loc_eng_ni_data.notif_in_progress)
    {
-      LOC_LOGI("loc_eng_ni_respond: send user response %d for notif %d", user_response, notif_id);
+      LOC_UTIL_LOGI("loc_eng_ni_respond: send user response %d for notif %d", user_response, notif_id);
       loc_ni_process_user_response(user_response);
    }
    else {
-      LOC_LOGE("loc_eng_ni_respond: notif_id %d mismatch or notification not in progress, response: %d",
+      LOC_UTIL_LOGE("loc_eng_ni_respond: notif_id %d mismatch or notification not in progress, response: %d",
             notif_id, user_response);
    }
 }

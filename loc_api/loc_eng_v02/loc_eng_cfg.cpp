@@ -36,15 +36,22 @@
 #include <ctype.h>
 #include <unistd.h>
 #include <time.h>
+#include <loc_eng_cfg.h>
+#include <loc_eng.h>
+
+#define LOG_TAG "loc_eng_v02"
+#include "loc_util_log.h"
+
+#ifdef LOC_UTIL_TARGET_OFF_TARGET
+
+#include "gps.h"
+
+#else
 
 #include <hardware/gps.h>
 
-#include <rpc/rpc.h>
-#include <loc_api_rpc_glue.h>
-#include <loc_eng.h>
+#endif //LOC_UTIL_TARGET_OFF_TARGET
 
-#define LOG_TAG "libloc"
-#include <utils/Log.h>
 
 /*=============================================================================
  *
@@ -166,11 +173,11 @@ void loc_read_gps_conf(void)
 
    if((gps_conf_fp = fopen(GPS_CONF_FILE, "r")) != NULL)
    {
-      LOC_LOGD("loc_read_gps_conf: using %s", GPS_CONF_FILE);
+      LOC_UTIL_LOGD("loc_read_gps_conf: using %s", GPS_CONF_FILE);
    }
    else
    {
-      LOC_LOGW("loc_read_gps_conf: no %s file, using defaults", GPS_CONF_FILE);
+      LOC_UTIL_LOGW("loc_read_gps_conf: no %s file, using defaults", GPS_CONF_FILE);
       return; /* no parameter file */
    }
 
@@ -217,15 +224,15 @@ void loc_read_gps_conf(void)
                         LOC_MAX_PARAM_STRING + 1);
                }
                /* Log INI values */
-               LOC_LOGD("loc_read_gps_conf: PARAM %s = %s\n", param_name, (char*)loc_parameter_table[i].param_ptr);
+               LOC_UTIL_LOGD("loc_read_gps_conf: PARAM %s = %s\n", param_name, (char*)loc_parameter_table[i].param_ptr);
                break;
             case 'n':
                *((int *)loc_parameter_table[i].param_ptr) = param_value;
                /* Log INI values */
-               LOC_LOGD("loc_read_gps_conf: PARAM %s = %d\n", param_name, param_value);
+               LOC_UTIL_LOGD("loc_read_gps_conf: PARAM %s = %d\n", param_name, param_value);
                break;
             default:
-               LOC_LOGE("loc_read_gps_conf: PARAM %s parameter type must be n or n", param_name);
+               LOC_UTIL_LOGE("loc_read_gps_conf: PARAM %s parameter type must be n or n", param_name);
             }
          }
       }

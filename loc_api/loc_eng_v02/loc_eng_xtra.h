@@ -30,7 +30,15 @@
 #ifndef LOC_ENG_XTRA_H
 #define LOC_ENG_XTRA_H
 
+#ifdef LOC_UTIL_TARGET_OFF_TARGET
+
+#include "gps.h"
+
+#else
+
 #include <hardware/gps.h>
+
+#endif //LOC_UTIL_TARGET_OFF_TARGET
 
 extern const GpsXtraInterface sLocEngXTRAInterface;
 extern int loc_eng_inject_xtra_data_in_buffer();
