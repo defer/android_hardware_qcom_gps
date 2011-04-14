@@ -13,7 +13,7 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 
-LOCAL_MODULE := gps.$(BOARD_VENDOR_QCOM_GPS_LOC_API_HARDWARE)
+LOCAL_MODULE := libloc_eng_v01.$(BOARD_VENDOR_QCOM_GPS_LOC_API_HARDWARE)
 
 ## Libs
 
@@ -45,7 +45,7 @@ endif # FEATURE_GNSS_BIT_API
 ifeq ($(BOARD_VENDOR_QCOM_GPS_LOC_API_AMSS_VERSION),50001)
     LOCAL_SHARED_LIBRARIES += libloc_api-rpc-qc
 else
-    LOCAL_STATIC_LIBRARIES:= libloc_api-rpc    
+    LOCAL_STATIC_LIBRARIES:= libloc_api-rpc
 endif
 
 LOCAL_CFLAGS += \
@@ -56,8 +56,8 @@ LOCAL_CFLAGS += \
 
 ## Includes
 LOCAL_C_INCLUDES:= \
-	$(TARGET_OUT_HEADERS)/libcommondefs-rpc/inc \
-	$(TARGET_OUT_HEADERS)/librpc \
+  $(TARGET_OUT_HEADERS)/libcommondefs-rpc/inc \
+  $(TARGET_OUT_HEADERS)/librpc \
 
 ifeq ($(BOARD_VENDOR_QCOM_GPS_LOC_API_AMSS_VERSION),50001)
 LOCAL_C_INCLUDES += \
