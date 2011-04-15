@@ -231,8 +231,15 @@ static int loc_eng_init(GpsCallbacks* callbacks)
    {
       loc_eng_deinit();       /* stop the active client */
 #ifdef FEATURE_GNSS_BIT_API
-      loc_eng_dmn_conn_loc_api_server_unblock();
-      loc_eng_dmn_conn_loc_api_server_join();
+      {
+          char baseband[PROPERTY_VALUE_MAX];
+          property_get("ro.baseband", baseband, "msm");
+          if ((strcmp(baseband,"svlte2a") == 0))
+          {
+              loc_eng_dmn_conn_loc_api_server_unblock();
+              loc_eng_dmn_conn_loc_api_server_join();
+          }
+      }
 #endif /* FEATURE_GNSS_BIT_API */
       loc_eng_inited = 0;
    }
@@ -273,7 +280,14 @@ static int loc_eng_init(GpsCallbacks* callbacks)
    {
       loc_eng_data.deferred_action_thread = callbacks->create_thread_cb("loc_api",loc_eng_deferred_action_thread, NULL);
 #ifdef FEATURE_GNSS_BIT_API
-      loc_eng_dmn_conn_loc_api_server_launch(NULL, NULL);
+      {
+          char baseband[PROPERTY_VALUE_MAX];
+          property_get("ro.baseband", baseband, "msm");
+          if ((strcmp(baseband,"svlte2a") == 0))
+          {
+              loc_eng_dmn_conn_loc_api_server_launch(NULL, NULL);
+          }
+      }
 #endif /* FEATURE_GNSS_BIT_API */
    }
 
