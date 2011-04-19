@@ -42,6 +42,8 @@
 #include <time.h>
 
 #include <rpc/rpc.h>
+#include <rpc/clnt.h>
+#include <rpc/types.h>
 #include "loc_api_rpc_glue.h"
 #include "loc_apicb_appinit.h"
 
@@ -61,6 +63,8 @@
 #define LOC_DATA_DEFAULT FALSE          // Default data connection status (1=ON, 0=OFF)
 #define SUCCESS TRUE
 #define FAILURE FALSE
+
+typedef void (*voidFuncPtr)(void);
 
 // Function declarations for sLocEngInterface
 static int  loc_eng_init(GpsCallbacks* callbacks);
@@ -88,6 +92,7 @@ static int loc_eng_set_apn(const char* apn);
 static int32 loc_event_cb(rpc_loc_client_handle_type client_handle,
                           rpc_loc_event_mask_type loc_event,
                           const rpc_loc_event_payload_u_type* loc_event_payload);
+static void loc_eng_rpc_global_cb(CLIENT* clnt, enum rpc_reset_event event);
 static void loc_eng_report_position(const rpc_loc_parsed_position_s_type *location_report_ptr);
 static void loc_eng_report_sv(const rpc_loc_gnss_info_s_type *gnss_report_ptr);
 static void loc_inform_gps_status(GpsStatusValue status);
@@ -100,6 +105,8 @@ static void loc_eng_process_atl_action(AGpsStatusValue status);
 
 static void loc_eng_delete_aiding_data_action(void);
 static void loc_eng_ioctl_data_close_status(int is_succ);
+static void loc_eng_report_modem_state(rpc_loc_engine_state_e_type state) ;
+static void loc_eng_set_deferred_action(unsigned int bits, voidFuncPtr setupLocked);
 
 static void loc_eng_agps_ril_init( AGpsRilCallbacks* callbacks );
 static void loc_eng_agps_ril_set_ref_location(const AGpsRefLocation *agps_reflocation, size_t sz_struct);
@@ -242,7 +249,9 @@ static int loc_eng_init(GpsCallbacks* callbacks)
 #endif
 
    // Start the LOC api RPC service (if not started yet)
-   loc_api_glue_init();
+	if (0 == loc_api_glue_init())
+	    return 0;
+
    callbacks->set_capabilities_cb(GPS_CAPABILITY_SCHEDULING | GPS_CAPABILITY_MSA | GPS_CAPABILITY_MSB);
    // Avoid repeated initialization. Call de-init to clean up first.
    if (loc_eng_inited == 1)
@@ -318,7 +327,8 @@ static int loc_eng_init(GpsCallbacks* callbacks)
                                    RPC_LOC_EVENT_STATUS_REPORT |
                                    RPC_LOC_EVENT_NMEA_1HZ_REPORT |
                                    RPC_LOC_EVENT_NI_NOTIFY_VERIFY_REQUEST;
-   loc_eng_data.client_handle = loc_open(event, loc_event_cb);
+   loc_eng_data.client_handle = loc_open(event, loc_event_cb, loc_eng_rpc_global_cb);
+
    loc_eng_data.client_opened = (loc_eng_data.client_handle >= 0);
 
    // XTRA module data initialization
@@ -458,12 +468,16 @@ static int loc_eng_start()
    if (ret_val != RPC_LOC_API_SUCCESS)
    {
       LOC_LOGE("loc_eng_start error, rc = %d\n", ret_val);
+	  if (ret_val == RPC_LOC_API_RPC_MODEM_RESTART) {
+		 loc_eng_data.navigating = TRUE;
+		 loc_eng_set_deferred_action(DEFERRED_ACTION_MODEM_DOWN_DETECTED, NULL);
+	  }
    }
    else {
       loc_eng_data.navigating = TRUE;
    }
 
-   return 0;
+   return ret_val;
 }
 
 /*===========================================================================
@@ -504,16 +518,18 @@ static int loc_eng_stop()
    if (ret_val != RPC_LOC_API_SUCCESS)
    {
       LOC_LOGE("loc_eng_stop error, rc = %d\n", ret_val);
-   }
-   else {
+	  if (ret_val == RPC_LOC_API_RPC_MODEM_RESTART) {
+		 loc_eng_set_deferred_action(DEFERRED_ACTION_MODEM_DOWN_DETECTED, NULL);
+	  }
+   } else {
       if (loc_eng_data.fix_session_status != GPS_STATUS_SESSION_BEGIN)
       {
          loc_inform_gps_status(GPS_STATUS_SESSION_END);
       }
-      loc_eng_data.navigating = FALSE;
    }
+   loc_eng_data.navigating = FALSE;
 
-   return 0;
+   return ret_val;
 }
 
 /*===========================================================================
@@ -568,7 +584,7 @@ static int  loc_eng_set_position_mode(GpsPositionMode mode, GpsPositionRecurrenc
    rpc_loc_fix_criteria_s_type *fix_criteria_ptr;
    rpc_loc_ioctl_e_type         ioctl_type = RPC_LOC_IOCTL_SET_FIX_CRITERIA;
    rpc_loc_operation_mode_e_type op_mode;
-   boolean                      ret_val;
+   int                          ret_val;
 
    LOGD ("loc_eng_set_position mode, client = %d, interval = %d, mode = %d\n",
             (int32) loc_eng_data.client_handle, min_interval, mode);
@@ -625,12 +641,15 @@ static int  loc_eng_set_position_mode(GpsPositionMode mode, GpsPositionRecurrenc
                             LOC_IOCTL_DEFAULT_TIMEOUT,
                             NULL /* No output information is expected*/);
 
-   if (ret_val != TRUE)
+   if (ret_val != RPC_LOC_API_SUCCESS)
    {
       LOC_LOGE("loc_eng_set_position mode failed\n");
+	  if (ret_val == RPC_LOC_API_RPC_MODEM_RESTART) {
+		 loc_eng_set_deferred_action(DEFERRED_ACTION_MODEM_DOWN_DETECTED, NULL);
+	  }
    }
 
-   return 0;
+   return ret_val;
 }
 
 /*===========================================================================
@@ -656,7 +675,7 @@ static int loc_eng_inject_time(GpsUtcTime time, int64_t timeReference, int uncer
    rpc_loc_ioctl_data_u_type        ioctl_data;
    rpc_loc_assist_data_time_s_type *time_info_ptr;
    rpc_loc_ioctl_e_type             ioctl_type = RPC_LOC_IOCTL_INJECT_UTC_TIME;
-   boolean                          ret_val;
+   int                              ret_val;
 
    LOC_LOGD ("loc_eng_inject_time, uncertainty = %d\n", uncertainty);
 
@@ -672,12 +691,15 @@ static int loc_eng_inject_time(GpsUtcTime time, int64_t timeReference, int uncer
                             LOC_IOCTL_DEFAULT_TIMEOUT,
                             NULL /* No output information is expected*/);
 
-   if (ret_val != TRUE)
+   if (ret_val != RPC_LOC_API_SUCCESS)
    {
       LOC_LOGE ("loc_eng_inject_time failed\n");
+	  if (ret_val == RPC_LOC_API_RPC_MODEM_RESTART) {
+		 loc_eng_set_deferred_action(DEFERRED_ACTION_MODEM_DOWN_DETECTED, NULL);
+	  }
    }
 
-   return RPC_LOC_API_SUCCESS;
+   return ret_val;
 }
 
 /*===========================================================================
@@ -704,6 +726,7 @@ static int loc_eng_inject_location(double latitude, double longitude, float accu
    rpc_loc_ioctl_data_u_type ioctl_data;
    rpc_loc_assist_data_pos_s_type *assistance_data_position =
       &ioctl_data.rpc_loc_ioctl_data_u_type_u.assistance_data_position;
+   int                          ret_val;
 
    /************************************************
     * Fill in latitude, longitude & accuracy
@@ -728,18 +751,20 @@ static int loc_eng_inject_location(double latitude, double longitude, float accu
          (double) assistance_data_position->hor_unc_circular);
 
    /* Make the API call */
-   if (TRUE != loc_eng_ioctl(
-         loc_eng_data.client_handle,
-         RPC_LOC_IOCTL_INJECT_POSITION,
-         &ioctl_data,
-         LOC_IOCTL_DEFAULT_TIMEOUT,
-         NULL /* No output information is expected*/))
+   ret_val = loc_eng_ioctl (loc_eng_data.client_handle,
+							RPC_LOC_IOCTL_INJECT_POSITION,
+							&ioctl_data,
+							LOC_IOCTL_DEFAULT_TIMEOUT,
+							NULL /* No output information is expected*/);
+   if (ret_val != RPC_LOC_API_SUCCESS)
    {
       LOC_LOGE("loc_eng_inject_injection failed.\n");
-      return RPC_LOC_API_GENERAL_FAILURE;
+	  if (ret_val == RPC_LOC_API_RPC_MODEM_RESTART) {
+		 loc_eng_set_deferred_action(DEFERRED_ACTION_MODEM_DOWN_DETECTED, NULL);
+	  }
    }
 
-   return RPC_LOC_API_SUCCESS; /* 0 */
+   return ret_val; 
 }
 
 /*===========================================================================
@@ -989,6 +1014,32 @@ static int32 loc_event_cb
 
    return RPC_LOC_API_SUCCESS;//We simply want to return sucess here as we do not want to
                               // cause any issues in RPC thread context
+}
+
+/*===========================================================================
+FUNCTION    loc_eng_rpc_global_cb
+
+DESCRIPTION
+   This is the callback function registered by loc_open for RPC global events
+
+DEPENDENCIES
+   N/A
+
+RETURN VALUE
+   RPC_LOC_API_SUCCESS
+
+SIDE EFFECTS
+   N/A
+
+===========================================================================*/
+static void loc_eng_rpc_global_cb(CLIENT* clnt, enum rpc_reset_event event) {
+    switch (event) {
+    case RPC_SUBSYSTEM_RESTART_BEGIN:
+        loc_eng_set_deferred_action(DEFERRED_ACTION_MODEM_DOWN_DETECTED, NULL);
+        break;
+    case RPC_SUBSYSTEM_RESTART_END:
+        loc_eng_set_deferred_action(DEFERRED_ACTION_MODEM_UP_DETECTED, NULL);
+    }
 }
 
 /*===========================================================================
@@ -1553,7 +1604,7 @@ static void loc_eng_ioctl_data_open_status(int is_succ)
    rpc_loc_server_open_status_s_type  *conn_open_status_ptr =
       &ioctl_data.rpc_loc_ioctl_data_u_type_u.conn_open_status;
    time_t                              time_now;
-   boolean                             ret_val;
+   int                                 ret_val;
 
    /**
     * In case data connection is already open (most of the time), delay 1s so
@@ -1611,7 +1662,7 @@ static void loc_eng_ioctl_data_close_status(int is_succ)
    rpc_loc_server_close_status_s_type *conn_close_status_ptr;
    rpc_loc_ioctl_data_u_type           ioctl_data;
    time_t                              time_now;
-   boolean                             ret_val;
+   int                                 ret_val;
 
    // Fill in data
    ioctl_data.disc = RPC_LOC_IOCTL_INFORM_SERVER_CLOSE_STATUS;
@@ -1855,7 +1906,7 @@ static int loc_eng_set_server(AGpsType type, const char* hostname, int port)
    rpc_loc_server_info_s_type       *server_info_ptr;
    rpc_loc_ioctl_e_type              ioctl_cmd;
    struct in_addr                    addr;
-   boolean                           ret_val;
+   int                               ret_val;
    char                              url[256];
 
    LOC_LOGD("loc_eng_set_server, type = %d, hostname = %s, port = %d\n", (int) type, hostname, port);
@@ -1924,7 +1975,7 @@ static int loc_eng_set_server(AGpsType type, const char* hostname, int port)
                             LOC_IOCTL_DEFAULT_TIMEOUT,
                             NULL /* No output information is expected*/);
 
-   if (ret_val != TRUE)
+   if (ret_val != RPC_LOC_API_SUCCESS)
    {
       LOC_LOGE("loc_eng_set_server failed\n");
    }
@@ -1933,7 +1984,7 @@ static int loc_eng_set_server(AGpsType type, const char* hostname, int port)
       LOC_LOGV("loc_eng_set_server successful\n");
    }
 
-   return 0;
+   return ret_val;
 }
 
 /*===========================================================================
@@ -2045,7 +2096,7 @@ static void loc_eng_delete_aiding_data_action(void)
    rpc_loc_ioctl_data_u_type          ioctl_data;
    rpc_loc_ioctl_e_type               ioctl_type = RPC_LOC_IOCTL_DELETE_ASSIST_DATA;
    rpc_loc_assist_data_delete_s_type  *assist_data_ptr;
-   boolean                            ret_val;
+   int                                ret_val;
 
    assist_data_ptr = &ioctl_data.rpc_loc_ioctl_data_u_type_u.assist_data_delete;
    assist_data_ptr->type = loc_eng_data.aiding_data_for_deletion == GPS_DELETE_ALL ?
@@ -2059,6 +2110,10 @@ static void loc_eng_delete_aiding_data_action(void)
                             &ioctl_data,
                             LOC_IOCTL_DEFAULT_TIMEOUT,
                             NULL);
+
+   if (ret_val == RPC_LOC_API_RPC_MODEM_RESTART) {
+	  loc_eng_set_deferred_action(DEFERRED_ACTION_MODEM_DOWN_DETECTED, NULL);
+   }
 
    LOC_LOGV("loc_eng_delete_aiding_data_action: %s\n", log_succ_fail_string(ret_val));
 }
@@ -2169,6 +2224,76 @@ static void loc_eng_process_atl_action(AGpsStatusValue status)
             NULL
       );
    }
+}
+
+/*===========================================================================
+FUNCTION loc_eng_report_modem_state
+
+DESCRIPTION
+   Calls this function when it is detected that modem restart is happening.
+   Either we detected the modem is down or received modem up event.
+   This must be called from the deferred thread to avoid race condition.
+
+DEPENDENCIES
+   None
+
+RETURN VALUE
+   None
+
+SIDE EFFECTS
+   N/A
+
+===========================================================================*/
+void loc_eng_report_modem_state(rpc_loc_engine_state_e_type state) {
+   rpc_loc_status_event_s_type status = {RPC_LOC_STATUS_EVENT_ENGINE_STATE,
+										 {RPC_LOC_STATUS_EVENT_ENGINE_STATE,
+										  {RPC_LOC_ENGINE_STATE_OFF}}};
+   static rpc_loc_engine_state_e_type last_state = RPC_LOC_ENGINE_STATE_MAX;
+   if (last_state != state) {
+	   if (RPC_LOC_ENGINE_STATE_OFF == state) {
+		   last_state = state;
+		   loc_eng_report_status(&status);
+	   } else if (RPC_LOC_ENGINE_STATE_ON == state) {
+		   status.payload.rpc_loc_status_event_payload_u_type_u.engine_state = RPC_LOC_ENGINE_STATE_ON;
+		   last_state = state;
+		   loc_eng_report_status(&status);
+
+		   // modem is back up.  If we crashed in the middle of navigating, we restart.
+		   if (loc_eng_data.navigating) {
+			   // not mutex protected, assuming fw won't call start twice without a
+			   // stop call in between.
+			   loc_start_fix(loc_eng_data.client_handle);
+		   }
+	   }
+   }
+}
+
+/*===========================================================================
+FUNCTION loc_eng_set_deferred_action
+
+DESCRIPTION
+   Sets up the deferred action(s)
+
+DEPENDENCIES
+   None
+
+RETURN VALUE
+   None
+
+SIDE EFFECTS
+   N/A
+
+===========================================================================*/
+static void loc_eng_set_deferred_action(unsigned int bits, voidFuncPtr setupLocked) {
+   pthread_mutex_lock (&loc_eng_data.deferred_action_mutex);
+   loc_eng_data.acquire_wakelock_cb();
+   loc_eng_data.deferred_action_flags |= bits;
+
+   if (NULL != setupLocked) 
+	  (*setupLocked)();
+
+   pthread_cond_signal  (&loc_eng_data.deferred_action_cond);
+   pthread_mutex_unlock (&loc_eng_data.deferred_action_mutex);
 }
 
 /*===========================================================================
@@ -2305,6 +2430,12 @@ static void loc_eng_deferred_action_thread(void* arg)
            }
            pthread_mutex_unlock(&(loc_eng_data.deferred_stop_mutex));
        }
+
+	  if (flags & DEFERRED_ACTION_MODEM_DOWN_DETECTED) {
+		 loc_eng_report_modem_state(RPC_LOC_ENGINE_STATE_OFF);
+	  } else if (flags & DEFERRED_ACTION_MODEM_UP_DETECTED) {
+		 loc_eng_report_modem_state(RPC_LOC_ENGINE_STATE_ON);
+	  } 
 
       // ATL open/close actions
       if (status != 0 )

@@ -65,13 +65,15 @@ enum loc_mute_session_e_type {
 };
 
 enum {
-    DEFERRED_ACTION_EVENT               = 0x01,
-    DEFERRED_ACTION_DELETE_AIDING       = 0x02,
-    DEFERRED_ACTION_AGPS_STATUS         = 0x04,
-    DEFERRED_ACTION_AGPS_DATA_SUCCESS   = 0x08,
-    DEFERRED_ACTION_AGPS_DATA_CLOSED    = 0x10,
-    DEFERRED_ACTION_AGPS_DATA_FAILED    = 0x20,
-    DEFERRED_ACTION_QUIT                = 0x40,
+    DEFERRED_ACTION_EVENT               = 0x00000001,
+    DEFERRED_ACTION_DELETE_AIDING       = 0x00000002,
+    DEFERRED_ACTION_AGPS_STATUS         = 0x00000004,
+    DEFERRED_ACTION_AGPS_DATA_SUCCESS   = 0x00000008,
+    DEFERRED_ACTION_AGPS_DATA_CLOSED    = 0x00000010,
+    DEFERRED_ACTION_AGPS_DATA_FAILED    = 0x00000020,
+    DEFERRED_ACTION_QUIT                = 0x00000040,
+    DEFERRED_ACTION_MODEM_DOWN_DETECTED = 0x00000080,
+    DEFERRED_ACTION_MODEM_UP_DETECTED   = 0x00000100,
 };
 
 // Module data
@@ -127,7 +129,7 @@ typedef struct
    // Condition variable used by deferred action thread
    pthread_cond_t                 deferred_action_cond;
    // flags for pending events for deferred action thread
-   int                             deferred_action_flags;
+   unsigned int                   deferred_action_flags;
    // For muting session broadcast
    pthread_mutex_t                mute_session_lock;
    loc_mute_session_e_type        mute_session_state;

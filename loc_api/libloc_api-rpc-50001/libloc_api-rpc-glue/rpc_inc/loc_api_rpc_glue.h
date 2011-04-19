@@ -50,6 +50,7 @@ typedef unsigned char boolean;
 
 #include "rpc_inc/loc_api_fixup.h"
 #include "rpc_inc/loc_api_sync_call.h"
+#include <rpc/clnt.h>
 
 #ifdef __cplusplus
 extern "C"
@@ -67,7 +68,8 @@ typedef int32 (loc_event_cb_f_type)(
 
 extern rpc_loc_client_handle_type loc_open(
       rpc_loc_event_mask_type       event_reg_mask,
-      loc_event_cb_f_type       *event_callback
+      loc_event_cb_f_type           *event_callback,
+      clnt_reset_notif_cb           rpc_global_cb
 );
 
 extern int32 loc_close

@@ -46,7 +46,6 @@
 #include <assert.h>
 
 #include <rpc/rpc.h>
-#include <rpc/clnt.h>
 
 /* Include RPC headers */
 #include "rpc_inc/loc_api_rpc_glue.h"
@@ -74,6 +73,7 @@ typedef struct
 {
     uint32 cb_id;                        /* same as rpc/types.h */
     loc_event_cb_f_type *cb_func;      /* callback func */
+    clnt_reset_notif_cb rpc_cb; /* callback from RPC */
     rpc_loc_client_handle_type handle; /* stores handle for client closing */
 } loc_glue_cb_entry_s_type;
 
@@ -89,7 +89,10 @@ loc_glue_cb_entry_s_type loc_glue_callback_table[LOC_API_CB_MAX_CLIENTS];
    if (loc_api_clnt == NULL) { return (ret_type) RPC_LOC_API_RPC_FAILURE; }
 
 #define LOC_GLUE_CHECK_RESULT(stat, ret_type) \
-   if (stat != RPC_SUCCESS) { return (ret_type) RPC_LOC_API_RPC_FAILURE; }
+  if (stat != RPC_SUCCESS) { \
+	  return (ret_type)((stat == RPC_SUBSYSTEM_RESTART) ? \
+						RPC_LOC_API_RPC_MODEM_RESTART : RPC_LOC_API_RPC_FAILURE); \
+  }
 
 /* Callback functions */
 /* Returns 1 if successful */
@@ -220,6 +223,16 @@ rpc_loc_api_cb_null_VER_svc(RPC_LOC_API_API_MAJOR_NUM, 0002);
 rpc_loc_api_cb_null_VER_svc(RPC_LOC_API_API_MAJOR_NUM, 0003);
 rpc_loc_api_cb_null_VER_svc(RPC_LOC_API_API_MAJOR_NUM, 0004);
 
+static void loc_api_glue_rpc_cb(CLIENT* client, enum rpc_reset_event event)
+{
+    int i;
+    for (i = 0; i < LOC_API_CB_MAX_CLIENTS; i++) {
+        if (NULL != loc_glue_callback_table[i].rpc_cb) {
+            loc_glue_callback_table[i].rpc_cb(client, event);
+        }
+    }
+}
+
 /*===========================================================================
 
 FUNCTION loc_api_glue_init
@@ -264,6 +277,7 @@ int loc_api_glue_init(void)
       if (rc >= 0)
       {
          LOGD("Loc API RPC client initialized.\n");
+         clnt_register_reset_notification_cb(loc_api_clnt, loc_api_glue_rpc_cb);
       }
       else {
          LOGE("Loc API callback initialization failed.\n");
@@ -276,7 +290,8 @@ int loc_api_glue_init(void)
 
 rpc_loc_client_handle_type loc_open (
       rpc_loc_event_mask_type       event_reg_mask,
-      loc_event_cb_f_type      *event_callback
+      loc_event_cb_f_type      *event_callback,
+      clnt_reset_notif_cb      rpc_cb
 )
 {
    LOC_GLUE_CHECK_INIT(rpc_loc_client_handle_type);
@@ -302,6 +317,7 @@ rpc_loc_client_handle_type loc_open (
            if (loc_glue_callback_table[i].cb_func == NULL)
            {
                loc_glue_callback_table[i].cb_func = event_callback;
+               loc_glue_callback_table[i].rpc_cb = rpc_cb;
                break;
            }
        }
@@ -351,6 +367,7 @@ int32 loc_close
           {
               /* Found the client */
               loc_glue_callback_table[i].cb_func = NULL;
+              loc_glue_callback_table[i].rpc_cb = NULL;
               loc_glue_callback_table[i].handle = -1;
               break;
           }
@@ -505,6 +522,7 @@ int32 loc_api_null(void)
    int32 rets;
    enum clnt_stat stat = RPC_SUCCESS;
 
+   clnt_unregister_reset_notification_cb(loc_api_clnt);
    stat = RPC_FUNC_VERSION(rpc_loc_api_null_, RPC_LOC_API_NULL_VERSION)(NULL, &rets, loc_api_clnt);
    LOC_GLUE_CHECK_RESULT(stat, int32);
 

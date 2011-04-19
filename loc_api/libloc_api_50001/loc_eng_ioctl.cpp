@@ -70,7 +70,7 @@ SIDE EFFECTS
    N/A
 
 ===========================================================================*/
-boolean loc_eng_ioctl
+int loc_eng_ioctl
 (
       rpc_loc_client_handle_type           handle,
       rpc_loc_ioctl_e_type                 ioctl_type,
@@ -91,5 +91,5 @@ boolean loc_eng_ioctl
          loc_get_ioctl_type_name(ioctl_type),
          loc_get_ioctl_status_name(ret_val) );
 
-   return ret_val == RPC_LOC_API_SUCCESS;
+   return ret_val;
 }

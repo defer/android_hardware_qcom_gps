@@ -30,7 +30,7 @@
 #ifndef LOC_ENG_IOCTL_H
 #define LOC_ENG_IOCTL_H
 
-extern boolean loc_eng_ioctl
+extern int loc_eng_ioctl
 (
       rpc_loc_client_handle_type           handle,
       rpc_loc_ioctl_e_type                 ioctl_type,

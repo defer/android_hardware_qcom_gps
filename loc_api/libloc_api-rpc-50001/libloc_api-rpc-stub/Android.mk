@@ -16,7 +16,6 @@ LOCAL_SRC_FILES += \
     src/loc_api_rpcgen_cb_xdr.c \
     src/loc_api_rpcgen_common_xdr.c \
     src/loc_api_rpcgen_cb_svc.c \
-    src/loc_apicb_appinit.c \
     src/loc_api_rpcgen_clnt.c \
     src/loc_api_rpcgen_xdr.c
 

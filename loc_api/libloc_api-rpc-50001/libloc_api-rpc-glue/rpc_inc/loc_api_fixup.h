@@ -66,8 +66,10 @@ extern bool_t xdr_bool(XDR *__xdrs, int *__bp);
 #define RPC_LOC_API_PHONE_OFFLINE     7
 #define RPC_LOC_API_TIMEOUT           8
 
-// Special return value for loc api calls in case of RCP failure
+// Special return value for loc api calls in case of RPC failure
 #define RPC_LOC_API_RPC_FAILURE       (-1234)
+// Special return value for modem restart incurred RPC failure
+#define RPC_LOC_API_RPC_MODEM_RESTART       (-1235)
 
 #define RPC_LOC_API_MAX_SV_COUNT                      80
 #define RPC_LOC_API_MAX_NMEA_STRING_LENGTH            1200
