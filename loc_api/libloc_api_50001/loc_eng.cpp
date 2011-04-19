@@ -106,7 +106,7 @@ static void loc_eng_agps_ril_set_ref_location(const AGpsRefLocation *agps_refloc
 static void loc_eng_agps_ril_set_set_id(AGpsSetIDType type, const char* setid);
 static void loc_eng_agps_ril_ni_message(uint8_t *msg, size_t len);
 static void loc_eng_agps_ril_update_network_state(int connected, int type, int roaming, const char* extra_info);
-static void loc_eng_agps_ril_update_network_vailability(int avaiable);
+static void loc_eng_agps_ril_update_network_vailability(int avaiable, const char* apn);
 
 // Defines the GpsInterface in gps.h
 static const GpsInterface sLocEngInterface =
@@ -327,6 +327,14 @@ static int loc_eng_init(GpsCallbacks* callbacks)
 
    loc_eng_inited = 1;
    LOC_LOGD("loc_eng_init created client, id = %d\n", (int32) loc_eng_data.client_handle);
+
+   rpc_loc_ioctl_data_u_type ioctl_data = {RPC_LOC_IOCTL_SET_SUPL_VERSION, {0}};
+   ioctl_data.rpc_loc_ioctl_data_u_type_u.supl_version = gps_conf.SUPL_VER;
+   loc_eng_ioctl (loc_eng_data.client_handle,
+                  RPC_LOC_IOCTL_SET_SUPL_VERSION,
+                  &ioctl_data,
+                  LOC_IOCTL_DEFAULT_TIMEOUT,
+                  NULL);
 
    return 0;
 }
@@ -1743,10 +1751,10 @@ static int loc_eng_set_apn (const char* apn)
 
    int apn_len;
 
-   LOC_LOGD("loc_eng_set_apn: APN Name = [%s]\n", apn);
-
    if (apn != NULL)
    {
+      LOC_LOGD("loc_eng_set_apn: APN Name = [%s]\n", apn);
+
       apn_len = strlen (apn);
 
 #if 0 /* hack: temporarily allow NULL apn name */
@@ -1769,6 +1777,16 @@ static int loc_eng_set_apn (const char* apn)
          memcpy(loc_eng_data.apn_name, apn, apn_len);
          loc_eng_data.apn_name[apn_len] = '\0';
       }
+
+      rpc_loc_ioctl_data_u_type ioctl_data = {RPC_LOC_IOCTL_SET_LBS_APN_PROFILE, {0}};
+      ioctl_data.rpc_loc_ioctl_data_u_type_u.apn_profiles[0].srv_system_type = LOC_APN_PROFILE_SRV_SYS_MAX;
+      ioctl_data.rpc_loc_ioctl_data_u_type_u.apn_profiles[0].pdp_type = LOC_APN_PROFILE_PDN_TYPE_IPV4;
+      memcpy(&(ioctl_data.rpc_loc_ioctl_data_u_type_u.apn_profiles[0].apn_name), loc_eng_data.apn_name, apn_len+1);
+      loc_eng_ioctl (loc_eng_data.client_handle,
+                     RPC_LOC_IOCTL_SET_LBS_APN_PROFILE,
+                     &ioctl_data,
+                     LOC_IOCTL_DEFAULT_TIMEOUT,
+                     NULL);
    }
 
    return 0;
@@ -1988,7 +2006,7 @@ SIDE EFFECTS
    N/A
 
 ===========================================================================*/
-static void loc_eng_agps_ril_update_network_vailability(int available)
+static void loc_eng_agps_ril_update_network_vailability(int available, const char* apn)
 {
     rpc_loc_ioctl_data_u_type ioctl_data = {RPC_LOC_IOCTL_SET_DATA_ENABLE, {0}};
 
@@ -1998,6 +2016,8 @@ static void loc_eng_agps_ril_update_network_vailability(int available)
                    &ioctl_data,
                    LOC_IOCTL_DEFAULT_TIMEOUT,
                    NULL);
+
+    loc_eng_set_apn(apn);
 }
 
 /*===========================================================================
