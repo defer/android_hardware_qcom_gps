@@ -103,7 +103,7 @@ static void loc_eng_process_conn_request(const rpc_loc_server_request_s_type *se
 static void loc_eng_deferred_action_thread(void* arg);
 static void loc_eng_process_atl_action(AGpsStatusValue status);
 
-static void loc_eng_delete_aiding_data_action(void);
+static void loc_eng_delete_aiding_data_action(GpsAidingData delete_bits);
 static void loc_eng_ioctl_data_close_status(int is_succ);
 static void loc_eng_report_modem_state(rpc_loc_engine_state_e_type state) ;
 static void loc_eng_set_deferred_action(unsigned int bits, voidFuncPtr setupLocked);
@@ -793,9 +793,7 @@ static void loc_eng_delete_aiding_data(GpsAidingData f)
 
    pthread_mutex_lock(&loc_eng_data.deferred_action_mutex);
 
-    // Currently, LOC API only support deletion of all aiding data,
-    if (f)
-        loc_eng_data.aiding_data_for_deletion = GPS_DELETE_ALL;
+   loc_eng_data.aiding_data_for_deletion |= f;
 
    if (loc_eng_data.engine_status != GPS_STATUS_ENGINE_ON &&
        loc_eng_data.aiding_data_for_deletion != 0)
@@ -2088,25 +2086,16 @@ SIDE EFFECTS
    N/A
 
 ===========================================================================*/
-static void loc_eng_delete_aiding_data_action(void)
+static void loc_eng_delete_aiding_data_action(GpsAidingData bits)
 {
-   // Currently, we only support deletion of all aiding data,
-   // since the Android defined aiding data mask matches with modem,
-   // so just pass them down without any translation
-   rpc_loc_ioctl_data_u_type          ioctl_data;
-   rpc_loc_ioctl_e_type               ioctl_type = RPC_LOC_IOCTL_DELETE_ASSIST_DATA;
+    rpc_loc_ioctl_data_u_type ioctl_data = {RPC_LOC_IOCTL_DELETE_ASSIST_DATA, {0}};
    rpc_loc_assist_data_delete_s_type  *assist_data_ptr;
    int                                ret_val;
 
-   assist_data_ptr = &ioctl_data.rpc_loc_ioctl_data_u_type_u.assist_data_delete;
-   assist_data_ptr->type = loc_eng_data.aiding_data_for_deletion == GPS_DELETE_ALL ?
-         RPC_LOC_ASSIST_DATA_ALL : loc_eng_data.aiding_data_for_deletion;
-   loc_eng_data.aiding_data_for_deletion = 0;
-   memset(&assist_data_ptr->reserved, 0, sizeof assist_data_ptr->reserved);
+   ioctl_data.rpc_loc_ioctl_data_u_type_u.assist_data_delete.type = bits;
 
-   ioctl_data.disc = ioctl_type;
    ret_val = loc_eng_ioctl (loc_eng_data.client_handle,
-                            ioctl_type,
+                            RPC_LOC_IOCTL_DELETE_ASSIST_DATA,
                             &ioctl_data,
                             LOC_IOCTL_DEFAULT_TIMEOUT,
                             NULL);
@@ -2375,8 +2364,8 @@ static void loc_eng_deferred_action_thread(void* arg)
       // Send_delete_aiding_data must be done when GPS engine is off
       if ((engine_status != GPS_STATUS_ENGINE_ON) && (aiding_data_for_deletion != 0))
       {
-         loc_eng_delete_aiding_data_action();
-         loc_eng_data.aiding_data_for_deletion = 0;
+         loc_eng_delete_aiding_data_action(aiding_data_for_deletion);
+         loc_eng_data.aiding_data_for_deletion &= ~aiding_data_for_deletion;
       }
 
       // Inject XTRA data when GPS engine is off
