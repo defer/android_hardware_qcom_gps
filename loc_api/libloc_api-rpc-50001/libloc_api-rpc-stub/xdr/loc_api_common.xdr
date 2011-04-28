@@ -27,7 +27,7 @@
  *
  */
 /* LOC_API TOOL VERSION: 4.48 */
-/* GENERATED: FRI APR 15 2011 */
+/* GENERATED: THU APR 28 2011 */
 /*=============================================================================
                       L O C _ A P I _ C O M M O N . X D R
 
@@ -59,7 +59,7 @@ Id: //source/qcom/qct/core/mproc/tools/rel/2h09/htorpc/lib/Htorpc/Metacomments.p
 Id: //source/qcom/qct/core/mproc/tools/rel/2h09/htorpc/lib/Htorpc/SymbolTable.pm#1  
 
 loc_api Definition File(s):
-Id: //source/qcom/qct/modem/api/gps/main/latest/loc_api.h#21
+Id: //source/qcom/qct/modem/api/gps/main/latest/loc_api.h#22
 =============================================================================*/
 /*=============================================================================
 $Header$ 
@@ -246,6 +246,7 @@ struct rpc_loc_status_event_s_type {
 enum rpc_loc_server_addr_e_type {
   RPC_LOC_SERVER_ADDR_IPV4 = 1,
   RPC_LOC_SERVER_ADDR_URL = 2,
+  RPC_LOC_SERVER_ADDR_IPV6 = 3,
   RPC_LOC_SERVER_ADDR_MAX = 268435456
 };
 
@@ -256,7 +257,12 @@ struct rpc_loc_server_addr_ipv4_type {
 
 struct rpc_loc_server_addr_url_type {
   rpc_uint16 length;
-    opaque addr[256]; /* EVAL:[256]*/  
+  opaque addr[256]; /* EVAL:[256]*/
+};
+
+struct rpc_loc_server_addr_ipv6_type {
+  rpc_uint16 addr[8];
+  rpc_uint32 port;
 };
 
 union rpc_loc_server_addr_u_type switch (rpc_loc_server_addr_e_type disc) {
@@ -264,6 +270,8 @@ union rpc_loc_server_addr_u_type switch (rpc_loc_server_addr_e_type disc) {
     rpc_loc_server_addr_ipv4_type ipv4;
   case RPC_LOC_SERVER_ADDR_URL:
     rpc_loc_server_addr_url_type url;
+  case RPC_LOC_SERVER_ADDR_IPV6:
+    rpc_loc_server_addr_ipv6_type ipv6;
   default:
     void;
 };
@@ -757,7 +765,7 @@ enum rpc_loc_server_open_status_e_type {
 struct rpc_loc_server_open_status_s_type {
   rpc_loc_server_connection_handle conn_handle;
   rpc_loc_server_open_status_e_type open_status;
-    opaque apn_name[100]; /* EVAL:[100]*/  
+  opaque apn_name[100]; /* EVAL:[100]*/
 };
 
 enum rpc_loc_server_close_status_e_type {
@@ -784,7 +792,7 @@ struct rpc_loc_wiper_fix_pos_s_type {
 };
 
 struct rpc_loc_wiper_ap_info_s_type {
-    opaque mac_addr[6]; /* EVAL:[6]*/  
+  opaque mac_addr[6]; /* EVAL:[6]*/
   rpc_int32 rssi;
   rpc_uint16 channel;
   rpc_uint8 ap_qualifier;
@@ -792,7 +800,7 @@ struct rpc_loc_wiper_ap_info_s_type {
 
 struct rpc_loc_wiper_ap_set_s_type {
   rpc_uint8 num_of_aps;
-    rpc_loc_wiper_ap_info_s_type ap_info[50]; /* EVAL:[50]*/  
+  rpc_loc_wiper_ap_info_s_type ap_info[50]; /* EVAL:[50]*/  
 };
 
 struct rpc_loc_wiper_position_report_s_type {
@@ -817,7 +825,7 @@ enum rpc_loc_fs_operation_e_type {
 };
 
 struct rpc_loc_efs_data_s_type {
-    opaque filename[64]; /* EVAL:[64]*/  
+  opaque filename[64]; /* EVAL:[64]*/  
   rpc_loc_fs_operation_e_type operation;
   rpc_uint32 total_size;
   opaque data_ptr<>;
@@ -848,7 +856,7 @@ typedef rpc_uint32 rpc_loc_assist_data_type;
 
 struct rpc_loc_assist_data_delete_s_type {
   rpc_loc_assist_data_type type;
-    rpc_uint32 reserved[8]; /* EVAL:[8]*/  
+  rpc_uint32 reserved[8]; /* EVAL:[8]*/  
 };
 
 union rpc_loc_ioctl_data_u_type switch (rpc_loc_ioctl_e_type disc) {

@@ -198,6 +198,7 @@ loc_apicb_prog_VER_freeresult(RPC_LOC_API_API_MAJOR_NUM, 0001);
 loc_apicb_prog_VER_freeresult(RPC_LOC_API_API_MAJOR_NUM, 0002);
 loc_apicb_prog_VER_freeresult(RPC_LOC_API_API_MAJOR_NUM, 0003);
 loc_apicb_prog_VER_freeresult(RPC_LOC_API_API_MAJOR_NUM, 0004);
+loc_apicb_prog_VER_freeresult(RPC_LOC_API_API_MAJOR_NUM, 0005);
 
 /*===========================================================================
 
@@ -222,6 +223,7 @@ rpc_loc_api_cb_null_VER_svc(RPC_LOC_API_API_MAJOR_NUM, 0001);
 rpc_loc_api_cb_null_VER_svc(RPC_LOC_API_API_MAJOR_NUM, 0002);
 rpc_loc_api_cb_null_VER_svc(RPC_LOC_API_API_MAJOR_NUM, 0003);
 rpc_loc_api_cb_null_VER_svc(RPC_LOC_API_API_MAJOR_NUM, 0004);
+rpc_loc_api_cb_null_VER_svc(RPC_LOC_API_API_MAJOR_NUM, 0005);
 
 static void loc_api_glue_rpc_cb(CLIENT* client, enum rpc_reset_event event)
 {

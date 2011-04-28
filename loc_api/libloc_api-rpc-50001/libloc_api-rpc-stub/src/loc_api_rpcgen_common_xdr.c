@@ -367,6 +367,20 @@ xdr_rpc_loc_server_addr_url_type (XDR *xdrs, rpc_loc_server_addr_url_type *objp)
 }
 
 bool_t
+xdr_rpc_loc_server_addr_ipv6_type (XDR *xdrs, rpc_loc_server_addr_ipv6_type *objp)
+{
+    register int32_t *buf;
+
+    int i;
+     if (!xdr_vector (xdrs, (char *)objp->addr, 8,
+        sizeof (rpc_uint16), (xdrproc_t) xdr_rpc_uint16))
+         return FALSE;
+     if (!xdr_rpc_uint32 (xdrs, &objp->port))
+         return FALSE;
+    return TRUE;
+}
+
+bool_t
 xdr_rpc_loc_server_addr_u_type (XDR *xdrs, rpc_loc_server_addr_u_type *objp)
 {
     register int32_t *buf;
@@ -380,6 +394,10 @@ xdr_rpc_loc_server_addr_u_type (XDR *xdrs, rpc_loc_server_addr_u_type *objp)
         break;
     case RPC_LOC_SERVER_ADDR_URL:
          if (!xdr_rpc_loc_server_addr_url_type (xdrs, &objp->rpc_loc_server_addr_u_type_u.url))
+             return FALSE;
+        break;
+    case RPC_LOC_SERVER_ADDR_IPV6:
+         if (!xdr_rpc_loc_server_addr_ipv6_type (xdrs, &objp->rpc_loc_server_addr_u_type_u.ipv6))
              return FALSE;
         break;
     default:

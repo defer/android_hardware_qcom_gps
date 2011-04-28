@@ -27,7 +27,7 @@
  *
  */
 /* LOC_API TOOL VERSION: 4.48 */
-/* GENERATED: FRI APR 15 2011 */
+/* GENERATED: THU APR 28 2011 */
 /*=============================================================================
                           L O C _ A P I _ C B . X D R
 
@@ -59,7 +59,7 @@ Id: //source/qcom/qct/core/mproc/tools/rel/2h09/htorpc/lib/Htorpc/Metacomments.p
 Id: //source/qcom/qct/core/mproc/tools/rel/2h09/htorpc/lib/Htorpc/SymbolTable.pm#1  
 
 loc_api Definition File(s):
-Id: //source/qcom/qct/modem/api/gps/main/latest/loc_api.h#21
+Id: //source/qcom/qct/modem/api/gps/main/latest/loc_api.h#22
 =============================================================================*/
 /*=============================================================================
 $Header$ 
@@ -94,7 +94,7 @@ struct rpc_loc_event_cb_f_type_rets {
 
 
 /*
- * XDR definition of the LOC_API callback program ( vers. 0x00050004 )
+ * XDR definition of the LOC_API callback program ( vers. 0x00050005 )
  */
 
 program LOC_APICBPROG {
@@ -139,9 +139,7 @@ RPC_LOC_IOCTL_SET_XTRA_APN_PROFILE
 
       } = 0x00050003;
 
-
-
-    version LOC_APICBVERS_0004 {
+version LOC_APICBVERS_0004 {
 
 /* Following elements added in enum rpc_loc_ioctl_e_type in 0x00050004 
 RPC_LOC_IOCTL_GET_SUPL_VERSION
@@ -154,6 +152,19 @@ RPC_LOC_IOCTL_SET_SUPL_VERSION
       } = 0x00050004;
 
 
+
+    version LOC_APICBVERS_0005 {
+
+/* Following elements added in enum rpc_loc_server_addr_e_type in 0x00050005 
+RPC_LOC_SERVER_ADDR_IPV6
+*/
+
+	int
+	rpc_loc_api_cb_null( void ) = 0xffffff00;
+
+      } = 0x00050005;
+
+
 } = 0x3100008C;
 
-const LOC_APICBVERS = 0x00050004;
+const LOC_APICBVERS = 0x00050005;

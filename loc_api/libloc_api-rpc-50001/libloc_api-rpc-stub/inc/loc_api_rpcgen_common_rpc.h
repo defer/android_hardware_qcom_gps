@@ -225,6 +225,7 @@ typedef struct rpc_loc_status_event_s_type rpc_loc_status_event_s_type;
 enum rpc_loc_server_addr_e_type {
     RPC_LOC_SERVER_ADDR_IPV4 = 1,
     RPC_LOC_SERVER_ADDR_URL = 2,
+    RPC_LOC_SERVER_ADDR_IPV6 = 3,
     RPC_LOC_SERVER_ADDR_MAX = 268435456,
 };
 typedef enum rpc_loc_server_addr_e_type rpc_loc_server_addr_e_type;
@@ -241,11 +242,18 @@ struct rpc_loc_server_addr_url_type {
 };
 typedef struct rpc_loc_server_addr_url_type rpc_loc_server_addr_url_type;
 
+struct rpc_loc_server_addr_ipv6_type {
+    rpc_uint16 addr[8];
+    rpc_uint32 port;
+};
+typedef struct rpc_loc_server_addr_ipv6_type rpc_loc_server_addr_ipv6_type;
+
 struct rpc_loc_server_addr_u_type {
     rpc_loc_server_addr_e_type disc;
     union {
         rpc_loc_server_addr_ipv4_type ipv4;
         rpc_loc_server_addr_url_type url;
+        rpc_loc_server_addr_ipv6_type ipv6;
     } rpc_loc_server_addr_u_type_u;
 };
 typedef struct rpc_loc_server_addr_u_type rpc_loc_server_addr_u_type;
@@ -1001,6 +1009,7 @@ extern  bool_t xdr_rpc_loc_status_event_s_type (XDR *, rpc_loc_status_event_s_ty
 extern  bool_t xdr_rpc_loc_server_addr_e_type (XDR *, rpc_loc_server_addr_e_type*);
 extern  bool_t xdr_rpc_loc_server_addr_ipv4_type (XDR *, rpc_loc_server_addr_ipv4_type*);
 extern  bool_t xdr_rpc_loc_server_addr_url_type (XDR *, rpc_loc_server_addr_url_type*);
+extern  bool_t xdr_rpc_loc_server_addr_ipv6_type (XDR *, rpc_loc_server_addr_ipv6_type*);
 extern  bool_t xdr_rpc_loc_server_addr_u_type (XDR *, rpc_loc_server_addr_u_type*);
 extern  bool_t xdr_rpc_loc_server_info_s_type (XDR *, rpc_loc_server_info_s_type*);
 extern  bool_t xdr_rpc_loc_ni_notify_verify_e_type (XDR *, rpc_loc_ni_notify_verify_e_type*);
@@ -1106,6 +1115,7 @@ extern bool_t xdr_rpc_loc_status_event_s_type ();
 extern bool_t xdr_rpc_loc_server_addr_e_type ();
 extern bool_t xdr_rpc_loc_server_addr_ipv4_type ();
 extern bool_t xdr_rpc_loc_server_addr_url_type ();
+extern bool_t xdr_rpc_loc_server_addr_ipv6_type ();
 extern bool_t xdr_rpc_loc_server_addr_u_type ();
 extern bool_t xdr_rpc_loc_server_info_s_type ();
 extern bool_t xdr_rpc_loc_ni_notify_verify_e_type ();
