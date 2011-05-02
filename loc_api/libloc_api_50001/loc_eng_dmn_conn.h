@@ -33,8 +33,8 @@
 
 #ifdef _ANDROID_
 
-#define GPSONE_LOC_API_Q_PATH "/etc/gpsone_d/gpsone_loc_api_q"
-#define GPSONE_CTRL_Q_PATH "/etc/gpsone_d/gpsone_ctrl_q"
+#define GPSONE_LOC_API_Q_PATH "/data/misc/gpsone_d/gpsone_loc_api_q"
+#define GPSONE_CTRL_Q_PATH "/data/misc/gpsone_d/gpsone_ctrl_q"
 
 #else
 
