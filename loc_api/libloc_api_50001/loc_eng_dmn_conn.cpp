@@ -70,7 +70,7 @@ static int loc_api_server_proc(void *context)
     struct ctrl_msgbuf * p_cmsgbuf;
     struct ctrl_msgbuf cmsg_resp;
 
-    sz = sizeof(struct ctrl_msgbuf);
+    sz = sizeof(struct ctrl_msgbuf) + 256;
     p_cmsgbuf = (struct ctrl_msgbuf *) malloc(sz);
 
     if (!p_cmsgbuf) {
