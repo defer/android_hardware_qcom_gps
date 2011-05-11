@@ -1105,7 +1105,7 @@ static bool validateRequest(
 
     case QMI_LOC_DELETE_ASSIST_DATA_REQ_V02:
     {
-      *pOutLen = sizeof(qmiLocDeleteAssistDataIndMsgT_v02);
+      *pOutLen = sizeof(qmiLocDeleteAssistDataReqMsgT_v02);
       break;
     }
 
@@ -1130,6 +1130,42 @@ static bool validateRequest(
     case QMI_LOC_SET_OPERATION_MODE_REQ_V02:
     {
       *pOutLen = sizeof(qmiLocSetOperationModeReqMsgT_v02);
+      break;
+    }
+
+    case QMI_LOC_SET_SPI_STATUS_REQ_V02:
+    {
+      *pOutLen = sizeof(qmiLocSetSpiStatusReqMsgT_v02);
+      break;
+    }
+
+    case QMI_LOC_INJECT_SENSOR_DATA_REQ_V02:
+    {
+      *pOutLen = sizeof(qmiLocInjectSensorDataReqMsgT_v02);
+      break;
+    }
+
+    case QMI_LOC_INJECT_TIME_SYNC_DATA_REQ_V02:
+    {
+      *pOutLen = sizeof(qmiLocInjectTimeSyncDataReqMsgT_v02);
+      break;
+    }
+
+    case QMI_LOC_SET_CRADLE_MOUNT_CONFIG_REQ_V02:
+    {
+      *pOutLen = sizeof(qmiLocSetCradleMountConfigReqMsgT_v02);
+      break;
+    }
+
+    case QMI_LOC_SET_EXTERNAL_POWER_CONFIG_REQ_V02:
+    {
+      *pOutLen = sizeof(qmiLocSetExternalPowerConfigReqMsgT_v02);
+      break;
+    }
+
+    case QMI_LOC_INFORM_LOCATION_SERVER_CONN_STATUS_REQ_V02:
+    {
+      *pOutLen = sizeof(qmiLocInformLocationServerConnStatusReqMsgT_v02);
       break;
     }
 

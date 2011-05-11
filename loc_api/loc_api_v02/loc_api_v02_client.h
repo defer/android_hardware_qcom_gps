@@ -43,7 +43,7 @@ extern "C" {
 #include <stdint.h>
 #include "qmi_loc_v02.h"  //QMI LOC Service data types definitions
 #include <stdbool.h>
-
+#include <stddef.h>
 
 /******************************************************************************
  *  Constants and configuration

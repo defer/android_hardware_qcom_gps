@@ -55,14 +55,14 @@
 
 //error logs
 #define LOC_UTIL_LOGE(...)   LOGE(__VA_ARGS__)
-//warning logs (hack!! change to LOGW)
-#define LOC_UTIL_LOGW(...)   LOGE(__VA_ARGS__)
+//warning logs
+#define LOC_UTIL_LOGW(...)   LOGW(__VA_ARGS__)
 // debug logs
-#define LOC_UTIL_LOGD(...)   LOGE(__VA_ARGS__)
+#define LOC_UTIL_LOGD(...)   LOGD(__VA_ARGS__)
 // info logs
-#define LOC_UTIL_LOGI(...)   LOGE(__VA_ARGS__)
+#define LOC_UTIL_LOGI(...)   LOGI(__VA_ARGS__)
 // verbose logs
-#define LOC_UTIL_LOGV(...)   LOGE(__VA_ARGS__)
+#define LOC_UTIL_LOGV(...)   LOGV(__VA_ARGS__)
 
 #endif //LOC_UTIL_TARGET_OFF_TARGET
 

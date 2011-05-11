@@ -1,5 +1,7 @@
 ifneq ($(BUILD_TINY_ANDROID),true)
-# TBD: Need a feature to disable compilation if QCCI is not available
+
+ifeq ($(TARGET_NO_RPC),true)
+
 LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
@@ -31,6 +33,9 @@ LOCAL_C_INCLUDES += \
 
 LOCAL_PRELINK_MODULE := false
 include $(BUILD_SHARED_LIBRARY)
+
+
+endif # TARGET_NO_RPC := true
 endif # not BUILD_TINY_ANDROID
 
 

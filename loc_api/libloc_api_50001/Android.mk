@@ -1,4 +1,5 @@
 ifneq ($(BUILD_TINY_ANDROID),true)
+ifneq ($(TARGET_NO_RPC),true)
 #Compile this library only for builds with the latest modem image
 ifeq ($(BOARD_VENDOR_QCOM_GPS_LOC_API_AMSS_VERSION),50001)
 AMSS_VERSION:=6356
@@ -76,4 +77,5 @@ LOCAL_PRELINK_MODULE := false
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
 include $(BUILD_SHARED_LIBRARY)
 endif # BOARD_VENDOR_QCOM_GPS_LOC_API_AMSS_VERSION = 50001
+endif # not TARGET_NO_RPC := true
 endif # not BUILD_TINY_ANDROID
