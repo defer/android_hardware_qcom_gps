@@ -66,6 +66,9 @@
 
 typedef void (*voidFuncPtr)(void);
 
+// 2nd half of init(), singled out for
+// modem restart to use.
+static int loc_eng_reinit();
 // Function declarations for sLocEngInterface
 static int  loc_eng_init(GpsCallbacks* callbacks);
 static int  loc_eng_start();
@@ -318,6 +321,17 @@ static int loc_eng_init(GpsCallbacks* callbacks)
 #endif /* FEATURE_GNSS_BIT_API */
    }
 
+   // XTRA module data initialization
+   pthread_mutex_init(&loc_eng_data.xtra_module_data.lock, NULL);
+   loc_eng_data.xtra_module_data.download_request_cb = NULL;
+
+   loc_eng_inited = 1;
+
+   return loc_eng_reinit();
+}
+
+static int loc_eng_reinit()
+{
    // Open client
    rpc_loc_event_mask_type event = RPC_LOC_EVENT_PARSED_POSITION_REPORT |
                                    RPC_LOC_EVENT_SATELLITE_REPORT |
@@ -330,12 +344,6 @@ static int loc_eng_init(GpsCallbacks* callbacks)
    loc_eng_data.client_handle = loc_open(event, loc_event_cb, loc_eng_rpc_global_cb);
 
    loc_eng_data.client_opened = (loc_eng_data.client_handle >= 0);
-
-   // XTRA module data initialization
-   pthread_mutex_init(&loc_eng_data.xtra_module_data.lock, NULL);
-   loc_eng_data.xtra_module_data.download_request_cb = NULL;
-
-   loc_eng_inited = 1;
    LOC_LOGD("loc_eng_init created client, id = %d\n", (int32) loc_eng_data.client_handle);
 
    rpc_loc_ioctl_data_u_type ioctl_data = {RPC_LOC_IOCTL_SET_SUPL_VERSION, {0}};
@@ -580,7 +588,7 @@ static int  loc_eng_set_position_mode(GpsPositionMode mode, GpsPositionRecurrenc
 {
    INIT_CHECK("loc_eng_set_position_mode");
 
-   rpc_loc_ioctl_data_u_type    ioctl_data;
+   rpc_loc_ioctl_data_u_type*    ioctl_data = &loc_eng_data.position_mode;
    rpc_loc_fix_criteria_s_type *fix_criteria_ptr;
    rpc_loc_ioctl_e_type         ioctl_type = RPC_LOC_IOCTL_SET_FIX_CRITERIA;
    rpc_loc_operation_mode_e_type op_mode;
@@ -601,7 +609,7 @@ static int  loc_eng_set_position_mode(GpsPositionMode mode, GpsPositionRecurrenc
       op_mode = RPC_LOC_OPER_MODE_STANDALONE;
    }
 
-   fix_criteria_ptr = &ioctl_data.rpc_loc_ioctl_data_u_type_u.fix_criteria;
+   fix_criteria_ptr = &ioctl_data->rpc_loc_ioctl_data_u_type_u.fix_criteria;
    fix_criteria_ptr->valid_mask = RPC_LOC_FIX_CRIT_VALID_PREFERRED_OPERATION_MODE |
                                   RPC_LOC_FIX_CRIT_VALID_RECURRENCE_TYPE;
    fix_criteria_ptr->min_interval = min_interval;
@@ -634,10 +642,11 @@ static int  loc_eng_set_position_mode(GpsPositionMode mode, GpsPositionRecurrenc
             fix_criteria_ptr->recurrence_type = RPC_LOC_PERIODIC_FIX;
             break;
     }
-   ioctl_data.disc = ioctl_type;
+   ioctl_data->disc = ioctl_type;
+
    ret_val = loc_eng_ioctl (loc_eng_data.client_handle,
                             ioctl_type,
-                            &ioctl_data,
+                            ioctl_data,
                             LOC_IOCTL_DEFAULT_TIMEOUT,
                             NULL /* No output information is expected*/);
 
@@ -2249,6 +2258,12 @@ void loc_eng_report_modem_state(rpc_loc_engine_state_e_type state) {
 
 		   // modem is back up.  If we crashed in the middle of navigating, we restart.
 		   if (loc_eng_data.navigating) {
+               loc_eng_reinit();
+               loc_eng_ioctl (loc_eng_data.client_handle,
+                              RPC_LOC_IOCTL_SET_FIX_CRITERIA,
+                              &loc_eng_data.position_mode,
+                              LOC_IOCTL_DEFAULT_TIMEOUT,
+                              NULL);
 			   // not mutex protected, assuming fw won't call start twice without a
 			   // stop call in between.
 			   loc_start_fix(loc_eng_data.client_handle);

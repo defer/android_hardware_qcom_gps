@@ -133,6 +133,9 @@ typedef struct
    // For muting session broadcast
    pthread_mutex_t                mute_session_lock;
    loc_mute_session_e_type        mute_session_state;
+    // [0] - supl version
+    // [1] - position_mode
+    rpc_loc_ioctl_data_u_type      position_mode;
 
 } loc_eng_data_s_type;
 
