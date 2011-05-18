@@ -113,7 +113,7 @@ static void loc_eng_agps_ril_set_ref_location(const AGpsRefLocation *agps_refloc
 static void loc_eng_agps_ril_set_set_id(AGpsSetIDType type, const char* setid);
 static void loc_eng_agps_ril_ni_message(uint8_t *msg, size_t len);
 static void loc_eng_agps_ril_update_network_state(int connected, int type, int roaming, const char* extra_info);
-static void loc_eng_agps_ril_update_network_vailability(int avaiable, const char* apn);
+static void loc_eng_agps_ril_update_network_availability(int avaiable, const char* apn);
 
 // Defines the GpsInterface in gps.h
 static const GpsInterface sLocEngInterface =
@@ -148,7 +148,7 @@ static const AGpsRilInterface sLocEngAGpsRilInterface =
    loc_eng_agps_ril_set_set_id,
    loc_eng_agps_ril_ni_message,
    loc_eng_agps_ril_update_network_state,
-   loc_eng_agps_ril_update_network_vailability
+   loc_eng_agps_ril_update_network_availability
 };
 
 // Global data structure for location engine
@@ -2039,7 +2039,7 @@ static void loc_eng_agps_ril_ni_message(uint8_t *msg, size_t len) {}
 static void loc_eng_agps_ril_update_network_state(int connected, int type, int roaming, const char* extra_info) {}
 
 /*===========================================================================
-FUNCTION    loc_eng_agps_ril_update_network_vailability
+FUNCTION    loc_eng_agps_ril_update_network_availability
 
 DESCRIPTION
    Sets data call allow vs disallow flag to modem
@@ -2055,7 +2055,7 @@ SIDE EFFECTS
    N/A
 
 ===========================================================================*/
-static void loc_eng_agps_ril_update_network_vailability(int available, const char* apn)
+static void loc_eng_agps_ril_update_network_availability(int available, const char* apn)
 {
     rpc_loc_ioctl_data_u_type ioctl_data = {RPC_LOC_IOCTL_SET_DATA_ENABLE, {0}};
 
