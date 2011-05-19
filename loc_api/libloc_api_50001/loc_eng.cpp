@@ -2146,8 +2146,9 @@ SIDE EFFECTS
 static void loc_eng_report_agps_status(AGpsType type,
                                        AGpsStatusValue status,
                                        unsigned long ipv4_addr,
-                                       unsigned char ipv6_addr[16])
+                                       unsigned char * ipv6_addr)
 {
+   AGpsStatus agpsStatus;
    if (loc_eng_data.agps_status_cb == NULL)
    {
       LOC_LOGE("loc_eng_report_agps_status, callback not initialized.\n");
@@ -2157,7 +2158,15 @@ static void loc_eng_report_agps_status(AGpsType type,
    LOC_LOGD("loc_eng_report_agps_status, type = %d, status = %d, ipv4_addr = %d\n",
          (int) type, (int) status,  (int) ipv4_addr);
 
-   AGpsStatus agpsStatus = {sizeof(agpsStatus),type, status, ipv4_addr, {ipv6_addr[16]}};
+   agpsStatus.size      = sizeof(agpsStatus);
+   agpsStatus.type      = type;
+   agpsStatus.status    = status;
+   agpsStatus.ipv4_addr = ipv4_addr;
+   if (ipv6_addr != NULL) {
+       memcpy(agpsStatus.ipv6_addr, ipv6_addr, 16);
+   } else {
+       memset(agpsStatus.ipv6_addr, 0, 16);
+   }
    switch (status)
    {
       case GPS_REQUEST_AGPS_DATA_CONN:
@@ -2471,13 +2480,13 @@ SIDE EFFECTS
    N/A
 
 ===========================================================================*/
-void loc_eng_if_wakeup(int if_req, unsigned is_supl, unsigned long ipv4_addr, unsigned char ipv6_addr[16])
+void loc_eng_if_wakeup(int if_req, unsigned is_supl, unsigned long ipv4_addr, unsigned char * ipv6_addr)
 {
    AGpsType                            agps_type;
 
    agps_type = is_supl? AGPS_TYPE_SUPL : AGPS_TYPE_ANY;  // No C2k?
 
-   if (if_req)
+   if (if_req == 0)
    {
       // Inform GpsLocationProvider (subject to cancellation if data call should not be bring down)
       loc_eng_report_agps_status(
