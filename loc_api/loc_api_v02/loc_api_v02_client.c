@@ -680,6 +680,13 @@ static bool locClientHandleIndication(
       break;
     }
 
+    case QMI_LOC_EVENT_LOCATION_SERVER_CONNECTION_REQ_IND_V02:
+    {
+      //locClientHandleLocServerConnReqInd(user_handle, msg_id, ind_buf, ind_buf_len);
+      status = true;
+      break;
+    }
+
     //-------------------------------------------------------------------------
 
     // handle the response indications
@@ -694,6 +701,18 @@ static bool locClientHandleIndication(
     }
     // predicted orbits data response indication
     case QMI_LOC_INJECT_PREDICTED_ORBITS_DATA_IND_V02:
+    {
+      //locClientHandleInjectPredictedOrbitsDataInd(user_handle, msg_id, ind_buf, ind_buf_len);
+      status = true;
+      break;
+    }
+
+    case QMI_LOC_INJECT_SENSOR_DATA_IND_V02 :
+    {
+      //locClientHandleInjectSensorDataInd(user_handle, msg_id, ind_buf, ind_buf_len);
+      status = true;
+      break;
+    }
     // for indications that only have a "status" field
     case QMI_LOC_NI_USER_RESPONSE_IND_V02:
     case QMI_LOC_INJECT_UTC_TIME_IND_V02:

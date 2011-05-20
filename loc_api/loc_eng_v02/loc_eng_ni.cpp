@@ -141,6 +141,7 @@ static void loc_ni_respond
    memset(&ni_resp,0, sizeof(ni_resp));
 
    ni_resp.userResp = resp;
+   ni_resp.notificationType = request_pass_back->notificationType;
 
    // copy SUPL payload from request
    if(request_pass_back->NiSuplInd_valid == 1)
@@ -402,10 +403,10 @@ static void loc_ni_request_handler(
          notif.requestor_id_encoding = GPS_ENC_UNKNOWN;
 
          // Set default_response & notify_flags
-         loc_ni_fill_notif_verify_type(&notif, vx_req->notificationType);
+         loc_ni_fill_notif_verify_type(&notif, ni_req_ptr->notificationType);
 
          // Privacy override handling
-         if (vx_req->notificationType ==
+         if (ni_req_ptr->notificationType ==
              eQMI_LOC_NI_USER_NOTIFY_VERIFY_PRIVACY_OVERRIDE_V02)
          {
             loc_eng_mute_one_session();
@@ -457,10 +458,10 @@ static void loc_ni_request_handler(
          }
 
          // Set default_response & notify_flags
-         loc_ni_fill_notif_verify_type(&notif, umts_cp_req->notificationPrivType);
+         loc_ni_fill_notif_verify_type(&notif, ni_req_ptr->notificationType);
 
          // Privacy override handling
-         if (umts_cp_req->notificationPrivType ==
+         if (ni_req_ptr->notificationType ==
              eQMI_LOC_NI_USER_NOTIFY_VERIFY_PRIVACY_OVERRIDE_V02)
          {
             loc_eng_mute_one_session();
@@ -477,7 +478,7 @@ static void loc_ni_request_handler(
          memset(notif.text, 0, sizeof notif.text);
          memset(notif.requestor_id, 0, sizeof notif.requestor_id);
          // Client name
-         if (supl_req->flags & QMI_LOC_NI_CLIENT_NAME_PRESENT_V02)
+         if (supl_req->valid_flags & QMI_LOC_SUPL_CLIENT_NAME_MASK_V02)
          {
             hexcode(notif.text, sizeof notif.text,
                    supl_req->clientName.formattedString,   /* buffer */
@@ -491,7 +492,7 @@ static void loc_ni_request_handler(
          }
 
          // Requestor ID
-         if (supl_req->flags & QMI_LOC_NI_REQUESTOR_ID_PRESENT_V02)
+         if (supl_req->valid_flags & QMI_LOC_SUPL_REQUESTOR_ID_MASK_V02)
          {
            hexcode(notif.requestor_id, sizeof notif.requestor_id,
                    supl_req->requestorId.formattedString,  /* buffer */
@@ -505,7 +506,7 @@ static void loc_ni_request_handler(
          }
 
         // Encoding type
-         if (supl_req->flags & QMI_LOC_NI_ENCODING_TYPE_PRESENT_V02)
+         if (supl_req->valid_flags & QMI_LOC_SUPL_DATA_CODING_SCHEME_MASK_V02)
          {
            notif.text_encoding = convert_encoding_type(supl_req->dataCodingScheme);
            notif.requestor_id_encoding = convert_encoding_type(supl_req->dataCodingScheme);
@@ -516,10 +517,10 @@ static void loc_ni_request_handler(
          }
 
          // Set default_response & notify_flags
-         loc_ni_fill_notif_verify_type(&notif, supl_req->notificationPrivType);
+         loc_ni_fill_notif_verify_type(&notif, ni_req_ptr->notificationType);
 
          // Privacy override handling
-         if (supl_req->notificationPrivType ==
+         if (ni_req_ptr->notificationType ==
             eQMI_LOC_NI_USER_NOTIFY_VERIFY_PRIVACY_OVERRIDE_V02)
          {
            loc_eng_mute_one_session();

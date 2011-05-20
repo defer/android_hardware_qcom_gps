@@ -1,4 +1,4 @@
-/* Copyright (c) 2011, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2011 Code Aurora Forum. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -24,10 +24,18 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
  */
-
 #ifndef QMILOC_SERVICE_H
 #define QMILOC_SERVICE_H
+
+/** @defgroup qmiLoc_qmi_consts Constant values defined in the IDL */
+/** @defgroup qmiLoc_qmi_msg_ids Constant values for QMI message IDs */
+/** @defgroup qmiLoc_qmi_enums Enumerated types used in QMI messages */
+/** @defgroup qmiLoc_qmi_messages Structures sent as QMI messages */
+/** @defgroup qmiLoc_qmi_aggregates Aggregate types used in QMI messages */
+/** @defgroup qmiLoc_qmi_accessor Accessor for QMI service object */
+/** @defgroup qmiLoc_qmi_version Constant values for versioning information */
 
 #include <stdint.h>
 #include "qmi_idl_lib.h"
@@ -185,39 +193,6 @@ extern "C" {
 /**  Maximum NMEA string length.  */
 #define QMI_LOC_NMEA_STRING_MAX_LENGTH_V02 200
 
-/**  Mask to denote that client name is present in
-  a NI notify verify request event.This mask is set in
-  the "flags" field of a notify verify structure.  */
-#define QMI_LOC_NI_CLIENT_NAME_PRESENT_V02 0x0001
-
-/**  Mask to denote that client external address
- is present in a NI notify verify request event.  */
-#define QMI_LOC_NI_CLIENT_EXTADDR_PRESENT_V02 0x0002
-
-/**  Mask to denote that requestor id field
- is present in a NI notify verify request event.
- This mask is set in the "flags" field of a
- notify verify structure.   */
-#define QMI_LOC_NI_REQUESTOR_ID_PRESENT_V02 0x0020
-
-/**  Mask to denote that codeword field is present
- in a NI notify verify request event.
- This mask is set in the "flags" field of a
- notify verify structure.  */
-#define QMI_LOC_NI_CODEWORD_PRESENT_V02 0x0040
-
-/**  Mask to denote that service type id field
- is present in a NI notify verify request event.
- This mask is set in the "flags" field of a
- notify verify structure.  */
-#define QMI_LOC_NI_SERVICE_TYPE_ID_PRESENT_V02 0x0080
-
-/**  Mask to denote that encoding type field
- is present in a NI notify verify request event.
- This mask is set in the "flags" field of a
- notify verify structure.  */
-#define QMI_LOC_NI_ENCODING_TYPE_PRESENT_V02 0x0100
-
 /**  Maximum length of the requestor ID string.  */
 #define QMI_LOC_NI_MAX_REQUESTOR_ID_LENGTH_V02 200
 
@@ -239,8 +214,76 @@ extern "C" {
 /**  Vertical accuracy is valid in the QoP.  */
 #define QMI_LOC_NI_SUPL_QOP_DELAY_VALID_V02 0x08
 
+/**  Maximum URL length accepted by location engine.  */
+#define QMI_LOC_MAX_SERVER_ADDR_LENGTH_V02 256
+
+/**  IPV6 address length in bytes.  */
+#define QMI_LOC_IPV6_ADDR_LENGTH_V02 8
+
+/**  IPV4 server address type.  */
+#define QMI_LOC_SERVER_ADDR_TYPE_IPV4_MASK_V02 0x0001
+
+/**  IPV6 server address type.  */
+#define QMI_LOC_SERVER_ADDR_TYPE_IPV6_MASK_V02 0x0002
+
+/**  URL server address type.  */
+#define QMI_LOC_SERVER_ADDR_TYPE_URL_MASK_V02 0x0004
+
 /**  SUPL hash length.  */
 #define QMI_LOC_NI_SUPL_HASH_LENGTH_V02 8
+
+/**  Mask to denote that the server information
+    is present in a NI SUPL notify verify request event. This mask is set in
+    the "valid_flags" field of a notify verify structure.  */
+#define QMI_LOC_SUPL_SERVER_INFO_MASK_V02 0x0001
+
+/**  Mask to denote that the SUPL session id
+     is present in a NI SUPL notify verify request event.
+     This mask is set in the "valid_flags" field of a
+     notify verify structure.   */
+#define QMI_LOC_SUPL_SESSION_ID_MASK_V02 0x0002
+
+/**  Mask to denote that supl hash is present
+     in a NI notify verify request event.
+     This mask is set in the "valid_flags" field of a
+     notify verify structure.   */
+#define QMI_LOC_SUPL_HASH_MASK_V02 0x0004
+
+/**  Mask to denote that position method is present
+     in a NI SUPL notify verify request event.
+     This mask is set in the "valid_flags" field of a
+     notify verify structure.  */
+#define QMI_LOC_SUPL_POS_METHOD_MASK_V02 0x0008
+
+/**  Mask to denote that data coding scheme
+     is present in a NI SUPL notify verify request event.
+     This mask is set in the "valid_flags" field of a
+     notify verify structure.  */
+#define QMI_LOC_SUPL_DATA_CODING_SCHEME_MASK_V02 0x0010
+
+/**  Mask to denote that requestor id
+     is present in a NI notify verify request event.
+     This mask is set in the "valid_flags" field of a
+     notify verify structure.  */
+#define QMI_LOC_SUPL_REQUESTOR_ID_MASK_V02 0x0020
+
+/**  Mask to denote that requestor id
+     is present in a NI notify verify request event.
+     This mask is set in the "valid_flags" field of a
+     notify verify structure.  */
+#define QMI_LOC_SUPL_CLIENT_NAME_MASK_V02 0x0040
+
+/**  Mask to denote that the quality of position
+     is present in a NI notify verify request event.
+     This mask is set in the "valid_flags" field of a
+     notify verify structure.  */
+#define QMI_LOC_SUPL_QOP_MASK_V02 0x0080
+
+/**  Mask to denote that the user response timer
+     is present in a NI notify verify request event.
+     This mask is set in the "valid_flags" field of a
+     notify verify structure.  */
+#define QMI_LOC_SUPL_USER_RESP_TIMER_MASK_V02 0x0100
 
 /**  Maximum client address length allowed.  */
 #define QMI_LOC_NI_MAX_EXT_CLIENT_ADDRESS_V02 20
@@ -248,8 +291,59 @@ extern "C" {
 /**  Maximum codeword length allowed.  */
 #define QMI_LOC_NI_CODEWORD_MAX_LENGTH_V02 20
 
-/**  Maximum URL length accepted by location engine.  */
-#define QMI_LOC_MAX_SERVER_ADDR_LENGTH_V02 256
+/**  Mask to denote that invoke id
+     is present in a NI notify verify request event.
+     This mask is set in the "valid flags" field of a
+     notify verify structure.  */
+#define QMI_LOC_UMTS_CP_INVOKE_ID_MASK_V02 0x0001
+
+/**  Mask to denote that data coding scheme
+     is present in a NI notify verify request event.
+     This mask is set in the "valid flags" field of a
+     notify verify structure.  */
+#define QMI_LOC_UMTS_CP_DATA_CODING_SCHEME_MASK_V02 0x0002
+
+/**  Mask to denote that notification text
+     is present in a NI notify verify request event.
+     This mask is set in the "valid flags" field of a
+     notify verify structure.  */
+#define QMI_LOC_UMTS_CP_NOTIFICATION_TEXT_MASK_V02 0x0004
+
+/**  Mask to denote that client address
+     is present in a NI notify verify request event.
+     This mask is set in the "valid flags" field of a
+     notify verify structure.  */
+#define QMI_LOC_UMTS_CP_CLIENT_ADDRESS_MASK_V02 0x0008
+
+/**  Mask to denote that location type
+     is present in a NI notify verify request event.
+     This mask is set in the "valid flags" field of a
+     notify verify structure.  */
+#define QMI_LOC_UMTS_CP_LOCATION_TYPE_MASK_V02 0x0010
+
+/**  Mask to denote that requestor id
+     is present in a NI notify verify request event.
+     This mask is set in the "valid flags" field of a
+     notify verify structure.  */
+#define QMI_LOC_UMTS_CP_REQUESTOR_ID_MASK_V02 0x0020
+
+/**  Mask to denote that codeword string
+     is present in a NI notify verify request event.
+     This mask is set in the "valid flags" field of a
+     notify verify structure.  */
+#define QMI_LOC_UMTS_CP_CODEWORD_STRING_MASK_V02 0x0040
+
+/**  Mask to denote that service type
+     is present in a NI notify verify request event.
+     This mask is set in the "valid flags" field of a
+     notify verify structure.  */
+#define QMI_LOC_UMTS_CP_SERVICE_TYPE_MASK_V02 0x0080
+
+/**  Mask to denote that the user response timer
+     is present in a NI notify verify request event.
+     This mask is set in the "valid flags" field of a
+     notify verify structure.  */
+#define QMI_LOC_UMTS_CP_USER_RESP_TIMER_MASK_V02 0x0100
 
 /**  Maximum number of NTP Servers sent out with this event. */
 #define QMI_LOC_MAX_NTP_SERVERS_V02 3
@@ -280,12 +374,6 @@ extern "C" {
 
 /**  Enable VTG type.  */
 #define QMI_LOC_NMEA_MASK_VTG_V02 0x0010
-
-/**  IPV4 server address type.  */
-#define QMI_LOC_SERVER_ADDR_TYPE_IPV4_MASK_V02 0x0001
-
-/**  URL server address type.  */
-#define QMI_LOC_SERVER_ADDR_TYPE_URL_MASK_V02 0x0002
 
 /**  All assistance data is to be deleted.  */
 #define QMI_LOC_ASSIST_DATA_MASK_ALL_V02 0xFFFFFFFF
@@ -320,21 +408,6 @@ extern "C" {
 
 /**  Maximum APN profiles supported. */
 #define QMI_LOC_MAX_APN_PROFILES_V02 6
-
-/**  CDMA Serving system.  */
-#define QMI_LOC_APN_PROFILE_SRV_SYS_CDMA_MASK_V02 0x01
-
-/**  HDR serving system.  */
-#define QMI_LOC_APN_PROFILE_SRV_SYS_HDR_MASK_V02 0x02
-
-/**  GSM serving system.  */
-#define QMI_LOC_APN_PROFILE_SRV_SYS_GSM_MASK_V02 0x04
-
-/**  WCDMA serving system.  */
-#define QMI_LOC_APN_PROFILE_SRV_SYS_WCDMA_MASK_V02 0x08
-
-/**  LTE serving system. */
-#define QMI_LOC_APN_PROFILE_SRV_SYS_LTE_MASK_V02 0x10
 /**
     @}
   */
@@ -1026,9 +1099,6 @@ typedef enum {
   */
 typedef struct {
 
-  qmiLocNiNotifyVerifyEnumT_v02 notificationType;
-  /**<   Type of notification/verification to be performed.  */
-
   uint8_t posQosIncl;
   /**<   Whether quality of service is included:\n
          - TRUE --  QoS included\n
@@ -1174,16 +1244,86 @@ typedef struct {
     @}
   */
 
+/** @addtogroup qmiLoc_qmi_enums
+    @{
+  */
+typedef enum {
+  QMILOCSERVERTYPEENUMT_MIN_ENUM_VAL_V02 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
+  eQMI_LOC_SERVER_TYPE_CDMA_PDE_V02 = 1, /**<  Server type is CDMA PDE.  */
+  eQMI_LOC_SERVER_TYPE_CDMA_MPC_V02 = 2, /**<  Server type is CDMA MPC.  */
+  eQMI_LOC_SERVER_TYPE_UMTS_SLP_V02 = 3, /**<  Server type is UMTS SLP.
+ Server type is custom PDE.  */
+  eQMI_LOC_SERVER_TYPE_CUSTOM_PDE_V02 = 4,
+  QMILOCSERVERTYPEENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
+}qmiLocServerTypeEnumT_v02;
+/**
+    @}
+  */
+
 /** @addtogroup qmiLoc_qmi_aggregates
     @{
   */
 typedef struct {
 
-  qmiLocNiNotifyVerifyEnumT_v02 notificationPrivType;
-  /**<   Notification type.  */
+  uint32_t addr;
+  /**<   IPV4 address.  */
 
-  uint16_t flags;
+  uint16_t port;
+  /**<   IPV4 Port.  */
+}qmiLocIpV4AddrStructType_v02;  /* Type */
+/**
+    @}
+  */
+
+/** @addtogroup qmiLoc_qmi_aggregates
+    @{
+  */
+typedef struct {
+
+  uint16_t addr[QMI_LOC_IPV6_ADDR_LENGTH_V02];
+  /**<   IPV6 address */
+
+  uint32_t port;
+  /**<   IPV6 port  */
+}qmiLocIpV6AddrStructType_v02;  /* Type */
+/**
+    @}
+  */
+
+/** @addtogroup qmiLoc_qmi_aggregates
+    @{
+  */
+typedef struct {
+
+  qmiLocServerTypeEnumT_v02 serverType;
+  /**<   Type of server, as defined in qmiLocServerTypeEnumT.  */
+
+  uint8_t suplServerAddrTypeMask;
+  /**<   IPV4, IPV6, URL.  */
+
+  qmiLocIpV4AddrStructType_v02 ipv4Addr;
+  /**<   IPV4 address and port.  */
+
+  qmiLocIpV6AddrStructType_v02 ipv6Addr;
+  /**<   IPV6 address and port.  */
+
+  char urlAddr[QMI_LOC_MAX_SERVER_ADDR_LENGTH_V02 + 1];
+  /**<   URL.  */
+}qmiLocNiSuplServerInfoStructT_v02;  /* Type */
+/**
+    @}
+  */
+
+/** @addtogroup qmiLoc_qmi_aggregates
+    @{
+  */
+typedef struct {
+
+  uint32_t valid_flags;
   /**<   Indicates which of the following are present.  */
+
+  qmiLocNiSuplServerInfoStructT_v02 suplServerInfo;
+  /**<   SUPL Server Information.  */
 
   uint8_t suplSessionId[QMI_LOC_NI_SUPL_SLP_SESSION_ID_BYTE_LENGTH_V02];
   /**<   SUPL session ID.  */
@@ -1251,14 +1391,11 @@ typedef struct {
   */
 typedef struct {
 
-  qmiLocNiNotifyVerifyEnumT_v02 notificationPrivType;
-  /**<   Notification type.  */
+  uint16_t valid_flags;
+  /**<   Which of the following fields are valid.  */
 
   uint8_t invokeId;
   /**<   Supplementary Services invoke ID.  */
-
-  uint16_t valid_flags;
-  /**<   Which of the following fields are valid.  */
 
   qmiLocNiDataCodingSchemeEnumT_v02 dataCodingScheme;
   /**<   Type of data encoding scheme for the text.
@@ -1325,6 +1462,10 @@ typedef struct {
   */
 /** Indication Message; Indicates an NI notify/verify request to the client. */
 typedef struct {
+
+  /* Mandatory */
+  qmiLocNiNotifyVerifyEnumT_v02 notificationType;
+  /**<   Type of notification/verification to be performed.  */
 
   /* Optional */
   uint8_t NiVxInd_valid;  /**< Must be set to true if NiVxInd is being passed */
@@ -1865,6 +2006,10 @@ typedef struct {
   /* Mandatory */
   qmiLocNiUserRespEnumT_v02 userResp;
   /**<   User accepted or denied.  */
+
+  /* Mandatory */
+  qmiLocNiNotifyVerifyEnumT_v02 notificationType;
+  /**<   Type of notification/verification performed.  */
 
   /* Optional */
   uint8_t NiVxPayload_valid;  /**< Must be set to true if NiVxPayload is being passed */
@@ -2499,37 +2644,6 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
-    @{
-  */
-typedef enum {
-  QMILOCSERVERTYPEENUMT_MIN_ENUM_VAL_V02 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
-  eQMI_LOC_SERVER_TYPE_CDMA_PDE_V02 = 1, /**<  Server type is CDMA PDE.  */
-  eQMI_LOC_SERVER_TYPE_CDMA_MPC_V02 = 2, /**<  Server type is CDMA MPC.  */
-  eQMI_LOC_SERVER_TYPE_UMTS_SLP_V02 = 3, /**<  Server type is UMTS SLP.
- Server type is custom PDE.  */
-  eQMI_LOC_SERVER_TYPE_CUSTOM_PDE_V02 = 4,
-  QMILOCSERVERTYPEENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
-}qmiLocServerTypeEnumT_v02;
-/**
-    @}
-  */
-
-/** @addtogroup qmiLoc_qmi_aggregates
-    @{
-  */
-typedef struct {
-
-  uint32_t addr;
-  /**<   IP address.  */
-
-  uint16_t port;
-  /**<   Port.  */
-}qmiLocIpV4AddrStructType_v02;  /* Type */
-/**
-    @}
-  */
-
 /** @addtogroup qmiLoc_qmi_messages
     @{
   */
@@ -2544,6 +2658,10 @@ typedef struct {
   uint8_t ipv4Addr_valid;  /**< Must be set to true if ipv4Addr is being passed */
   qmiLocIpV4AddrStructType_v02 ipv4Addr;
   /**<   IPV4 address and port.  */
+
+  /* Optional */
+  uint8_t ipv6Addr_valid;  /**< Must be set to true if ipv6Addr is being passed */
+  qmiLocIpV6AddrStructType_v02 ipv6Addr;
 
   /* Optional */
   uint8_t urlAddr_valid;  /**< Must be set to true if urlAddr is being passed */
@@ -2604,14 +2722,15 @@ typedef struct {
   qmiLocServerTypeEnumT_v02 serverType;
   /**<   Type of server, as defined in qmiLocServerTypeEnumT.  */
 
-  /* Mandatory */
-  uint8_t serverAddrTypeMask;
-  /**<   IPV4, URL, or both.                          */
-
   /* Optional */
   uint8_t ipv4Addr_valid;  /**< Must be set to true if ipv4Addr is being passed */
   qmiLocIpV4AddrStructType_v02 ipv4Addr;
   /**<   IPV4 address and port.  */
+
+  /* Optional */
+  uint8_t ipv6Addr_valid;  /**< Must be set to true if ipv6Addr is being passed */
+  qmiLocIpV6AddrStructType_v02 ipv6Addr;
+  /**<   IPV6 address and port.  */
 
   /* Optional */
   uint8_t urlAddr_valid;  /**< Must be set to true if urlAddr is being passed */
@@ -3357,9 +3476,6 @@ typedef enum {
     @{
   */
 typedef struct {
-
-  uint32_t servingSystemMask;
-  /**<   Serving system on which this APN should be used  */
 
   qmiLocServerPDNEnumT_v02 pdnType;
   /**<   Pdp type of the APN profile */

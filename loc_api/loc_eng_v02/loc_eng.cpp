@@ -87,12 +87,14 @@ static const void* loc_eng_get_extension(const char* name);
 
 // Function declarations for sLocEngAGpsInterface
 static void loc_eng_agps_init(AGpsCallbacks* callbacks);
-static int loc_eng_data_conn_open(const char* apn);
+static int loc_eng_data_conn_open(const char* apn, AGpsBearerType bearerType);
 static int loc_eng_data_conn_closed();
 static int loc_eng_data_conn_failed();
 static int loc_eng_set_server(AGpsType type, const char *hostname, int port);
 static int loc_eng_set_server_proxy(AGpsType type, const char *hostname, int port);
 
+static bool resolve_in_addr(const char *host_addr,
+                            struct in_addr *in_addr_ptr);
 
 // Internal functions
 static int loc_eng_deinit();
@@ -124,6 +126,20 @@ static void loc_eng_deferred_action_thread(void* arg);
 
 static void loc_eng_delete_aiding_data_action(void);
 
+//ATL functions
+static void loc_eng_atl_state_reset();
+static bool loc_eng_enqueue_atl_conn_handle(
+   uint32_t conn_handle, bool responded);
+static bool loc_eng_dequeue_atl_conn_handle( uint32_t conn_handle);
+static bool loc_eng_is_atl_conn_handle_queue_empty();
+static void loc_eng_process_conn_request(
+   const qmiLocEventLocationServerConnectionReqIndMsgT_v02 * server_request_ptr);
+static void loc_eng_send_data_status(
+   uint32_t conn_handle, bool status, qmiLocServerRequestEnumT_v02 request_type);
+static void loc_eng_process_conn_ind(loc_eng_atl_ind_e_type ind);
+static void loc_eng_process_conn_request(
+   const qmiLocEventLocationServerConnectionReqIndMsgT_v02 * server_request_ptr);
+static int loc_eng_set_apn (const char* apn);
 
 // Defines the GpsInterface in gps.h
 static const GpsInterface sLocEngInterface =
@@ -143,6 +159,9 @@ static const GpsInterface sLocEngInterface =
 // Global data structure for location engine
 loc_eng_data_s_type loc_eng_data;
 int loc_eng_inited = 0; /* not initialized */
+
+//ATL state
+loc_eng_atl_info_s_type loc_eng_atl_state;
 
 static const AGpsInterface sLocEngAGpsInterface =
 {
@@ -243,7 +262,6 @@ static int loc_eng_init(GpsCallbacks* callbacks)
       return (-EINVAL);
    }
 
-
 #if DISABLE_CLEANUP
    if (loc_eng_data.deferred_action_thread) {
         LOC_UTIL_LOGD("loc_eng_init. already initialized so return SUCCESS\n");
@@ -304,6 +322,9 @@ static int loc_eng_init(GpsCallbacks* callbacks)
    // a timeout based on this value internally?
    loc_eng_data.fix_criteria.preferred_time = 30000; //in ms
 
+   //reset ATL state
+   loc_eng_atl_state_reset();
+
    loc_eng_data.aiding_data_for_deletion = 0;
 
    // initialize the synchronous request API, this API
@@ -321,7 +342,8 @@ static int loc_eng_init(GpsCallbacks* callbacks)
         QMI_LOC_EVENT_ENGINE_STATE_REPORT_V02 |
         QMI_LOC_EVENT_FIX_SESSION_STATUS_REPORT_V02 |
         QMI_LOC_EVENT_NMEA_POSITION_REPORT_V02 |
-        QMI_LOC_EVENT_NI_NOTIFY_VERIFY_REQUEST_V02;
+        QMI_LOC_EVENT_NI_NOTIFY_VERIFY_REQUEST_V02|
+        QMI_LOC_EVENT_LOCATION_SERVER_REQUEST_V02;
 
    status = locClientOpen(event_mask, loc_event_cb, loc_resp_cb,
                            &loc_eng_data.client_handle);
@@ -622,6 +644,18 @@ static int loc_eng_stop()
 
    memset(&stop_msg, 0, sizeof(stop_msg));
 
+   pthread_mutex_lock(&(loc_eng_data.deferred_stop_mutex));
+    // work around problem with loc_eng_stop when AGPS requests are pending
+    // we defer stopping the engine until the AGPS request is done
+   if (loc_eng_data.agps_request_pending)
+   {
+      loc_eng_data.stop_request_pending = true;
+      LOC_UTIL_LOGD("loc_eng_stop - deferring stop until AGPS data call is finished\n");
+      pthread_mutex_unlock(&(loc_eng_data.deferred_stop_mutex));
+      return 0;
+   }
+   pthread_mutex_unlock(&(loc_eng_data.deferred_stop_mutex));
+
    // dummy session id
    stop_msg.sessionId = LOC_FIX_SESSION_ID_DEFAULT;
 
@@ -701,22 +735,27 @@ static int  loc_eng_set_position_mode(GpsPositionMode mode, GpsPositionRecurrenc
           loc_eng_data.client_handle, min_interval, mode);
 
    //store the fix criteria
-
    loc_eng_data.fix_criteria.mode = mode;
    loc_eng_data.fix_criteria.recurrence = recurrence;
-   loc_eng_data.fix_criteria.min_interval = min_interval;
+   if(min_interval == 0)
+   {
+      loc_eng_data.fix_criteria.min_interval = MIN_POSSIBLE_FIX_INTERVAL;
+   }
+   else
+   {
+      loc_eng_data.fix_criteria.min_interval = min_interval;
+   }
+
    loc_eng_data.fix_criteria.preferred_accuracy = preferred_accuracy;
    loc_eng_data.fix_criteria.preferred_time = preferred_time;
 
    if(true == loc_eng_data.navigating)
    {
-     //fix is in progress, send a restart
-     LOC_UTIL_LOGD ("loc_eng_set_position mode called when fix is in progress, "
-           ": restarting the fix\n");
-
-     rc = loc_eng_start();
+      //fix is in progress, send a restart
+      LOC_UTIL_LOGD ("loc_eng_set_position mode called when fix is in progress, "
+                     ": restarting the fix\n");
+      rc = loc_eng_start();
    }
-
    return rc;
 }
 
@@ -834,7 +873,6 @@ static int loc_eng_inject_location(double latitude, double longitude, float accu
                 , status, inject_pos_ind.status);
       return -EIO;
    }
-
    return  0;
 }
 
@@ -874,7 +912,6 @@ static void loc_eng_delete_aiding_data(GpsAidingData f)
       /* hold a wake lock while events are pending for deferred_action_thread */
       loc_eng_data.acquire_wakelock_cb();
 
-      //??? BUG!!action_flag is defined to be an enum and is being used as bit mask
       loc_eng_data.deferred_action_flags |= DEFERRED_ACTION_DELETE_AIDING;
       pthread_cond_signal(&loc_eng_data.deferred_action_cond);
 
@@ -1570,11 +1607,14 @@ static void loc_eng_process_loc_event (uint32_t loc_event_id,
       case QMI_LOC_EVENT_NI_NOTIFY_VERIFY_REQ_IND_V02:
          loc_eng_ni_callback(loc_event_payload.pNiNotifyVerifyReqEvent);
          break;
+
+      // AGPS data request
+      case QMI_LOC_EVENT_LOCATION_SERVER_CONNECTION_REQ_IND_V02:
+         loc_eng_process_conn_request(loc_event_payload.pLocationServerConnReqEvent);
+         break;
    }
 
 }
-
-
 
 /*===========================================================================
 FUNCTION    loc_eng_agps_init
@@ -1595,9 +1635,9 @@ SIDE EFFECTS
 static void loc_eng_agps_init(AGpsCallbacks* callbacks)
 {
 
-//???   loc_eng_data.agps_status_cb = callbacks->status_cb;
+   loc_eng_data.agps_status_cb = callbacks->status_cb;
 
-   LOC_UTIL_LOGD("loc_eng_agps_init called, ignoring the callbacks \n");
+   LOC_UTIL_LOGV("loc_eng_agps_init called\n");
 
    // Set server addresses which came before init
    if (supl_host_set)
@@ -1610,46 +1650,6 @@ static void loc_eng_agps_init(AGpsCallbacks* callbacks)
       // loc_c2k_addr_is_set will be set in here
       loc_eng_set_server(AGPS_TYPE_C2K, c2k_host_buf, c2k_port_buf);
    }
-}
-
-
-/*===========================================================================
-
-FUNCTION resolve_in_addr
-
-DESCRIPTION
-   Translates a hostname to in_addr struct
-
-DEPENDENCIES
-   n/a
-
-RETURN VALUE
-   true if successful
-
-SIDE EFFECTS
-   n/a
-
-===========================================================================*/
-static bool resolve_in_addr(const char *host_addr, struct in_addr *in_addr_ptr)
-{
-   struct hostent             *hp;
-   hp = gethostbyname(host_addr);
-   if (hp != NULL) /* DNS OK */
-   {
-      memcpy(in_addr_ptr, hp->h_addr_list[0], hp->h_length);
-   }
-   else
-   {
-      /* Try IP representation */
-      if (inet_aton(host_addr, in_addr_ptr) == 0)
-      {
-         /* IP not valid */
-         LOC_UTIL_LOGE("DNS query on '%s' failed\n", host_addr);
-         return false;
-      }
-   }
-
-   return true;
 }
 
 /*===========================================================================
@@ -1689,7 +1689,7 @@ static int loc_eng_set_server(AGpsType type, const char* hostname, int port)
    if (len >= sizeof(url))
    {
       LOC_UTIL_LOGE("loc_eng_set_server, URL too long (len=%d).\n", len);
-      return -1;
+      return -EINVAL;
    }
 
   switch (type) {
@@ -1703,7 +1703,7 @@ static int loc_eng_set_server(AGpsType type, const char* hostname, int port)
       if (!resolve_in_addr(hostname, &addr))
       {
          LOC_UTIL_LOGE("loc_eng_set_server, hostname %s cannot be resolved.\n", hostname);
-         return -2;
+         return -EIO;
       }
 
       set_server_req.serverType = eQMI_LOC_SERVER_TYPE_CDMA_PDE_V02;
@@ -1734,37 +1734,13 @@ static int loc_eng_set_server(AGpsType type, const char* hostname, int port)
    {
       LOC_UTIL_LOGE ("loc_eng_set_server failed\n, status = %d, "
                 "set_server_ind.status = %d\n", status, set_server_ind.status);
-     // return -1; //?? verify if JNI checks for errors
+      return -EIO;
    }
    else
    {
       LOC_UTIL_LOGV("loc_eng_set_server successful\n");
    }
 
-   return 0;
-}
-
-// does nothing, defined to avould passing a NULL
-// int he AGPs interface
-static int loc_eng_data_conn_open(const char* apn)
-{
-   LOC_UTIL_LOGD("loc_eng_data_conn_open called \n");
-   return 0;
-}
-
-// does nothing, defined to avould passing a NULL
-// int he AGPs interface
-static int loc_eng_data_conn_closed()
-{
-   LOC_UTIL_LOGD("loc_eng_data_conn_closed called \n");
-   return 0;
-}
-
-// does nothing, defined to avould passing a NULL
-// int he AGPs interface
-static int loc_eng_data_conn_failed()
-{
-   LOC_UTIL_LOGD("loc_eng_data_conn_failed called \n");
    return 0;
 }
 
@@ -1863,7 +1839,723 @@ static void loc_eng_delete_aiding_data_action(void)
             "delete_data_ind.status = %d\n", status, delete_data_ind.status);
 }
 
+/*===========================================================================
+FUNCTION    loc_eng_report_agps_status
 
+DESCRIPTION
+   This functions calls the native callback function for GpsLocationProvider
+to update AGPS status. The expected behavior from GpsLocationProvider is the following.
+
+   For status GPS_REQUEST_AGPS_DATA_CONN, GpsLocationProvider will inform the open
+   status of the data connection if it is already open, or try to bring up a data
+   connection when it is not.
+
+   For status GPS_RELEASE_AGPS_DATA_CONN, GpsLocationProvider will try to bring down
+   the data connection when it is open. (use this carefully)
+
+   Currently, no actions are taken for other status, such as GPS_AGPS_DATA_CONNECTED,
+   GPS_AGPS_DATA_CONN_DONE or GPS_AGPS_DATA_CONN_FAILED.
+
+DEPENDENCIES
+   None
+
+RETURN VALUE
+   None
+
+SIDE EFFECTS
+   N/A
+
+===========================================================================*/
+static void loc_eng_report_agps_status(AGpsType type,
+                                       AGpsStatusValue status,
+                                       unsigned long ipv4_addr,
+                                       unsigned char *ipv6_addr)
+{
+   AGpsStatus agpsStatus;
+
+   if (loc_eng_data.agps_status_cb == NULL)
+   {
+      LOC_UTIL_LOGE("loc_eng_report_agps_status, callback not initialized.\n");
+      return;
+   }
+
+   LOC_UTIL_LOGI("loc_eng_report_agps_status, type = %d, status = %d, ipv4_addr = %u\n",
+         (int) type, (int) status,  (int) ipv4_addr);
+
+   agpsStatus.size = sizeof(agpsStatus);
+   agpsStatus.type = type;
+   agpsStatus.status = status;
+   agpsStatus.ipv4_addr = ipv4_addr;
+   if(NULL != ipv6_addr)
+   {
+      memcpy(agpsStatus.ipv6_addr, ipv6_addr, 16);
+   }
+   else
+   {
+      memset(agpsStatus.ipv6_addr, 0, 16);
+   }
+
+   switch (status)
+   {
+      case GPS_REQUEST_AGPS_DATA_CONN:
+         loc_eng_data.agps_status_cb(&agpsStatus);
+         break;
+      case GPS_RELEASE_AGPS_DATA_CONN:
+         // This will not close always-on connection. Comment out if it does.
+         loc_eng_data.agps_status_cb(&agpsStatus);
+         break;
+   }
+}
+
+/*===========================================================================
+FUNCTION    loc_eng_send_data_status
+
+DESCRIPTION
+   This function makes  sends the status of data call to the modem
+
+DEPENDENCIES
+   Requires loc_eng_data.apn_name
+
+RETURN VALUE
+   None
+
+SIDE EFFECTS
+   N/A
+
+===========================================================================*/
+static void loc_eng_send_data_status(
+   uint32_t conn_handle, bool status, qmiLocServerRequestEnumT_v02 request_type)
+{
+   locClientStatusEnumType result = eLOC_CLIENT_SUCCESS;
+   locClientReqUnionType req_union;
+   qmiLocInformLocationServerConnStatusReqMsgT_v02 conn_status_req;
+   qmiLocInformLocationServerConnStatusIndMsgT_v02 conn_status_ind;
+
+   memset(&conn_status_req, 0, sizeof(conn_status_req));
+   memset(&conn_status_ind, 0, sizeof(conn_status_ind));
+
+      // Fill in data
+   conn_status_req.connHandle = conn_handle;
+
+   conn_status_req.requestType = request_type;
+
+   // TBD handle multiple server protocols
+  // conn_status_req.serverProtocol_valid = 1;
+  // conn_status_req.serverProtocol = loc_eng_atl_state.server_protocol;
+
+   conn_status_req.statusType = (status == true) ?
+      eQMI_LOC_SERVER_REQ_STATUS_SUCCESS_V02:eQMI_LOC_SERVER_REQ_STATUS_FAILURE_V02;
+
+   if(request_type == eQMI_LOC_SERVER_REQUEST_OPEN_V02 && true == status)
+   {
+      //TBD :handle multiple apn types
+      strlcpy(conn_status_req.apnProfile.apnName, loc_eng_atl_state.apn_profile.apnName,
+              sizeof(conn_status_req.apnProfile.apnName) );
+      conn_status_req.apnProfile_valid = 1;
+
+      LOC_UTIL_LOGI("%s:%d]: ATL open APN name = [%s]\n",
+                     __func__, __LINE__,
+                    loc_eng_atl_state.apn_profile.apnName);
+   }
+
+   req_union.pInformLocationServerConnStatusReq = &conn_status_req;
+
+   result = loc_sync_send_req(loc_eng_data.client_handle,
+                              QMI_LOC_INFORM_LOCATION_SERVER_CONN_STATUS_REQ_V02,
+                              req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                              QMI_LOC_INFORM_LOCATION_SERVER_CONN_STATUS_IND_V02,
+                              &conn_status_ind);
+
+   if(result != eLOC_CLIENT_SUCCESS ||
+       eQMI_LOC_SUCCESS_V02 != conn_status_ind.status)
+   {
+      LOC_UTIL_LOGE ("%s:%d]: Error status = %d, ind..status = %d "
+                     "request_type = %d\n", __func__, __LINE__, result,
+                     conn_status_ind.status, request_type);
+   }
+}
+
+#define FEATURE_ALLOW_NULL_APN (1)
+
+/*===========================================================================
+FUNCTION    loc_eng_data_conn_open
+
+DESCRIPTION
+   This function is called when on-demand data connection opening is successful.
+It should inform ARM 9 about the data open result.
+
+DEPENDENCIES
+   NONE
+
+RETURN VALUE
+   0
+
+SIDE EFFECTS
+   N/A
+
+===========================================================================*/
+static int loc_eng_data_conn_open(const char* apn, AGpsBearerType bearerType)
+{
+   INIT_CHECK("loc_eng_data_conn_open");
+
+#ifndef FEATURE_ALLOW_NULL_APN
+   if (NULL == apn)
+   {
+      return 0;
+   }
+#endif
+
+   LOC_UTIL_LOGD("%s:%d]: APN name = [%s]\n",
+                 __func__, __LINE__, apn);
+   pthread_mutex_lock(&(loc_eng_data.deferred_action_mutex));
+   loc_eng_set_apn(apn);
+   /* hold a wake lock while events are pending for deferred_action_thread */
+   loc_eng_data.acquire_wakelock_cb();
+   loc_eng_data.deferred_action_flags |= DEFERRED_ACTION_AGPS_DATA_OPENED;
+   pthread_cond_signal(&(loc_eng_data.deferred_action_cond));
+   pthread_mutex_unlock(&(loc_eng_data.deferred_action_mutex));
+   return 0;
+}
+
+/*===========================================================================
+FUNCTION    loc_eng_data_conn_closed
+
+DESCRIPTION
+   This function is called when on-demand data connection closing is done.
+It should inform ARM 9 about the data close result.
+
+DEPENDENCIES
+   NONE
+
+RETURN VALUE
+   0
+
+SIDE EFFECTS
+   N/A
+
+===========================================================================*/
+static int loc_eng_data_conn_closed()
+{
+   INIT_CHECK("loc_eng_data_conn_closed");
+
+   LOC_UTIL_LOGD("loc_eng_data_conn_closed");
+   pthread_mutex_lock(&(loc_eng_data.deferred_action_mutex));
+   /* hold a wake lock while events are pending for deferred_action_thread */
+   loc_eng_data.acquire_wakelock_cb();
+   loc_eng_data.deferred_action_flags |= DEFERRED_ACTION_AGPS_DATA_CLOSED;
+   pthread_cond_signal(&(loc_eng_data.deferred_action_cond));
+   pthread_mutex_unlock(&(loc_eng_data.deferred_action_mutex));
+   return 0;
+}
+
+/*===========================================================================
+FUNCTION    loc_eng_data_conn_failed
+
+DESCRIPTION
+   This function is called when on-demand data connection opening has failed.
+It should inform ARM 9 about the data open result.
+
+DEPENDENCIES
+   NONE
+
+RETURN VALUE
+   0
+
+SIDE EFFECTS
+   N/A
+
+===========================================================================*/
+int loc_eng_data_conn_failed()
+{
+   INIT_CHECK("loc_eng_data_conn_failed");
+   LOC_UTIL_LOGD("loc_eng_data_conn_failed");
+
+   pthread_mutex_lock(&(loc_eng_data.deferred_action_mutex));
+   //TBD: what to do with the loc_eng_data.data_connection_is_on here?
+   // If this is called only in response to the open request then false;
+   // if it can sent as a response to close request, the connection state will
+   // be unknown. Also can it be called asynchronously, for example if data
+   // connection is lost during AGPS session?
+
+   /* hold a wake lock while events are pending for deferred_action_thread */
+   loc_eng_data.acquire_wakelock_cb();
+   loc_eng_data.deferred_action_flags |= DEFERRED_ACTION_AGPS_DATA_FAILED;
+   pthread_cond_signal(&(loc_eng_data.deferred_action_cond));
+   pthread_mutex_unlock(&(loc_eng_data.deferred_action_mutex));
+   return 0;
+}
+
+/*===========================================================================
+FUNCTION    loc_eng_set_apn
+
+DESCRIPTION
+   This is used to inform the location engine of the apn name for the active
+   data connection. If there is no data connection, an empty apn name will
+   be used.
+
+DEPENDENCIES
+   NONE
+
+RETURN VALUE
+   0
+
+SIDE EFFECTS
+   N/A
+
+===========================================================================*/
+static int loc_eng_set_apn (const char* apn)
+{
+   INIT_CHECK("loc_eng_set_apn");
+   LOC_UTIL_LOGI("%s:%d]: APN Name = [%s]\n", __func__, __LINE__, apn);
+   strlcpy(loc_eng_atl_state.apn_profile.apnName, apn,
+           sizeof(loc_eng_atl_state.apn_profile.apnName));
+
+   //TBD: Right now we are assuming default values for SUPL,
+   loc_eng_atl_state.apn_profile.pdnType = eQMI_LOC_APN_PROFILE_PDN_TYPE_IPV4_V02;
+   return 0;
+}
+
+/*===========================================================================
+
+FUNCTION resolve_in_addr
+
+DESCRIPTION
+   Translates a hostname to in_addr struct
+
+DEPENDENCIES
+   n/a
+
+RETURN VALUE
+   true if successful
+
+SIDE EFFECTS
+   n/a
+
+===========================================================================*/
+static bool resolve_in_addr(const char *host_addr,
+                            struct in_addr *in_addr_ptr)
+{
+   struct hostent             *hp;
+   hp = gethostbyname(host_addr);
+   if (hp != NULL) /* DNS OK */
+   {
+      memcpy(in_addr_ptr, hp->h_addr_list[0], hp->h_length);
+   }
+   else
+   {
+      /* Try IP representation */
+      if (inet_aton(host_addr, in_addr_ptr) == 0)
+      {
+         /* IP not valid */
+         LOC_UTIL_LOGE("DNS query on '%s' failed\n", host_addr);
+         return false;
+      }
+   }
+   return true;
+}
+
+/*===========================================================================
+FUNCTION    lloc_eng_atl_state_reset
+
+DESCRIPTION
+   This is used to reset the atl state to default
+   request
+
+DEPENDENCIES
+   None
+
+RETURN VALUE
+  true on SUCCESS; false otherwise
+
+SIDE EFFECTS
+   N/A
+
+===========================================================================*/
+static void loc_eng_atl_state_reset()
+{
+   int idx;
+   loc_eng_atl_state.atl_state = LOC_CONN_IDLE;
+   for(idx = 0; idx < MAX_NUM_ATL_CONNECTIONS; idx++)
+   {
+      loc_eng_atl_state.atl_open_conn_handle_list[idx].conn_handle =
+         INVALID_ATL_CONNECTION_HANDLE;
+      loc_eng_atl_state.atl_open_conn_handle_list[idx].in_use = false;
+      loc_eng_atl_state.atl_open_conn_handle_list[idx].responded = true;
+   }
+   // TBD: Assuming SUPL as default
+   loc_eng_atl_state.apn_profile.pdnType = eQMI_LOC_APN_PROFILE_PDN_TYPE_IPV4_V02;
+}
+
+/*===========================================================================
+FUNCTION    loc_eng_enqueue_atl_conn_handle
+
+DESCRIPTION
+   This is used to enqueue a conn_handle that came with an atl open
+   request
+
+DEPENDENCIES
+   None
+
+RETURN VALUE
+  true on SUCCESS; false otherwise
+
+SIDE EFFECTS
+   N/A
+
+===========================================================================*/
+
+static bool loc_eng_enqueue_atl_conn_handle(
+   uint32_t conn_handle, bool responded)
+{
+   int idx;
+   loc_eng_atl_list_type *atl_list = loc_eng_atl_state.atl_open_conn_handle_list;
+   for ( idx = 0; idx < MAX_NUM_ATL_CONNECTIONS; idx++)
+   {
+      if (atl_list[idx].in_use == false)
+      {
+         atl_list[idx].in_use =  true;
+         atl_list[idx].responded = responded;
+         atl_list[idx].conn_handle = conn_handle;
+         LOC_UTIL_LOGV("%s:%d], conn handle %u enqueued at idx %d\n",
+                       __func__, __LINE__, conn_handle, idx);
+         return true;
+      }
+   }
+   // no entry available return error
+   return false;
+}
+
+
+/*===========================================================================
+FUNCTION    loc_eng_dequeue_atl_conn_handle
+
+DESCRIPTION
+   This is used to dequeue an atl connection handle
+
+DEPENDENCIES
+   None
+
+RETURN VALUE
+  true on SUCCESS; false otherwise
+
+SIDE EFFECTS
+   N/A
+
+===========================================================================*/
+
+static bool loc_eng_dequeue_atl_conn_handle( uint32_t conn_handle)
+{
+   int idx;
+   loc_eng_atl_list_type *atl_list = loc_eng_atl_state.atl_open_conn_handle_list;
+   for ( idx = 0; idx < MAX_NUM_ATL_CONNECTIONS; idx++)
+   {
+      if (atl_list[idx].in_use == true &&
+          atl_list[idx].conn_handle == conn_handle)
+      {
+         LOC_UTIL_LOGV("%s:%d], conn handle %u dequeued from idx %d\n",
+                       __func__, __LINE__, conn_handle, idx);
+
+         atl_list[idx].in_use =  false;
+         atl_list[idx].responded = true;
+         atl_list[idx].conn_handle = INVALID_ATL_CONNECTION_HANDLE;
+         return true;
+      }
+   }
+   // conn_handle not found, return
+   return false;
+}
+
+/*===========================================================================
+FUNCTION    loc_eng_is_atl_conn_handle_queue_empty
+
+DESCRIPTION
+   This is used to check if the atl conn handle queue is does not
+   have any open request pending
+
+DEPENDENCIES
+   None
+
+RETURN VALUE
+   true on SUCCESS; false otherwise
+
+SIDE EFFECTS
+   N/A
+
+===========================================================================*/
+static bool loc_eng_is_atl_conn_handle_queue_empty()
+{
+   int idx;
+   loc_eng_atl_list_type *atl_list = loc_eng_atl_state.atl_open_conn_handle_list;
+   for ( idx = 0; idx < MAX_NUM_ATL_CONNECTIONS; idx++)
+   {
+      if (atl_list[idx].in_use == true)
+      {
+        return false;
+      }
+   }
+   // no in_use entry, return success
+    LOC_UTIL_LOGV("%s:%d], conn handle queue is empty\n",
+                  __func__, __LINE__);
+   return true;
+}
+
+/*===========================================================================
+FUNCTION    loc_eng_process_conn_request
+
+DESCRIPTION
+   This is used to process a ATL data connection open/close request.
+
+DEPENDENCIES
+   None
+
+RETURN VALUE
+   None
+
+SIDE EFFECTS
+   N/A
+
+===========================================================================*/
+static void loc_eng_process_conn_request(
+   const qmiLocEventLocationServerConnectionReqIndMsgT_v02 * server_request_ptr)
+{
+   AGpsType agps_type = AGPS_TYPE_ANY;
+
+   LOC_UTIL_LOGV("%s:%d] : atl state = %d  atl request = %d\n", __func__, __LINE__,
+                 loc_eng_atl_state.atl_state, server_request_ptr->requestType);
+
+   switch(loc_eng_atl_state.atl_state)
+   {
+      case LOC_CONN_IDLE:
+         if(server_request_ptr->requestType == eQMI_LOC_SERVER_REQUEST_OPEN_V02 )
+         {
+            if( !loc_eng_enqueue_atl_conn_handle(server_request_ptr->connHandle, false))
+            {
+               loc_eng_send_data_status(server_request_ptr->connHandle,
+                                        false, server_request_ptr->requestType);
+               LOC_UTIL_LOGE("%s:%d]: could not enqueue the server open request\n",
+                             __func__, __LINE__);
+            }
+            else
+            {
+               loc_eng_atl_state.atl_state = LOC_CONN_OPEN_REQ;
+               // Ask Android layer to open an ATL connection
+               loc_eng_report_agps_status(
+                  agps_type, GPS_REQUEST_AGPS_DATA_CONN,
+                  INADDR_NONE, NULL);
+            }
+         }
+         else if(server_request_ptr->requestType == eQMI_LOC_SERVER_REQUEST_CLOSE_V02)
+         {
+            LOC_UTIL_LOGE("%s:%d]: engine sent close request in IDLE state, send failure back to "
+                          "engine\n", __func__, __LINE__);
+            //TBD: can send success here if needed
+            loc_eng_send_data_status(server_request_ptr->connHandle,
+                                     false, server_request_ptr->requestType);
+         }
+         break;
+
+      case LOC_CONN_OPEN_REQ :
+         if(server_request_ptr->requestType == eQMI_LOC_SERVER_REQUEST_OPEN_V02 )
+         {
+            //enqueue the request
+            if(!loc_eng_enqueue_atl_conn_handle(server_request_ptr->connHandle, false))
+            {
+               loc_eng_send_data_status(server_request_ptr->connHandle,
+                                        false, server_request_ptr->requestType);
+               LOC_UTIL_LOGE("%s:%d]: could not enqueue the server open request\n",
+                             __func__, __LINE__);
+            }
+            else
+            {
+               // enqueued
+               LOC_UTIL_LOGV("%s:%d]: Enqueued atl open request from"
+                             " the engine when the conn state is LOC_CONN_OPEN_REQ\n",
+                             __func__, __LINE__);
+            }
+         }
+         else if (server_request_ptr->requestType == eQMI_LOC_SERVER_REQUEST_CLOSE_V02)
+         {
+            if(!loc_eng_dequeue_atl_conn_handle(server_request_ptr->connHandle))
+            {
+               loc_eng_send_data_status(server_request_ptr->connHandle,
+                                        false, server_request_ptr->requestType);
+               LOC_UTIL_LOGE("%s:%d]: could not find open request corresponding to"
+                             "this close request\n",__func__, __LINE__);
+            }
+            else
+            {
+               //dequeued open request, send success for close back to engine
+               loc_eng_send_data_status(server_request_ptr->connHandle,
+                                        true, server_request_ptr->requestType);
+               LOC_UTIL_LOGV("%s:%d]: sending success for close request for handle %d\n",
+                             __func__, __LINE__, server_request_ptr->connHandle );
+
+               // check if empty
+               if(loc_eng_is_atl_conn_handle_queue_empty())
+               {
+                  // TBD: the connection is not up here, we should
+                  // set the state to IDLE, and handle open_ind in the IDLE state
+                  // correctly
+                  loc_eng_atl_state_reset();
+               }
+            }
+         }
+         break;
+
+      case LOC_CONN_OPEN:
+         if(server_request_ptr->requestType == eQMI_LOC_SERVER_REQUEST_OPEN_V02 )
+         {
+            //enqueue the request
+            if(!loc_eng_enqueue_atl_conn_handle(server_request_ptr->connHandle, true))
+            {
+               //could not enqueue
+               loc_eng_send_data_status(server_request_ptr->connHandle,
+                                        false, server_request_ptr->requestType);
+               LOC_UTIL_LOGE("%s:%d]: could not enqueue the server open request\n",
+                             __func__, __LINE__);
+            }
+            else
+            {
+               //enqueued, send a response since the connection is already open
+               loc_eng_send_data_status(server_request_ptr->connHandle,
+                                        true, server_request_ptr->requestType);
+               LOC_UTIL_LOGV("%s:%d]: Enqueued and responded to a open request "
+                             "from the engine when the conn state is LOC_CONN_OPEN\n",
+                             __func__, __LINE__);
+            }
+         }
+         else if (server_request_ptr->requestType == eQMI_LOC_SERVER_REQUEST_CLOSE_V02)
+         {
+            if(!loc_eng_dequeue_atl_conn_handle(server_request_ptr->connHandle))
+            {
+               loc_eng_send_data_status(server_request_ptr->connHandle,
+                                        false, server_request_ptr->requestType);
+               LOC_UTIL_LOGE("%s:%d]: could not find open request corresponding to"
+                             "this close request\n",__func__, __LINE__);
+            }
+            else
+            {
+               //dequeued open request, send success for close back to engine
+               loc_eng_send_data_status(server_request_ptr->connHandle,
+                                        true, server_request_ptr->requestType);
+               LOC_UTIL_LOGV("%s:%d]: sending success for close request for handle %d\n",
+                             __func__, __LINE__, server_request_ptr->connHandle );
+
+               // check if empty
+               if(loc_eng_is_atl_conn_handle_queue_empty())
+               {
+                  // ask the android layer to close ATL connection
+                  loc_eng_report_agps_status(
+                  agps_type, GPS_RELEASE_AGPS_DATA_CONN,
+                  INADDR_NONE, NULL);
+                  // set state to idle
+                  // TBD: Is there a need for a close_req state to check
+                  //  if the connection was actually torn down
+                  loc_eng_atl_state_reset();
+               }
+            }
+         }
+         break;
+   } // end state machine switch
+   return;
+}
+
+/*===========================================================================
+FUNCTION loc_eng_process_conn_ind
+
+DESCRIPTION
+   Process the conn_ind from the Android layer
+
+DEPENDENCIES
+   None
+
+RETURN VALUE
+   None
+
+SIDE EFFECTS
+   N/A
+
+===========================================================================*/
+
+static void loc_eng_process_conn_ind(loc_eng_atl_ind_e_type ind)
+{
+   LOC_UTIL_LOGV("%s:%d] : atl state = %d  atl indication = %d\n", __func__, __LINE__,
+                 loc_eng_atl_state.atl_state, ind);
+
+   switch(loc_eng_atl_state.atl_state)
+   {
+      case LOC_CONN_IDLE:
+         // do nothing here
+         // TBD: if the state transitioned from open_req, after the last
+         // close_req was called, we may get a open indication here
+
+         break;
+
+      case LOC_CONN_OPEN_REQ:
+         if(LOC_ATL_OPEN_IND == ind)
+         {
+            // send response back for all queued open requests
+            int idx;
+            loc_eng_atl_list_type *atl_list =
+               loc_eng_atl_state.atl_open_conn_handle_list;
+            for(idx = 0; idx < MAX_NUM_ATL_CONNECTIONS; idx++)
+            {
+               if( ( true == atl_list[idx].in_use)  &&
+                   ( false == atl_list[idx].responded) )
+               {
+                  //send open success back to engine
+                  LOC_UTIL_LOGV("%s:%d]: sending atl open response"
+                                " for idx = %u, handle = %u\n", __func__,
+                                __LINE__, idx, atl_list[idx].conn_handle);
+                  loc_eng_send_data_status(atl_list[idx].conn_handle,
+                                        true, eQMI_LOC_SERVER_REQUEST_OPEN_V02);
+                  atl_list[idx].responded = true;
+               }
+            }
+            loc_eng_atl_state.atl_state = LOC_CONN_OPEN;
+         }
+         else if(LOC_ATL_FAILURE_IND == ind || LOC_ATL_CLOSE_IND == ind)
+         {
+            //move to idle state and send failure back for
+            // all queued open requests
+             // send response back for all queued open requests
+            int idx;
+            loc_eng_atl_list_type *atl_list =
+               loc_eng_atl_state.atl_open_conn_handle_list;
+            for(idx = 0; idx < MAX_NUM_ATL_CONNECTIONS; idx++)
+            {
+               if( ( true == atl_list[idx].in_use)  &&
+                   ( false == atl_list[idx].responded) )
+               {
+                  //send open failure back to engine
+                  loc_eng_send_data_status(atl_list[idx].conn_handle,
+                                        false, eQMI_LOC_SERVER_REQUEST_OPEN_V02);
+               }
+            }
+            //TBD: what to do if any close requests come
+            //after the state is moved to IDLE??
+            loc_eng_atl_state_reset();
+         }
+         break;
+
+      case LOC_CONN_OPEN:
+         if (LOC_ATL_OPEN_IND == ind)
+         {
+            //do nothing
+            LOC_UTIL_LOGD("%s:%d]: Got open indication when state is open!!\n",
+                          __func__, __LINE__);
+         }
+         if(LOC_ATL_CLOSE_IND == ind || LOC_ATL_FAILURE_IND)
+         {
+            LOC_UTIL_LOGE("%s:%d]: Error unexpected indication %d in OPEN state!!\n",
+                          __func__, __LINE__, ind);
+            loc_eng_atl_state_reset();
+            //TBD: What to do with close requests that may come after a failure
+            // should we check the previous state in IDLE??
+         }
+         break;
+   }
+}
 
 /*===========================================================================
 FUNCTION loc_eng_deferred_action_thread
@@ -1885,7 +2577,8 @@ SIDE EFFECTS
 
 static void loc_eng_deferred_action_thread(void* arg)
 {
-  LOC_UTIL_LOGD("loc_eng_deferred_action_thread started\n");
+   AGpsStatusValue      status;
+   LOC_UTIL_LOGD("loc_eng_deferred_action_thread started\n");
 
    // make sure we do not run in background scheduling group
 #ifndef LOC_UTIL_TARGET_OFF_TARGET
@@ -1900,7 +2593,6 @@ static void loc_eng_deferred_action_thread(void* arg)
       GpsStatusValue             engine_status;
       uint32_t                   loc_event_id;
       locClientEventIndUnionType loc_event_payload;
-      int                        action_flags = 0;
 
       // Wait until we are signalled to do a deferred action, or exit
       pthread_mutex_lock(&loc_eng_data.deferred_action_mutex);
@@ -1935,8 +2627,7 @@ static void loc_eng_deferred_action_thread(void* arg)
      if ( (loc_event_id != 0) &&
           (true == copy_event_payload( loc_event_id,
                                        &loc_event_payload,
-                                       loc_eng_data.loc_event_payload)
-           ) )
+                                       loc_eng_data.loc_event_payload) ) )
      {
         void *dummy = NULL;
         LOC_UTIL_LOGD("loc_eng_deferred_action_thread event %d\n",loc_event_id);
@@ -1949,18 +2640,26 @@ static void loc_eng_deferred_action_thread(void* arg)
 
      //TBD: consider copying the flags into a local flag and then
      // checking the local flag for the action to perform
-
+     int flags = loc_eng_data.deferred_action_flags;
      loc_eng_data.deferred_action_flags = 0;
      engine_status = loc_eng_data.engine_status;
      aiding_data_for_deletion = loc_eng_data.aiding_data_for_deletion;
+     status = loc_eng_data.agps_status;
+     loc_eng_data.agps_status = 0;
 
      // perform all actions after releasing the mutex to avoid blocking RPCs from the ARM9
      pthread_mutex_unlock(&(loc_eng_data.deferred_action_mutex));
 
-     if (loc_event_id != 0)
+     if ((flags & DEFERRED_ACTION_EVENT) || (loc_event_id != 0))
      {
         loc_eng_process_loc_event(loc_event_id, loc_event_payload);
+        //TBD: one way to serialize is to "continue" from here
+        // continue;
      }
+
+     //TBD: Can process the XTRA and delete aiding data when engine is off
+     //Set a signal flag for for engine turning off and check is here
+     // and "continue" once processed
 
      // Send_delete_aiding_data must be done when GPS engine is off
      if ((engine_status != GPS_STATUS_ENGINE_ON) && (aiding_data_for_deletion != 0))
@@ -1975,6 +2674,37 @@ static void loc_eng_deferred_action_thread(void* arg)
      {
         loc_eng_inject_xtra_data_in_buffer();
      }
+
+     //Process connectivity manager events at this point
+     if(flags & DEFERRED_ACTION_AGPS_DATA_OPENED)
+     {
+        loc_eng_process_conn_ind(LOC_ATL_OPEN_IND);
+     }
+     else if(flags & DEFERRED_ACTION_AGPS_DATA_CLOSED)
+     {
+        loc_eng_process_conn_ind(LOC_ATL_CLOSE_IND);
+     }
+     else if(flags & DEFERRED_ACTION_AGPS_DATA_FAILED)
+     {
+        loc_eng_process_conn_ind(LOC_ATL_FAILURE_IND);
+     }
+
+      if (flags & (DEFERRED_ACTION_AGPS_DATA_OPENED |
+                   DEFERRED_ACTION_AGPS_DATA_CLOSED |
+                   DEFERRED_ACTION_AGPS_DATA_FAILED))
+      {
+          pthread_mutex_lock(&(loc_eng_data.deferred_stop_mutex));
+          // work around problem with loc_eng_stop when AGPS requests are pending
+          // we defer stopping the engine until the AGPS request is done
+          loc_eng_data.agps_request_pending = false;
+          pthread_mutex_unlock(&(loc_eng_data.deferred_stop_mutex));
+
+          if (loc_eng_data.stop_request_pending)
+          {
+             loc_eng_stop();
+          }
+      }
+
    }
 
    LOC_UTIL_LOGD("loc_eng_deferred_action_thread exiting\n");
@@ -1987,4 +2717,6 @@ extern "C" const GpsInterface* get_gps_interface()
 {
     return &sLocEngInterface;
 }
+
+
 

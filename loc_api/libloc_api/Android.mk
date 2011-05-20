@@ -1,3 +1,4 @@
+ifneq ($(TARGET_NO_RPC),true)
 #Compile the old library version from Google push for Passion builds with old modem image
 ifneq ($(BOARD_VENDOR_QCOM_GPS_LOC_API_AMSS_VERSION),50001)
 LOCAL_PATH := $(call my-dir)
@@ -35,3 +36,4 @@ LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
 
 include $(BUILD_SHARED_LIBRARY)
 endif #BOARD_VENDOR_QCOM_GPS_LOC_API_AMSS_VERSION = 50001
+endif # not TARGET_NO_RPC := true

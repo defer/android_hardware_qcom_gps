@@ -50,10 +50,19 @@
 
 #include <loc_eng_ni.h>
 
+// The data connection minimal open time
+#define DATA_OPEN_MIN_TIME        (1)  /* sec */
+
 // The system sees GPS engine turns off after inactive for this period of time
-#define GPS_AUTO_OFF_TIME         2  /* secs */
+#define GPS_AUTO_OFF_TIME         (2)  /* secs */
 //To signify that when requesting a data connection HAL need not specify whether CDMA or UMTS
-#define DONT_CARE                 0
+#define DONT_CARE                 (0)
+
+#define MAX_NUM_ATL_CONNECTIONS   (2)
+
+#define INVALID_ATL_CONNECTION_HANDLE  0xFFFFFFFF
+
+#define MIN_POSSIBLE_FIX_INTERVAL   (1000) // in milliseconds
 
 typedef enum {
    LOC_MUTE_SESS_NONE,
@@ -63,11 +72,19 @@ typedef enum {
 
 #define DEFERRED_ACTION_EVENT               (0x01)
 #define DEFERRED_ACTION_DELETE_AIDING       (0x02)
-#define DEFERRED_ACTION_AGPS_STATUS         (0x04)
-#define DEFERRED_ACTION_AGPS_DATA_SUCCESS   (0x08)
+#define DEFERRED_ACTION_AGPS_CONN_REQUEST   (0x04)
+#define DEFERRED_ACTION_AGPS_DATA_OPENED    (0x08)
 #define DEFERRED_ACTION_AGPS_DATA_CLOSED    (0x10)
 #define DEFERRED_ACTION_AGPS_DATA_FAILED    (0x20)
 #define DEFERRED_ACTION_QUIT                (0x40)
+
+typedef enum
+{
+  LOC_ATL_OPEN_IND,
+  LOC_ATL_CLOSE_IND,
+  LOC_ATL_FAILURE_IND
+}loc_eng_atl_ind_e_type;
+
 
 typedef struct
 {
@@ -78,58 +95,115 @@ typedef struct
   uint32_t preferred_time;
 }loc_eng_fix_criteria_s_type;
 
+typedef enum
+{
+  // There is no connection request pending,
+  // The data connection is not up, the open q should
+  // be empty
+  LOC_CONN_IDLE,
+  // There is an outstanding open request,
+  // waiting for the android layer to respond to open request
+  LOC_CONN_OPEN_REQ,
+  //the data connection is open, all outstanding atl open requests
+  // from the engine have been responded to
+  LOC_CONN_OPEN
+  // outstanding close request, but android layer has not
+  // torn down the data connection yet
+ // LOC_CONN_CLOSE_REQ
+}loc_eng_atl_session_state_e_type;
+
+// This list contains the conn_handles that were specified in a
+// ATL open reqyest from the modem but the corresponding
+// close request has not been called.
+typedef struct
+{
+  bool in_use;
+  bool responded; // if response to the engine has been sent for this
+  // handle
+  uint32_t conn_handle;
+}loc_eng_atl_list_type;
+
+typedef struct
+{
+  // TBD: ATL server protocol
+  //qmiLocServerProtocolEnumT_v02 server_protocol;
+
+  // APN profile
+  qmiLocApnProfilesStructT_v02 apn_profile;
+
+  // current ATL state
+  loc_eng_atl_session_state_e_type atl_state;
+
+  // TBD: previous ATL state
+  //loc_eng_atl_session_state_e_type prev_atl_state;
+
+  // list of conn_handles specified in the open_request
+  // that are not yet closed
+  loc_eng_atl_list_type atl_open_conn_handle_list[MAX_NUM_ATL_CONNECTIONS];
+}loc_eng_atl_info_s_type;
+
+// global ATL state variable
+extern loc_eng_atl_info_s_type loc_eng_atl_state;
+
 
 // Module data
 typedef struct
 {
-   locClientHandleType            client_handle;
-   gps_location_callback          location_cb;
-   gps_status_callback            status_cb;
-   gps_sv_status_callback         sv_status_cb;
+  locClientHandleType            client_handle;
+  gps_location_callback          location_cb;
+  gps_status_callback            status_cb;
+  gps_sv_status_callback         sv_status_cb;
+  agps_status_callback           agps_status_cb;
+  gps_nmea_callback              nmea_cb;
+  gps_ni_notify_callback         ni_notify_cb;
+  gps_acquire_wakelock           acquire_wakelock_cb;
+  gps_release_wakelock           release_wakelock_cb;
 
-   gps_nmea_callback              nmea_cb;
-   gps_ni_notify_callback         ni_notify_cb;
-   gps_acquire_wakelock           acquire_wakelock_cb;
-   gps_release_wakelock           release_wakelock_cb;
+  //stored fix criteria
+  loc_eng_fix_criteria_s_type    fix_criteria;
 
-   //stored fix criteria
-   loc_eng_fix_criteria_s_type    fix_criteria;
+  loc_eng_xtra_data_s_type       xtra_module_data;
 
-   loc_eng_xtra_data_s_type       xtra_module_data;
+  // AGPS specific variables
+  AGpsStatusValue                agps_status;
+  // used to defer stopping the GPS engine until AGPS data calls are done
+  bool                           agps_request_pending;
+  // used to denote that a stop reuqest is pending because of AGPS session
+  bool                           stop_request_pending;
+  pthread_mutex_t                deferred_stop_mutex;
 
-   pthread_mutex_t                deferred_stop_mutex;
-   // data from loc_event_cb
-   int32_t                        loc_event_id;
-   locClientEventIndUnionType     loc_event_payload;
+  // data from loc_event_cb
+  int32_t                        loc_event_id;
+  locClientEventIndUnionType     loc_event_payload;
 
-   bool                           client_opened;
+  bool                           client_opened;
 
-   // set to true when the client calls loc_eng_start and
-   // set to false when the client call loc_eng_stop
-   // indicates client state before fix_session_status
-   // is set through the loc api event
-   bool                           navigating;
+  // set to true when the client calls loc_eng_start and
+  // set to false when the client calls loc_eng_stop
+  // indicates client state before fix_session_status
+  // is set through the loc api event
+  bool                           navigating;
 
-   // GPS engine status
-   GpsStatusValue                 engine_status;
-   // GPS
-   GpsStatusValue                 fix_session_status;
+  // GPS engine status
+  GpsStatusValue                 engine_status;
+  // GPS
+  GpsStatusValue                 fix_session_status;
 
-   // Aiding data information to be deleted, aiding data can only be deleted when GPS engine is off
-   GpsAidingData                  aiding_data_for_deletion;
+  // Aiding data information to be deleted, aiding data can only be deleted when GPS engine is off
+  GpsAidingData                  aiding_data_for_deletion;
 
-    // Data variables used by deferred action thread
-   pthread_t                      deferred_action_thread;
+  // Data variables used by deferred action thread
+  pthread_t                      deferred_action_thread;
 
-   // Mutex used by deferred action thread
-   pthread_mutex_t                deferred_action_mutex;
-   // Condition variable used by deferred action thread
-   pthread_cond_t                 deferred_action_cond;
-   // flags for pending events for deferred action thread
-   int                             deferred_action_flags;
-   // For muting session broadcast
-   pthread_mutex_t                mute_session_lock;
-   loc_mute_session_e_type        mute_session_state;
+  // Mutex used by deferred action thread
+  pthread_mutex_t                deferred_action_mutex;
+  // Condition variable used by deferred action thread
+  pthread_cond_t                 deferred_action_cond;
+  // flags for pending events for deferred action thread
+  int                            deferred_action_flags;
+  // For muting session broadcast
+  pthread_mutex_t                mute_session_lock;
+  loc_mute_session_e_type        mute_session_state;
 
 } loc_eng_data_s_type;
 

@@ -32,6 +32,8 @@
 
 #ifdef LOC_UTIL_TARGET_OFF_TARGET
 
+#include <stdio.h>
+
 //error logs
 #define LOC_UTIL_LOGE(...) printf(__VA_ARGS__)
 //warning logs
