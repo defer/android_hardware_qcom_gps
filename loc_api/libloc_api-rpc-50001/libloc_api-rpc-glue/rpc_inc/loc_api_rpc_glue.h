@@ -77,6 +77,11 @@ extern int32 loc_close
       rpc_loc_client_handle_type handle
 );
 
+extern void loc_clear
+(
+      rpc_loc_client_handle_type handle
+);
+
 extern int32 loc_start_fix
 (
       rpc_loc_client_handle_type handle

@@ -81,6 +81,9 @@ static int loc_eng_inject_location(double latitude, double longitude, float accu
 static void loc_eng_delete_aiding_data(GpsAidingData f);
 static const void* loc_eng_get_extension(const char* name);
 
+// 2nd half of init(), singled out for
+// modem restart to use.
+static void loc_eng_agps_reinit();
 // Function declarations for sLocEngAGpsInterface
 static void loc_eng_agps_init(AGpsCallbacks* callbacks);
 static int loc_eng_data_conn_open(const char* apn);
@@ -1555,6 +1558,36 @@ static void loc_eng_process_loc_event (rpc_loc_event_mask_type loc_event,
    loc_eng_ni_callback(loc_event, loc_event_payload);
 }
 /*===========================================================================
+FUNCTION    loc_eng_agps_reinit
+
+DESCRIPTION
+   2nd half of loc_eng_agps_init(), singled out for modem restart to use.
+
+DEPENDENCIES
+   NONE
+
+RETURN VALUE
+   0
+
+SIDE EFFECTS
+   N/A
+
+===========================================================================*/
+static void loc_eng_agps_reinit()
+{
+    // Set server addresses which came before init
+   if (supl_host_set)
+   {
+      loc_eng_set_server(AGPS_TYPE_SUPL, supl_host_buf, supl_port_buf);
+   }
+
+   if (c2k_host_set)
+   {
+      // loc_c2k_addr_is_set will be set in here
+      loc_eng_set_server(AGPS_TYPE_C2K, c2k_host_buf, c2k_port_buf);
+   }
+}
+/*===========================================================================
 FUNCTION    loc_eng_agps_init
 
 DESCRIPTION
@@ -1576,17 +1609,7 @@ static void loc_eng_agps_init(AGpsCallbacks* callbacks)
 
    loc_c2k_addr_is_set = 0;
 
-   // Set server addresses which came before init
-   if (supl_host_set)
-   {
-      loc_eng_set_server(AGPS_TYPE_SUPL, supl_host_buf, supl_port_buf);
-   }
-
-   if (c2k_host_set)
-   {
-      // loc_c2k_addr_is_set will be set in here
-      loc_eng_set_server(AGPS_TYPE_C2K, c2k_host_buf, c2k_port_buf);
-   }
+   loc_eng_agps_reinit();
 }
 
 /*===========================================================================
@@ -2253,31 +2276,40 @@ SIDE EFFECTS
 ===========================================================================*/
 void loc_eng_report_modem_state(rpc_loc_engine_state_e_type state) {
    rpc_loc_status_event_s_type status = {RPC_LOC_STATUS_EVENT_ENGINE_STATE,
-										 {RPC_LOC_STATUS_EVENT_ENGINE_STATE,
-										  {RPC_LOC_ENGINE_STATE_OFF}}};
+                                         {RPC_LOC_STATUS_EVENT_ENGINE_STATE,
+                                          {RPC_LOC_ENGINE_STATE_OFF}}};
    static rpc_loc_engine_state_e_type last_state = RPC_LOC_ENGINE_STATE_MAX;
    if (last_state != state) {
-	   if (RPC_LOC_ENGINE_STATE_OFF == state) {
-		   last_state = state;
-		   loc_eng_report_status(&status);
-	   } else if (RPC_LOC_ENGINE_STATE_ON == state) {
-		   status.payload.rpc_loc_status_event_payload_u_type_u.engine_state = RPC_LOC_ENGINE_STATE_ON;
-		   last_state = state;
-		   loc_eng_report_status(&status);
+       if (RPC_LOC_ENGINE_STATE_OFF == state) {
+           last_state = state;
+           loc_ni_reset_on_modem_restart();
+           loc_eng_report_status(&status);
+       } else if (RPC_LOC_ENGINE_STATE_ON == state) {
+           status.payload.rpc_loc_status_event_payload_u_type_u.engine_state = RPC_LOC_ENGINE_STATE_ON;
+           last_state = state;
+           loc_eng_report_status(&status);
 
-		   // modem is back up.  If we crashed in the middle of navigating, we restart.
-		   if (loc_eng_data.navigating) {
+           if (loc_eng_inited == 1) {
+               loc_clear(loc_eng_data.client_handle);
                loc_eng_reinit();
+           }
+
+           if (loc_eng_data.agps_status_cb != NULL) {
+               loc_eng_agps_reinit();
+           }
+
+           // modem is back up.  If we crashed in the middle of navigating, we restart.
+           if (loc_eng_data.navigating) {
                loc_eng_ioctl (loc_eng_data.client_handle,
                               RPC_LOC_IOCTL_SET_FIX_CRITERIA,
                               &loc_eng_data.position_mode,
                               LOC_IOCTL_DEFAULT_TIMEOUT,
                               NULL);
-			   // not mutex protected, assuming fw won't call start twice without a
-			   // stop call in between.
-			   loc_start_fix(loc_eng_data.client_handle);
-		   }
-	   }
+               // not mutex protected, assuming fw won't call start twice without a
+               // stop call in between.
+               loc_start_fix(loc_eng_data.client_handle);
+           }
+       }
    }
 }
 

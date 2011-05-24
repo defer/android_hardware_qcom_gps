@@ -50,6 +50,7 @@ typedef struct {
 // Functions for sLocEngNiInterface
 extern void loc_eng_ni_init(GpsNiCallbacks *callbacks);
 extern void loc_eng_ni_respond(int notif_id, GpsUserResponseType user_response);
+extern void loc_ni_reset_on_modem_restart();
 
 extern int loc_eng_ni_callback (
       rpc_loc_event_mask_type               loc_event,              /* event mask           */

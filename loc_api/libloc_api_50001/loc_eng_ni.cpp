@@ -671,7 +671,13 @@ static void* loc_ni_thread_proc(void *threadid)
                   "pthread_cond_timedwait = %d\n",rc );
          loc_eng_ni_data.user_response_received = FALSE; /* Reset the user response flag for the next session*/
       }
-   loc_ni_respond(loc_eng_ni_data.resp, &loc_eng_ni_data.loc_ni_request);
+
+   // adding this check to support modem restart, in which case, we need the thread
+   // to exit without calling loc_ni_respond. We make sure notif_in_progress is false
+   // in loc_ni_reset_on_modem_restart()
+   if (loc_eng_ni_data.notif_in_progress) {
+       loc_ni_respond(loc_eng_ni_data.resp, &loc_eng_ni_data.loc_ni_request);
+   }
    pthread_mutex_unlock(&user_cb_data_mutex);
    pthread_mutex_lock(&loc_eng_ni_data.loc_ni_lock);
    loc_eng_ni_data.notif_in_progress = FALSE;
@@ -679,6 +685,24 @@ static void* loc_ni_thread_proc(void *threadid)
    loc_eng_ni_data.current_notif_id = -1;
    pthread_mutex_unlock(&loc_eng_ni_data.loc_ni_lock);
    return NULL;
+}
+
+void loc_ni_reset_on_modem_restart()
+{
+    // only if modem has requested but then died.
+    if (loc_eng_ni_data.notif_in_progress) {
+        pthread_mutex_lock(&loc_eng_ni_data.loc_ni_lock);
+        // turn the flag off to make sure we do not IOCTL
+        loc_eng_ni_data.notif_in_progress = FALSE;
+        pthread_mutex_unlock(&loc_eng_ni_data.loc_ni_lock);
+
+        pthread_mutex_lock(&user_cb_data_mutex);
+        // the goal is to wake up loc_ni_thread_proc
+        // and let it exit.
+        loc_eng_ni_data.user_response_received = TRUE;
+        pthread_cond_signal(&user_cb_arrived_cond);
+        pthread_mutex_unlock(&user_cb_data_mutex);
+    }
 }
 
 /*===========================================================================

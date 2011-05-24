@@ -361,27 +361,31 @@ int32 loc_close
 
    stat = RPC_FUNC_VERSION(rpc_loc_close_, RPC_LOC_CLOSE_VERSION)(&args, &rets, loc_api_clnt);
 
-   /* Clean the client's callback function in callback table */
-   int i;
-   for (i = 0; i < LOC_API_CB_MAX_CLIENTS; i++)
-   {
-          if (loc_glue_callback_table[i].handle == handle)
-          {
-              /* Found the client */
-              loc_glue_callback_table[i].cb_func = NULL;
-              loc_glue_callback_table[i].rpc_cb = NULL;
-              loc_glue_callback_table[i].handle = -1;
-              break;
-          }
-   }
-
-   if (i == LOC_API_CB_MAX_CLIENTS)
-   {
-       LOGW("Handle not found (handle=%d)...\n", (int) handle);
-   }
+   loc_clear(handle);
 
    LOC_GLUE_CHECK_RESULT(stat, int32);
    return (int32) rets.loc_close_result;
+}
+
+void loc_clear(rpc_loc_client_handle_type handle) {
+    /* Clean the client's callback function in callback table */
+    int i;
+    for (i = 0; i < LOC_API_CB_MAX_CLIENTS; i++)
+    {
+        if (loc_glue_callback_table[i].handle == handle)
+        {
+            /* Found the client */
+            loc_glue_callback_table[i].cb_func = NULL;
+            loc_glue_callback_table[i].rpc_cb = NULL;
+            loc_glue_callback_table[i].handle = -1;
+            break;
+        }
+    }
+
+    if (i == LOC_API_CB_MAX_CLIENTS)
+    {
+        LOGW("Handle not found (handle=%d)...\n", (int) handle);
+    }
 }
 
 int32 loc_start_fix
