@@ -31,8 +31,8 @@
 #define LOC_ENG_H
 
 // Uncomment to keep all LOG messages (LOGD, LOGI, LOGV, etc.)
-// #define LOG_NDEBUG 0
-
+#define LOG_NDEBUG 0
+#define MAX_NUM_ATL_CONNECTIONS  2
 // Define boolean type to be used by libgps on loc api module
 typedef unsigned char boolean;
 
@@ -58,11 +58,27 @@ typedef unsigned char boolean;
 // The system sees GPS engine turns off after inactive for this period of time
 #define GPS_AUTO_OFF_TIME         2  /* secs */
 #define MIN_POSSIBLE_FIX_INTERVAL 1000 /* msec */
+#define SUCCESS              TRUE
+#define FAILURE                 FALSE
+#define INVALID_ATL_CONNECTION_HANDLE -1
 enum loc_mute_session_e_type {
    LOC_MUTE_SESS_NONE,
    LOC_MUTE_SESS_WAIT,
    LOC_MUTE_SESS_IN_SESSION
 };
+enum loc_eng_atl_session_state_e_type{
+   LOC_CONN_IDLE,
+   LOC_CONN_OPEN_REQ,
+   LOC_CONN_OPEN,
+   LOC_CONN_CLOSE_REQ
+};
+typedef struct
+{
+   // ATL variables
+   loc_eng_atl_session_state_e_type conn_state;
+   rpc_loc_server_connection_handle  conn_handle;
+   boolean                        active;
+}loc_eng_atl_info_s_type;
 
 enum {
     DEFERRED_ACTION_EVENT               = 0x00000001,
@@ -105,9 +121,10 @@ typedef struct
 
    // ATL variables
    char                           apn_name[100];
+   // Adequate instances of ATL variables for cases where we have simultaneous
+   // connections to MPC & PDE
+   loc_eng_atl_info_s_type       atl_conn_info[MAX_NUM_ATL_CONNECTIONS];
    rpc_loc_server_connection_handle  conn_handle;
-   time_t                         data_conn_open_time;
-
    // GPS engine status
    GpsStatusValue                 engine_status;
    GpsStatusValue                 fix_session_status;
