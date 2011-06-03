@@ -65,6 +65,7 @@ int thelper_signal_init(struct loc_eng_dmn_conn_thelper * thelper);
 int thelper_signal_destroy(struct loc_eng_dmn_conn_thelper * thelper);
 int thelper_signal_wait(struct loc_eng_dmn_conn_thelper * thelper);
 int thelper_signal_ready(struct loc_eng_dmn_conn_thelper * thelper);
+int thelper_signal_block(struct loc_eng_dmn_conn_thelper * thelper);
 
 #ifdef __cplusplus
 }

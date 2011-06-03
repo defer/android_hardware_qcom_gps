@@ -120,7 +120,7 @@ static int qct_loc_eng_inject_xtra_data(char* data, int length)
    rpc_loc_ioctl_e_type                 ioctl_type = RPC_LOC_IOCTL_INJECT_PREDICTED_ORBITS_DATA;
    rpc_loc_predicted_orbits_data_s_type *predicted_orbits_data_ptr;
 
-   LOC_LOGD("qct_loc_eng_inject_xtra_data, xtra size = %d, data ptr = 0x%x\n", length, (int) data);
+   LOC_LOGD("qct_loc_eng_inject_xtra_data, xtra size = %d, data ptr = 0x%lx\n", length, (long) data);
 
    predicted_orbits_data_ptr = &ioctl_data.rpc_loc_ioctl_data_u_type_u.predicted_orbits_data;
    predicted_orbits_data_ptr->format_type = RPC_LOC_PREDICTED_ORBITS_XTRA;

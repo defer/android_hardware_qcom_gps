@@ -52,6 +52,7 @@ SIDE EFFECTS
 int thelper_signal_init(struct loc_eng_dmn_conn_thelper * thelper)
 {
     int result;
+    thelper->thread_exit  = 0;
     thelper->thread_ready = 0;
     result = pthread_cond_init( &thelper->thread_cond, NULL);
     if (result) {
@@ -120,11 +121,15 @@ SIDE EFFECTS
 ===========================================================================*/
 int thelper_signal_wait(struct loc_eng_dmn_conn_thelper * thelper)
 {
-    int result = -1;
+    int result = 0;
 
     pthread_mutex_lock(&thelper->thread_mutex);
-    if (!thelper->thread_ready) {
+    if (!thelper->thread_ready && !thelper->thread_exit) {
         result = pthread_cond_wait(&thelper->thread_cond, &thelper->thread_mutex);
+    }
+
+    if (thelper->thread_exit) {
+        result = -1;
     }
     pthread_mutex_unlock(&thelper->thread_mutex);
 
@@ -158,6 +163,37 @@ int thelper_signal_ready(struct loc_eng_dmn_conn_thelper * thelper)
     pthread_mutex_lock(&thelper->thread_mutex);
     thelper->thread_ready = 1;
     result = pthread_cond_signal(&thelper->thread_cond);
+    pthread_mutex_unlock(&thelper->thread_mutex);
+
+    return result;
+}
+
+/*===========================================================================
+FUNCTION     thelper_signal_block
+
+DESCRIPTION
+   This function will set the thread ready to 0 to block the thelper_signal_wait
+
+    thelper - pointer to thelper instance
+
+DEPENDENCIES
+   None
+
+RETURN VALUE
+   if thread_ready is set
+
+SIDE EFFECTS
+   N/A
+
+===========================================================================*/
+int thelper_signal_block(struct loc_eng_dmn_conn_thelper * thelper)
+{
+    int result = thelper->thread_ready;
+
+    LOC_LOGD("%s:%d] 0x%lx\n", __func__, __LINE__, (long) thelper);
+
+    pthread_mutex_lock(&thelper->thread_mutex);
+    thelper->thread_ready = 0;
     pthread_mutex_unlock(&thelper->thread_mutex);
 
     return result;
@@ -267,7 +303,6 @@ int loc_eng_dmn_conn_launch_thelper(struct loc_eng_dmn_conn_thelper * thelper,
 {
     int result;
 
-    thelper->thread_exit  = 0;
     thelper_signal_init(thelper);
 
     if (context) {

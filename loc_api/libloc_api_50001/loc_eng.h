@@ -49,6 +49,7 @@ typedef unsigned char boolean;
 #include <loc_eng_ni.h>
 #include <loc_eng_log.h>
 #include <loc_eng_cfg.h>
+#include <loc_eng_dbg.h>
 
 #define LOC_IOCTL_DEFAULT_TIMEOUT 1000 // 1000 milli-seconds
 
@@ -159,21 +160,5 @@ typedef struct
 extern loc_eng_data_s_type loc_eng_data;
 
 extern void loc_eng_mute_one_session();
-
-/* LOGGING MACROS */
-#define LOC_LOGE(...) \
-if (gps_conf.DEBUG_LEVEL >= 1) { LOGE(__VA_ARGS__); }
-
-#define LOC_LOGW(...) \
-if (gps_conf.DEBUG_LEVEL >= 2) { LOGW(__VA_ARGS__); }
-
-#define LOC_LOGI(...) \
-if (gps_conf.DEBUG_LEVEL >= 3) { LOGI(__VA_ARGS__); }
-
-#define LOC_LOGD(...) \
-if (gps_conf.DEBUG_LEVEL >= 4) { LOGD(__VA_ARGS__); }
-
-#define LOC_LOGV(...) \
-if (gps_conf.DEBUG_LEVEL >= 5) { LOGV(__VA_ARGS__); }
 
 #endif // LOC_ENG_H
