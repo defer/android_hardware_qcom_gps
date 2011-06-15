@@ -1,7 +1,5 @@
 ifneq ($(BUILD_TINY_ANDROID),true)
 
-ifneq ($(TARGET_NO_RPC),true)
-
 ifneq ($(BOARD_VENDOR_QCOM_GPS_LOC_API_AMSS_VERSION),50001)
 
 LOCAL_PATH:= $(call my-dir)
@@ -59,5 +57,4 @@ LOCAL_MODULE:= libloc_api-rpc
 include $(BUILD_STATIC_LIBRARY)
 
 endif
-endif # not TARGET_NO_RPC := true
 endif
