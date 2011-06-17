@@ -251,7 +251,6 @@ SIDE EFFECTS
 
 static int loc_eng_init(GpsCallbacks* callbacks)
 {
-   int i=0;
    LOC_LOGD("loc_eng_init entering");
 #if DISABLE_CLEANUP
     if (loc_eng_data.deferred_action_thread) {
@@ -303,16 +302,7 @@ static int loc_eng_init(GpsCallbacks* callbacks)
    loc_eng_data.deferred_action_flags = 0;
    // Mute session
    loc_eng_data.mute_session_state = LOC_MUTE_SESS_NONE;
-
-   // Data connection for AGPS
-   loc_eng_data.data_connection_is_on = LOC_DATA_DEFAULT;
    memset(loc_eng_data.apn_name, 0, sizeof loc_eng_data.apn_name);
-   for(i=0;i <= MAX_NUM_ATL_CONNECTIONS; i++ )
-   {
-      loc_eng_data.atl_conn_info[i].active = FALSE;
-      loc_eng_data.atl_conn_info[i].conn_state = LOC_CONN_IDLE;
-      loc_eng_data.atl_conn_info[i].conn_handle = INVALID_ATL_CONNECTION_HANDLE; //since connection handles can be 0
-   }
    loc_eng_data.aiding_data_for_deletion = 0;
 
    pthread_mutex_init(&loc_eng_data.mute_session_lock, NULL);
@@ -1587,6 +1577,16 @@ SIDE EFFECTS
 ===========================================================================*/
 static void loc_eng_agps_reinit()
 {
+   // Data connection for AGPS
+   loc_eng_data.data_connection_is_on = LOC_DATA_DEFAULT;
+   int i=0;
+   for(i=0;i <= MAX_NUM_ATL_CONNECTIONS; i++ )
+   {
+      loc_eng_data.atl_conn_info[i].active = FALSE;
+      loc_eng_data.atl_conn_info[i].conn_state = LOC_CONN_IDLE;
+      loc_eng_data.atl_conn_info[i].conn_handle = INVALID_ATL_CONNECTION_HANDLE; //since connection handles can be 0
+   }
+
     // Set server addresses which came before init
    if (supl_host_set)
    {
