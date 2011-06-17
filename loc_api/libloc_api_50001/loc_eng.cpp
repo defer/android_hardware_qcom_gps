@@ -477,7 +477,12 @@ static int loc_eng_start()
 
    int ret_val;
    LOC_LOGD("loc_eng_start called");
-
+   //Reset the Stop pending flag to ensure the positioning session continues
+   //even when we get a sequence Start-Stop_start from the framework and we
+   //do not get a chance to send a loc_stop after CM responds to us
+   pthread_mutex_lock(&(loc_eng_data.deferred_stop_mutex));
+   loc_eng_data.stop_request_pending = false;
+   pthread_mutex_unlock(&(loc_eng_data.deferred_stop_mutex));
    ret_val = loc_start_fix(loc_eng_data.client_handle);
 
    if (ret_val != RPC_LOC_API_SUCCESS)
@@ -630,6 +635,7 @@ static int  loc_eng_set_position_mode(GpsPositionMode mode, GpsPositionRecurrenc
         /*If the framework passes in 0 transalate it into the maximum frequency we can report positions
           which is 1 Hz or once very second */
         fix_criteria_ptr->min_interval = MIN_POSSIBLE_FIX_INTERVAL;
+        fix_criteria_ptr->valid_mask |= RPC_LOC_FIX_CRIT_VALID_MIN_INTERVAL;
     }
     if (preferred_accuracy > 0) {
         fix_criteria_ptr->preferred_accuracy = preferred_accuracy;
@@ -2622,6 +2628,7 @@ static void loc_eng_deferred_action_thread(void* arg)
                    LOC_LOGD ("loc_stop_fix failed!\n");
                }
            }
+           loc_eng_data.stop_request_pending = false;
            pthread_mutex_unlock(&(loc_eng_data.deferred_stop_mutex));
        }
 
