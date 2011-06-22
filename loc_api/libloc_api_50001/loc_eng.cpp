@@ -264,7 +264,6 @@ static int loc_eng_init(GpsCallbacks* callbacks)
     if (0 == loc_api_glue_init())
         return 0;
 
-   callbacks->set_capabilities_cb(GPS_CAPABILITY_SCHEDULING | GPS_CAPABILITY_MSA | GPS_CAPABILITY_MSB);
    // Avoid repeated initialization. Call de-init to clean up first.
    if (loc_eng_inited == 1)
    {
@@ -285,6 +284,7 @@ static int loc_eng_init(GpsCallbacks* callbacks)
 
    // Process gps.conf
    loc_read_gps_conf();
+   callbacks->set_capabilities_cb(gps_conf.CAPABILITIES);
 
    // Save callbacks
    memset(&loc_eng_data, 0, sizeof (loc_eng_data_s_type));

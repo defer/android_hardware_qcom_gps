@@ -58,6 +58,7 @@ typedef struct loc_gps_cfg_s
   unsigned long  ENABLE_WIPER;
   unsigned long  DEBUG_LEVEL;
   unsigned long  SUPL_VER;
+  unsigned long  CAPABILITIES;
   // char           string_val[LOC_MAX_PARAM_STRING + 1]; /* An example string value */
 } loc_gps_cfg_s_type;
 
