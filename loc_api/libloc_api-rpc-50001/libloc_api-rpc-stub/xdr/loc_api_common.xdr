@@ -27,7 +27,7 @@
  *
  */
 /* LOC_API TOOL VERSION: 4.48 */
-/* GENERATED: THU APR 28 2011 */
+/* GENERATED: TUE JUN 14 2011 */
 /*=============================================================================
                       L O C _ A P I _ C O M M O N . X D R
 
@@ -59,7 +59,7 @@ Id: //source/qcom/qct/core/mproc/tools/rel/2h09/htorpc/lib/Htorpc/Metacomments.p
 Id: //source/qcom/qct/core/mproc/tools/rel/2h09/htorpc/lib/Htorpc/SymbolTable.pm#1  
 
 loc_api Definition File(s):
-Id: //source/qcom/qct/modem/api/gps/main/latest/loc_api.h#22
+Id: //source/qcom/qct/modem/api/gps/main/latest/loc_api.h#24
 =============================================================================*/
 /*=============================================================================
 $Header$ 
@@ -70,19 +70,19 @@ $Header$
 const LOC_API_TOOLVERS = 0x00040030;
 const LOC_API_FEATURES = 0x00000001;
 
+const RPC_LOC_EVENT_STATUS_REPORT = 0x00000100;
+
+const RPC_LOC_EVENT_ASSISTANCE_DATA_REQUEST = 0x00000020;
+
+const RPC_LOC_EVENT_WPS_NEEDED_REQUEST = 0x00000200;
+
 const RPC_LOC_EVENT_SATELLITE_REPORT = 0x00000002;
 
 const RPC_LOC_EVENT_PARSED_POSITION_REPORT = 0x00000001;
 
 const RPC_LOC_EVENT_RESERVED = 0x8000000000000000;
 
-const RPC_LOC_EVENT_STATUS_REPORT = 0x00000100;
-
 const RPC_LOC_EVENT_LOCATION_SERVER_REQUEST = 0x00000040;
-
-const RPC_LOC_EVENT_ASSISTANCE_DATA_REQUEST = 0x00000020;
-
-const RPC_LOC_EVENT_WPS_NEEDED_REQUEST = 0x00000200;
 
 const RPC_LOC_EVENT_NMEA_POSITION_REPORT = 0x00000008;
 
@@ -208,7 +208,7 @@ struct rpc_loc_gnss_info_s_type {
 
 struct rpc_loc_nmea_report_s_type {
   rpc_uint16 length;
-    opaque nmea_sentences[200]; /* EVAL:[200]*/  
+  opaque nmea_sentences[200];
 };
 
 enum rpc_loc_status_event_e_type {
@@ -257,7 +257,7 @@ struct rpc_loc_server_addr_ipv4_type {
 
 struct rpc_loc_server_addr_url_type {
   rpc_uint16 length;
-  opaque addr[256]; /* EVAL:[256]*/
+  opaque addr[256];
 };
 
 struct rpc_loc_server_addr_ipv6_type {
@@ -358,7 +358,7 @@ enum rpc_loc_ni_vx_pos_mode_e_type {
 
 struct rpc_loc_ni_vx_requester_id_s_type {
   unsigned char requester_id_length;
-    opaque requester_id[200]; /* EVAL:[200]*/  
+  opaque requester_id[200];
 };
 
 struct rpc_loc_ni_vx_notify_verify_req_s_type {
@@ -389,19 +389,19 @@ enum rpc_loc_ni_supl_pos_method_e_type {
 
 struct rpc_loc_ni_supl_slp_session_id_s_type {
   unsigned char presence;
-    opaque session_id[4]; /* EVAL:[4]*/  
+  opaque session_id[4];
   rpc_loc_server_info_s_type slp_address;
 };
 
 struct rpc_loc_ni_requestor_id_s_type {
   unsigned char data_coding_scheme;
-    opaque requestor_id_string[200]; /* EVAL:[200]*/  
+  opaque requestor_id_string[200];
   unsigned char string_len;
 };
 
 struct rpc_loc_ni_supl_client_name_s_type {
   unsigned char data_coding_scheme;
-    opaque client_name_string[64]; /* EVAL:[64]*/  
+  opaque client_name_string[64];
   unsigned char string_len;
 };
 
@@ -417,7 +417,7 @@ struct rpc_loc_ni_supl_notify_verify_req_s_type {
   rpc_loc_ni_notify_verify_e_type notification_priv_type;
   rpc_uint16 flags;
   rpc_loc_ni_supl_slp_session_id_s_type supl_slp_session_id;
-    opaque supl_hash[8]; /* EVAL:[8]*/  
+  opaque supl_hash[8];
   rpc_loc_ni_datacoding_scheme_e_type datacoding_scheme;
   rpc_loc_ni_supl_pos_method_e_type pos_method;
   rpc_loc_ni_requestor_id_s_type requestor_id;
@@ -428,7 +428,7 @@ struct rpc_loc_ni_supl_notify_verify_req_s_type {
 
 struct rpc_loc_ni_ext_client_address_s_type {
   unsigned char ext_client_address_len;
-    opaque ext_client_address[20]; /* EVAL:[20]*/  
+  opaque ext_client_address[20];
 };
 
 enum rpc_loc_ni_location_type_e_type {
@@ -445,7 +445,7 @@ struct rpc_loc_ni_deferred_location_s_type {
 
 struct rpc_loc_ni_codeword_string_s_type {
   unsigned char data_coding_scheme;
-    opaque lcs_codeword_string[20]; /* EVAL:[20]*/  
+  opaque lcs_codeword_string[20];
   unsigned char string_len;
 };
 
@@ -458,7 +458,7 @@ struct rpc_loc_ni_umts_cp_notify_verify_req_s_type {
   unsigned char invoke_id;
   rpc_uint16 flags;
   unsigned char notification_length;
-    opaque notification_text[64]; /* EVAL:[64]*/  
+  opaque notification_text[64];
   rpc_loc_ni_datacoding_scheme_e_type datacoding_scheme;
   rpc_loc_ni_ext_client_address_s_type ext_client_address_data;
   rpc_loc_ni_location_type_e_type location_type;
@@ -557,15 +557,28 @@ enum rpc_loc_server_protocol_e_type {
   RPC_LOC_SERVER_PROTOCOL_MAX = 16777216
 };
 
+enum rpc_loc_server_connection_e_type {
+  RPC_LOC_SERVER_CONNECTION_LBS = 0,
+  RPC_LOC_SERVER_CONNECTION_WWAN_INTERNET,
+  RPC_LOC_SERVER_CONNECTION_MAX = 16777216
+};
+
 enum rpc_loc_server_request_e_type {
   RPC_LOC_SERVER_REQUEST_OPEN = 1,
   RPC_LOC_SERVER_REQUEST_CLOSE = 2,
+  RPC_LOC_SERVER_REQUEST_MULTI_OPEN = 3,
   RPC_LOC_SERVER_REQUEST_MAX = 268435456
 };
 
 struct rpc_loc_server_open_req_s_type {
   rpc_loc_server_connection_handle conn_handle;
   rpc_loc_server_protocol_e_type protocol;
+};
+
+struct rpc_loc_server_multi_open_req_s_type {
+  rpc_loc_server_connection_handle conn_handle;
+  rpc_loc_server_protocol_e_type protocol;
+  rpc_loc_server_connection_e_type connection_type;
 };
 
 struct rpc_loc_server_close_req_s_type {
@@ -577,6 +590,8 @@ union rpc_loc_server_request_u_type switch (rpc_loc_server_request_e_type disc) 
     rpc_loc_server_open_req_s_type open_req;
   case RPC_LOC_SERVER_REQUEST_CLOSE:
     rpc_loc_server_close_req_s_type close_req;
+  case RPC_LOC_SERVER_REQUEST_MULTI_OPEN:
+    rpc_loc_server_multi_open_req_s_type multi_open_req;
   default:
     void;
 };
@@ -623,6 +638,8 @@ enum rpc_loc_ioctl_e_type {
   RPC_LOC_IOCTL_SEND_WIPER_POSITION_REPORT = 411,
   RPC_LOC_IOCTL_NOTIFY_WIPER_STATUS = 412,
   RPC_LOC_IOCTL_ACCESS_EFS_DATA = 413,
+  RPC_LOC_IOCTL_ERROR_ESTIMATE_CONFIG = 414,
+  RPC_LOC_IOCTL_INFORM_SERVER_MULTI_OPEN_STATUS = 415,
   RPC_LOC_IOCTL_NV_SETTINGS_START_INDEX = 800,
   RPC_LOC_IOCTL_SET_ENGINE_LOCK = 800,
   RPC_LOC_IOCTL_GET_ENGINE_LOCK = 801,
@@ -762,10 +779,25 @@ enum rpc_loc_server_open_status_e_type {
   RPC_LOC_SERVER_OPEN_STATUS_MAX = 268435456
 };
 
+enum rpc_loc_server_pdp_type_e_type {
+  RPC_LOC_SERVER_PDP_IP = 0,
+  RPC_LOC_SERVER_PDP_PPP,
+  RPC_LOC_SERVER_PDP_IPV6,
+  RPC_LOC_SERVER_PDP_IPV4V6,
+  RPC_LOC_SERVER_PDP_MAX = 268435456
+};
+
 struct rpc_loc_server_open_status_s_type {
   rpc_loc_server_connection_handle conn_handle;
   rpc_loc_server_open_status_e_type open_status;
-  opaque apn_name[100]; /* EVAL:[100]*/
+  opaque apn_name[100];
+};
+
+struct rpc_loc_server_multi_open_status_s_type {
+  rpc_loc_server_connection_handle conn_handle;
+  rpc_loc_server_open_status_e_type open_status;
+  rpc_loc_server_pdp_type_e_type pdp_type;
+  opaque apn_name[100];
 };
 
 enum rpc_loc_server_close_status_e_type {
@@ -792,7 +824,7 @@ struct rpc_loc_wiper_fix_pos_s_type {
 };
 
 struct rpc_loc_wiper_ap_info_s_type {
-  opaque mac_addr[6]; /* EVAL:[6]*/
+  opaque mac_addr[6];
   rpc_int32 rssi;
   rpc_uint16 channel;
   rpc_uint8 ap_qualifier;
@@ -800,7 +832,7 @@ struct rpc_loc_wiper_ap_info_s_type {
 
 struct rpc_loc_wiper_ap_set_s_type {
   rpc_uint8 num_of_aps;
-  rpc_loc_wiper_ap_info_s_type ap_info[50]; /* EVAL:[50]*/  
+  rpc_loc_wiper_ap_info_s_type ap_info[50];
 };
 
 struct rpc_loc_wiper_position_report_s_type {
@@ -825,7 +857,7 @@ enum rpc_loc_fs_operation_e_type {
 };
 
 struct rpc_loc_efs_data_s_type {
-  opaque filename[64]; /* EVAL:[64]*/  
+  opaque filename[64];
   rpc_loc_fs_operation_e_type operation;
   rpc_uint32 total_size;
   opaque data_ptr<>;
@@ -833,6 +865,12 @@ struct rpc_loc_efs_data_s_type {
   rpc_uint8 part;
   rpc_uint8 total_parts;
   rpc_uint32 reserved;
+};
+
+enum rpc_loc_error_estimate_config_e_type {
+  RPC_LOC_ERROR_ESTIMATE_CONFIG_SET = 1,
+  RPC_LOC_ERROR_ESTIMATE_CONFIG_CLEAR = 2,
+  RPC_LOC_ERROR_ESTIMATE_MAX = 268435456
 };
 
 struct rpc_loc_apn_profiles_type {
@@ -856,7 +894,7 @@ typedef rpc_uint32 rpc_loc_assist_data_type;
 
 struct rpc_loc_assist_data_delete_s_type {
   rpc_loc_assist_data_type type;
-  rpc_uint32 reserved[8]; /* EVAL:[8]*/  
+  rpc_uint32 reserved[8];
 };
 
 union rpc_loc_ioctl_data_u_type switch (rpc_loc_ioctl_e_type disc) {
@@ -897,6 +935,8 @@ union rpc_loc_ioctl_data_u_type switch (rpc_loc_ioctl_e_type disc) {
     rpc_loc_assist_data_delete_s_type assist_data_delete;
   case RPC_LOC_IOCTL_ACCESS_EFS_DATA:
     rpc_loc_efs_data_s_type efs_data;
+  case RPC_LOC_IOCTL_ERROR_ESTIMATE_CONFIG:
+    rpc_loc_error_estimate_config_e_type error_estimate_config;
   case RPC_LOC_IOCTL_SET_XTRA_T_SESSION_CONTROL:
     rpc_uint8 xtra_t_session_control;
   case  RPC_LOC_IOCTL_SET_LBS_APN_PROFILE:
@@ -906,6 +946,8 @@ union rpc_loc_ioctl_data_u_type switch (rpc_loc_ioctl_e_type disc) {
     rpc_boolean data_enable;
   case RPC_LOC_IOCTL_SET_SUPL_VERSION:
     rpc_uint32 supl_version;
+  case RPC_LOC_IOCTL_INFORM_SERVER_MULTI_OPEN_STATUS:
+    rpc_loc_server_multi_open_status_s_type multi_conn_open_status;
   case RPC_LOC_IOCTL_RESERVED_CMD:
     rpc_loc_reserved_payload_s_type reserved;
   default:

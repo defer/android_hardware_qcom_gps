@@ -923,6 +923,16 @@ xdr_rpc_loc_server_protocol_e_type (XDR *xdrs, rpc_loc_server_protocol_e_type *o
 }
 
 bool_t
+xdr_rpc_loc_server_connection_e_type (XDR *xdrs, rpc_loc_server_connection_e_type *objp)
+{
+    register int32_t *buf;
+
+     if (!xdr_enum (xdrs, (enum_t *) objp))
+         return FALSE;
+    return TRUE;
+}
+
+bool_t
 xdr_rpc_loc_server_request_e_type (XDR *xdrs, rpc_loc_server_request_e_type *objp)
 {
     register int32_t *buf;
@@ -940,6 +950,20 @@ xdr_rpc_loc_server_open_req_s_type (XDR *xdrs, rpc_loc_server_open_req_s_type *o
      if (!xdr_rpc_loc_server_connection_handle (xdrs, &objp->conn_handle))
          return FALSE;
      if (!xdr_rpc_loc_server_protocol_e_type (xdrs, &objp->protocol))
+         return FALSE;
+    return TRUE;
+}
+
+bool_t
+xdr_rpc_loc_server_multi_open_req_s_type (XDR *xdrs, rpc_loc_server_multi_open_req_s_type *objp)
+{
+    register int32_t *buf;
+
+     if (!xdr_rpc_loc_server_connection_handle (xdrs, &objp->conn_handle))
+         return FALSE;
+     if (!xdr_rpc_loc_server_protocol_e_type (xdrs, &objp->protocol))
+         return FALSE;
+     if (!xdr_rpc_loc_server_connection_e_type (xdrs, &objp->connection_type))
          return FALSE;
     return TRUE;
 }
@@ -968,6 +992,10 @@ xdr_rpc_loc_server_request_u_type (XDR *xdrs, rpc_loc_server_request_u_type *obj
         break;
     case RPC_LOC_SERVER_REQUEST_CLOSE:
          if (!xdr_rpc_loc_server_close_req_s_type (xdrs, &objp->rpc_loc_server_request_u_type_u.close_req))
+             return FALSE;
+        break;
+    case RPC_LOC_SERVER_REQUEST_MULTI_OPEN:
+         if (!xdr_rpc_loc_server_multi_open_req_s_type (xdrs, &objp->rpc_loc_server_request_u_type_u.multi_open_req))
              return FALSE;
         break;
     default:
@@ -1241,6 +1269,16 @@ xdr_rpc_loc_server_open_status_e_type (XDR *xdrs, rpc_loc_server_open_status_e_t
 }
 
 bool_t
+xdr_rpc_loc_server_pdp_type_e_type (XDR *xdrs, rpc_loc_server_pdp_type_e_type *objp)
+{
+    register int32_t *buf;
+
+     if (!xdr_enum (xdrs, (enum_t *) objp))
+         return FALSE;
+    return TRUE;
+}
+
+bool_t
 xdr_rpc_loc_server_open_status_s_type (XDR *xdrs, rpc_loc_server_open_status_s_type *objp)
 {
     register int32_t *buf;
@@ -1249,6 +1287,23 @@ xdr_rpc_loc_server_open_status_s_type (XDR *xdrs, rpc_loc_server_open_status_s_t
      if (!xdr_rpc_loc_server_connection_handle (xdrs, &objp->conn_handle))
          return FALSE;
      if (!xdr_rpc_loc_server_open_status_e_type (xdrs, &objp->open_status))
+         return FALSE;
+     if (!xdr_opaque (xdrs, objp->apn_name, 100))
+         return FALSE;
+    return TRUE;
+}
+
+bool_t
+xdr_rpc_loc_server_multi_open_status_s_type (XDR *xdrs, rpc_loc_server_multi_open_status_s_type *objp)
+{
+    register int32_t *buf;
+
+    int i;
+     if (!xdr_rpc_loc_server_connection_handle (xdrs, &objp->conn_handle))
+         return FALSE;
+     if (!xdr_rpc_loc_server_open_status_e_type (xdrs, &objp->open_status))
+         return FALSE;
+     if (!xdr_rpc_loc_server_pdp_type_e_type (xdrs, &objp->pdp_type))
          return FALSE;
      if (!xdr_opaque (xdrs, objp->apn_name, 100))
          return FALSE;
@@ -1398,6 +1453,16 @@ xdr_rpc_loc_efs_data_s_type (XDR *xdrs, rpc_loc_efs_data_s_type *objp)
 }
 
 bool_t
+xdr_rpc_loc_error_estimate_config_e_type (XDR *xdrs, rpc_loc_error_estimate_config_e_type *objp)
+{
+    register int32_t *buf;
+
+     if (!xdr_enum (xdrs, (enum_t *) objp))
+         return FALSE;
+    return TRUE;
+}
+
+bool_t
 xdr_rpc_loc_apn_profiles_type (XDR *xdrs, rpc_loc_apn_profiles_type *objp)
 {
     register int32_t *buf;
@@ -1537,6 +1602,10 @@ xdr_rpc_loc_ioctl_data_u_type (XDR *xdrs, rpc_loc_ioctl_data_u_type *objp)
          if (!xdr_rpc_loc_efs_data_s_type (xdrs, &objp->rpc_loc_ioctl_data_u_type_u.efs_data))
              return FALSE;
         break;
+    case RPC_LOC_IOCTL_ERROR_ESTIMATE_CONFIG:
+         if (!xdr_rpc_loc_error_estimate_config_e_type (xdrs, &objp->rpc_loc_ioctl_data_u_type_u.error_estimate_config))
+             return FALSE;
+        break;
     case RPC_LOC_IOCTL_SET_XTRA_T_SESSION_CONTROL:
          if (!xdr_rpc_uint8 (xdrs, &objp->rpc_loc_ioctl_data_u_type_u.xtra_t_session_control))
              return FALSE;
@@ -1553,6 +1622,10 @@ xdr_rpc_loc_ioctl_data_u_type (XDR *xdrs, rpc_loc_ioctl_data_u_type *objp)
         break;
     case RPC_LOC_IOCTL_SET_SUPL_VERSION:
          if (!xdr_rpc_uint32 (xdrs, &objp->rpc_loc_ioctl_data_u_type_u.supl_version))
+             return FALSE;
+        break;
+    case RPC_LOC_IOCTL_INFORM_SERVER_MULTI_OPEN_STATUS:
+         if (!xdr_rpc_loc_server_multi_open_status_s_type (xdrs, &objp->rpc_loc_ioctl_data_u_type_u.multi_conn_open_status))
              return FALSE;
         break;
     case RPC_LOC_IOCTL_RESERVED_CMD:

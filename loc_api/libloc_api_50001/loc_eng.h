@@ -118,7 +118,7 @@ typedef struct
 
    boolean                        client_opened;
    boolean                        navigating;
-   boolean                        data_connection_is_on;
+   AGpsBearerType                 data_connection_bearer;
 
    // ATL variables
    char                           apn_name[100];
@@ -126,6 +126,7 @@ typedef struct
    // connections to MPC & PDE
    loc_eng_atl_info_s_type       atl_conn_info[MAX_NUM_ATL_CONNECTIONS];
    rpc_loc_server_connection_handle  conn_handle;
+   AGpsType                       conn_type;
    // GPS engine status
    GpsStatusValue                 engine_status;
    GpsStatusValue                 fix_session_status;

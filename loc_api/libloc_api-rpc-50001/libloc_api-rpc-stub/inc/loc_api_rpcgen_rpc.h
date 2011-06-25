@@ -123,7 +123,7 @@ struct rpc_loc_api_api_versions_rets {
     rpc_uint32 *len;
 };
 typedef struct rpc_loc_api_api_versions_rets rpc_loc_api_api_versions_rets;
-#define LOC_APIVERS 0x00050005
+#define LOC_APIVERS 0x00050006
 
 #define LOC_APIPROG 0x3000008C
 #define LOC_APIVERS_0001 0x00050001
@@ -229,6 +229,18 @@ extern int loc_apiprog_0x00050005_freeresult (SVCXPRT *, xdrproc_t, caddr_t);
 extern  enum clnt_stat rpc_loc_api_null_0x00050005();
 extern  bool_t rpc_loc_api_null_0x00050005_svc();
 extern int loc_apiprog_0x00050005_freeresult ();
+#endif /* K&R C */
+#define LOC_APIVERS_0006 0x00050006
+
+#if defined(__STDC__) || defined(__cplusplus)
+extern  enum clnt_stat rpc_loc_api_null_0x00050006(void *, void *, CLIENT *);
+extern  bool_t rpc_loc_api_null_0x00050006_svc(void *, void *, struct svc_req *);
+extern int loc_apiprog_0x00050006_freeresult (SVCXPRT *, xdrproc_t, caddr_t);
+
+#else /* K&R C */
+extern  enum clnt_stat rpc_loc_api_null_0x00050006();
+extern  bool_t rpc_loc_api_null_0x00050006_svc();
+extern int loc_apiprog_0x00050006_freeresult ();
 #endif /* K&R C */
 
 /* the xdr functions */

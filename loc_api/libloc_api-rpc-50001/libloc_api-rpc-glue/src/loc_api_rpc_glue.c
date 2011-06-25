@@ -90,8 +90,8 @@ loc_glue_cb_entry_s_type loc_glue_callback_table[LOC_API_CB_MAX_CLIENTS];
 
 #define LOC_GLUE_CHECK_RESULT(stat, ret_type) \
   if (stat != RPC_SUCCESS) { \
-	  return (ret_type)((stat == RPC_SUBSYSTEM_RESTART) ? \
-						RPC_LOC_API_RPC_MODEM_RESTART : RPC_LOC_API_RPC_FAILURE); \
+      return (ret_type)((stat == RPC_SUBSYSTEM_RESTART) ? \
+                        RPC_LOC_API_RPC_MODEM_RESTART : RPC_LOC_API_RPC_FAILURE); \
   }
 
 /* Callback functions */
@@ -199,6 +199,7 @@ loc_apicb_prog_VER_freeresult(RPC_LOC_API_API_MAJOR_NUM, 0002);
 loc_apicb_prog_VER_freeresult(RPC_LOC_API_API_MAJOR_NUM, 0003);
 loc_apicb_prog_VER_freeresult(RPC_LOC_API_API_MAJOR_NUM, 0004);
 loc_apicb_prog_VER_freeresult(RPC_LOC_API_API_MAJOR_NUM, 0005);
+loc_apicb_prog_VER_freeresult(RPC_LOC_API_API_MAJOR_NUM, 0006);
 
 /*===========================================================================
 
@@ -224,6 +225,7 @@ rpc_loc_api_cb_null_VER_svc(RPC_LOC_API_API_MAJOR_NUM, 0002);
 rpc_loc_api_cb_null_VER_svc(RPC_LOC_API_API_MAJOR_NUM, 0003);
 rpc_loc_api_cb_null_VER_svc(RPC_LOC_API_API_MAJOR_NUM, 0004);
 rpc_loc_api_cb_null_VER_svc(RPC_LOC_API_API_MAJOR_NUM, 0005);
+rpc_loc_api_cb_null_VER_svc(RPC_LOC_API_API_MAJOR_NUM, 0006);
 
 static void loc_api_glue_rpc_cb(CLIENT* client, enum rpc_reset_event event)
 {

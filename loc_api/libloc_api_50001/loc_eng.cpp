@@ -87,7 +87,7 @@ static const void* loc_eng_get_extension(const char* name);
 static void loc_eng_agps_reinit();
 // Function declarations for sLocEngAGpsInterface
 static void loc_eng_agps_init(AGpsCallbacks* callbacks);
-static int loc_eng_data_conn_open(const char* apn);
+static int loc_eng_data_conn_open(const char* apn, AGpsBearerType bearerType);
 static int loc_eng_data_conn_closed();
 static int loc_eng_data_conn_failed();
 static int loc_eng_set_server(AGpsType type, const char *hostname, int port);
@@ -108,7 +108,8 @@ static void loc_eng_report_nmea(const rpc_loc_nmea_report_s_type *nmea_report_pt
 static void loc_eng_process_conn_request(const rpc_loc_server_request_s_type *server_request_ptr);
 
 static void loc_eng_deferred_action_thread(void* arg);
-static void loc_eng_process_atl_action(AGpsStatusValue status);
+static void loc_eng_process_atl_action(rpc_loc_server_connection_handle conn_handle,
+                                       AGpsStatusValue status, AGpsType agpsType);
 
 static void loc_eng_delete_aiding_data_action(GpsAidingData delete_bits);
 /* Helper functions to manage the state machine for each ATL session*/
@@ -303,6 +304,7 @@ static int loc_eng_init(GpsCallbacks* callbacks)
    // Mute session
    loc_eng_data.mute_session_state = LOC_MUTE_SESS_NONE;
    memset(loc_eng_data.apn_name, 0, sizeof loc_eng_data.apn_name);
+
    loc_eng_data.aiding_data_for_deletion = 0;
 
    pthread_mutex_init(&loc_eng_data.mute_session_lock, NULL);
@@ -1455,18 +1457,28 @@ static void loc_eng_process_conn_request (const rpc_loc_server_request_s_type *s
    LOC_LOGD("loc_eng_process_conn_request: get loc event location server request, event = %d\n", server_request_ptr->event);
    pthread_mutex_lock(&loc_eng_data.deferred_action_mutex);
 
-   if (server_request_ptr->event == RPC_LOC_SERVER_REQUEST_OPEN)
+   switch (server_request_ptr->event)
    {
+   case RPC_LOC_SERVER_REQUEST_MULTI_OPEN:
+      loc_eng_data.agps_status = GPS_REQUEST_AGPS_DATA_CONN;
+      loc_eng_data.conn_handle = server_request_ptr->payload.rpc_loc_server_request_u_type_u.multi_open_req.conn_handle;
+      loc_eng_data.conn_type = (server_request_ptr->payload.rpc_loc_server_request_u_type_u.multi_open_req.connection_type
+                                == RPC_LOC_SERVER_CONNECTION_LBS) ? AGPS_TYPE_SUPL : AGPS_TYPE_WWAN_ANY;
+      loc_eng_data.agps_request_pending = true;
+      break;
+   case RPC_LOC_SERVER_REQUEST_OPEN:
       loc_eng_data.agps_status = GPS_REQUEST_AGPS_DATA_CONN;
       loc_eng_data.conn_handle = server_request_ptr->payload.rpc_loc_server_request_u_type_u.open_req.conn_handle;
+      loc_eng_data.conn_type = AGPS_TYPE_INVALID;
       loc_eng_data.agps_request_pending = true;
-   }
-   else
-   {
+      break;
+   default:
       loc_eng_data.agps_status = GPS_RELEASE_AGPS_DATA_CONN;
       loc_eng_data.conn_handle = server_request_ptr->payload.rpc_loc_server_request_u_type_u.close_req.conn_handle;
       loc_eng_data.agps_request_pending = false;
+      break;
    }
+
    /* hold a wake lock while events are pending for deferred_action_thread */
    loc_eng_data.acquire_wakelock_cb();
    loc_eng_data.deferred_action_flags |= DEFERRED_ACTION_AGPS_STATUS;
@@ -1578,7 +1590,7 @@ SIDE EFFECTS
 static void loc_eng_agps_reinit()
 {
    // Data connection for AGPS
-   loc_eng_data.data_connection_is_on = LOC_DATA_DEFAULT;
+   loc_eng_data.data_connection_bearer = AGPS_APN_BEARER_INVALID;
    int i=0;
    for(i=0;i <= MAX_NUM_ATL_CONNECTIONS; i++ )
    {
@@ -1642,51 +1654,88 @@ SIDE EFFECTS
 ===========================================================================*/
 static void loc_eng_ioctl_data_open_status(int is_succ)
 {
-   rpc_loc_ioctl_data_u_type           ioctl_data;
-   rpc_loc_server_open_status_s_type  *conn_open_status_ptr =
-      &ioctl_data.rpc_loc_ioctl_data_u_type_u.conn_open_status;
-   int                                 ret_val;
+    rpc_loc_ioctl_data_u_type           ioctl_data;
+    int                                 ret_val;
 
-   //Go through all the active connection states to determine which command to send to LOC MW and the
-  //state machine updates that need to be done
-  for (int i=0;i< MAX_NUM_ATL_CONNECTIONS;i++)
-   {
-    LOC_LOGD("loc_eng_ioctl_data_open_status, is_active = %d, handle = %d, state = %d, dataOn: %d\n",
-    loc_eng_data.atl_conn_info[i].active, loc_eng_data.atl_conn_info[i].conn_handle,
-    loc_eng_data.atl_conn_info[i].conn_state,
-    loc_eng_data.data_connection_is_on);
-
-    if ((loc_eng_data.atl_conn_info[i].active == TRUE) &&
-        (loc_eng_data.atl_conn_info[i].conn_state == LOC_CONN_OPEN_REQ))
+    //Go through all the active connection states to determine which command to send to LOC MW and the
+    //state machine updates that need to be done
+    for (int i=0;i< MAX_NUM_ATL_CONNECTIONS;i++)
     {
-     //update the session states
-     loc_eng_data.atl_conn_info[i].conn_state = is_succ ? LOC_CONN_OPEN : LOC_CONN_IDLE;
-   // Fill in data
-   ioctl_data.disc = RPC_LOC_IOCTL_INFORM_SERVER_OPEN_STATUS;
-     conn_open_status_ptr->conn_handle = loc_eng_data.atl_conn_info[i].conn_handle;
-#if (AMSS_VERSION==3200)
-   conn_open_status_ptr->apn_name = loc_eng_data.apn_name; /* requires APN */
-#else
-   strlcpy(conn_open_status_ptr->apn_name, loc_eng_data.apn_name,
-         sizeof conn_open_status_ptr->apn_name);
-#endif /* #if (AMSS_VERSION==3200) */
-   conn_open_status_ptr->open_status = is_succ ? RPC_LOC_SERVER_OPEN_SUCCESS : RPC_LOC_SERVER_OPEN_FAIL;
+        LOC_LOGD("loc_eng_ioctl_data_open_status, is_active = %d, handle = %d, state = %d, bearer: %d\n",
+                 loc_eng_data.atl_conn_info[i].active, loc_eng_data.atl_conn_info[i].conn_handle,
+                 loc_eng_data.atl_conn_info[i].conn_state,
+                 loc_eng_data.data_connection_bearer);
 
-   LOC_LOGD("loc_eng_ioctl for ATL open %s, APN name = [%s]\n",
-         log_succ_fail_string(is_succ),
-         loc_eng_data.apn_name);
-    //Delay the call into the modem as there is a chance that this IOCTL into LOC MW
-    //will be invoked before we return from loc_process_conn_request() into the RPC context
-    usleep(TENMSDELAY);
-   // Make the IOCTL call
-   ret_val = loc_eng_ioctl(loc_eng_data.client_handle,
-         ioctl_data.disc,
-         &ioctl_data,
-         LOC_IOCTL_DEFAULT_TIMEOUT,
-         NULL);
-     LOC_LOGD("loc_eng_ioctl for ATL open ack: %s\n", log_succ_fail_string(ret_val));
+        rpc_loc_server_open_status_e_type open_status = is_succ ? RPC_LOC_SERVER_OPEN_SUCCESS : RPC_LOC_SERVER_OPEN_FAIL;
+
+        if ((loc_eng_data.atl_conn_info[i].active == TRUE) &&
+            (loc_eng_data.atl_conn_info[i].conn_state == LOC_CONN_OPEN_REQ))
+        {
+            //update the session states
+            loc_eng_data.atl_conn_info[i].conn_state = is_succ ? LOC_CONN_OPEN : LOC_CONN_IDLE;
+
+            //Delay the call into the modem as there is a chance that this IOCTL into LOC MW
+            //will be invoked before we return from loc_process_conn_request() into the RPC context
+            usleep(TENMSDELAY);
+
+            if (AGPS_TYPE_INVALID == loc_eng_data.conn_type) {
+                rpc_loc_server_open_status_s_type  *conn_open_status_ptr =
+                    &ioctl_data.rpc_loc_ioctl_data_u_type_u.conn_open_status;
+
+                // Fill in data
+                ioctl_data.disc = RPC_LOC_IOCTL_INFORM_SERVER_OPEN_STATUS;
+                conn_open_status_ptr->conn_handle = loc_eng_data.atl_conn_info[i].conn_handle;
+                conn_open_status_ptr->open_status = open_status;
+#if (AMSS_VERSION==3200)
+                conn_open_status_ptr->apn_name = loc_eng_data.apn_name; /* requires APN */
+#else
+                strlcpy(conn_open_status_ptr->apn_name, loc_eng_data.apn_name,
+                        sizeof conn_open_status_ptr->apn_name);
+#endif /* #if (AMSS_VERSION==3200) */
+
+                LOC_LOGD("ATL RPC_LOC_IOCTL_INFORM_SERVER_OPEN_STATUS open %s, APN name = [%s]\n",
+                         log_succ_fail_string(is_succ),
+                         loc_eng_data.apn_name);
+            } else {
+                rpc_loc_server_multi_open_status_s_type  *conn_multi_open_status_ptr =
+                    &ioctl_data.rpc_loc_ioctl_data_u_type_u.multi_conn_open_status;
+
+                // Fill in data
+                ioctl_data.disc = RPC_LOC_IOCTL_INFORM_SERVER_MULTI_OPEN_STATUS;
+                conn_multi_open_status_ptr->conn_handle = loc_eng_data.atl_conn_info[i].conn_handle;
+                conn_multi_open_status_ptr->open_status = open_status;
+                strlcpy(conn_multi_open_status_ptr->apn_name, loc_eng_data.apn_name,
+                        sizeof conn_multi_open_status_ptr->apn_name);
+
+                switch(loc_eng_data.data_connection_bearer)
+                {
+                case AGPS_APN_BEARER_IPV4:
+                    conn_multi_open_status_ptr->pdp_type = RPC_LOC_SERVER_PDP_IP;
+                    break;
+                case AGPS_APN_BEARER_IPV6:
+                    conn_multi_open_status_ptr->pdp_type = RPC_LOC_SERVER_PDP_IPV6;
+                    break;
+                case AGPS_APN_BEARER_IPV4V6:
+                    conn_multi_open_status_ptr->pdp_type = RPC_LOC_SERVER_PDP_IPV4V6;
+                    break;
+                default:
+                    conn_multi_open_status_ptr->pdp_type = RPC_LOC_SERVER_PDP_PPP;
+                }
+
+                LOC_LOGD("ATL RPC_LOC_IOCTL_INFORM_SERVER_MULTI_OPEN_STATUSopen %s, APN name = [%s], pdp_type = %d\n",
+                         log_succ_fail_string(is_succ),
+                         loc_eng_data.apn_name,
+                         conn_multi_open_status_ptr->pdp_type);
+            }
+
+            // Make the IOCTL call
+            ret_val = loc_eng_ioctl(loc_eng_data.client_handle,
+                                    ioctl_data.disc,
+                                    &ioctl_data,
+                                    LOC_IOCTL_DEFAULT_TIMEOUT,
+                                    NULL);
+        }
     }
-  }
 }
 /*===========================================================================
 FUNCTION    loc_eng_ioctl_data_close_status
@@ -1712,10 +1761,10 @@ static void loc_eng_ioctl_data_close_status(int is_succ)
 
    for (int i=0;i< MAX_NUM_ATL_CONNECTIONS;i++)
    {
-      LOC_LOGD("loc_eng_ioctl_data_close_status, is_active = %d, handle = %d, state = %d, dataOn: %d\n",
+      LOC_LOGD("loc_eng_ioctl_data_close_status, is_active = %d, handle = %d, state = %d, bearer: %d\n",
             loc_eng_data.atl_conn_info[i].active, loc_eng_data.atl_conn_info[i].conn_handle,
             loc_eng_data.atl_conn_info[i].conn_state,
-            loc_eng_data.data_connection_is_on);
+            loc_eng_data.data_connection_bearer);
 
       if ( loc_eng_data.atl_conn_info[i].active == TRUE &&
            ((loc_eng_data.atl_conn_info[i].conn_state == LOC_CONN_CLOSE_REQ )||
@@ -1735,7 +1784,7 @@ static void loc_eng_ioctl_data_close_status(int is_succ)
                                  &ioctl_data,
                                  LOC_IOCTL_DEFAULT_TIMEOUT,
                                  NULL);
-         LOC_LOGD("loc_eng_ioctl for ATL close: %s\n", log_succ_fail_string(ret_val));
+
          //update the session states
          loc_eng_data.atl_conn_info[i].conn_state = LOC_CONN_IDLE;
          loc_eng_data.atl_conn_info[i].active = FALSE;
@@ -1761,13 +1810,13 @@ SIDE EFFECTS
    N/A
 
 ===========================================================================*/
-static int loc_eng_data_conn_open(const char* apn)
+static int loc_eng_data_conn_open(const char* apn, AGpsBearerType bearerType)
 {
    INIT_CHECK("loc_eng_data_conn_open");
 
    LOC_LOGD("loc_eng_data_conn_open APN name = [%s]", apn);
    pthread_mutex_lock(&(loc_eng_data.deferred_action_mutex));
-   loc_eng_data.data_connection_is_on = TRUE;
+   loc_eng_data.data_connection_bearer = bearerType;
    loc_eng_set_apn(apn);
    /* hold a wake lock while events are pending for deferred_action_thread */
    loc_eng_data.acquire_wakelock_cb();
@@ -1872,7 +1921,7 @@ static int loc_eng_set_apn (const char* apn)
 #if 0 /* hack: temporarily allow NULL apn name */
       if (apn_len == 0)
       {
-         loc_eng_data.data_connection_is_on = FALSE;
+         loc_eng_data.data_connection_bearer = AGPS_APN_BEARER_INVALID;
       }
       else
 #endif
@@ -1892,6 +1941,7 @@ static int loc_eng_set_apn (const char* apn)
       ioctl_data.rpc_loc_ioctl_data_u_type_u.apn_profiles[0].srv_system_type = LOC_APN_PROFILE_SRV_SYS_MAX;
       ioctl_data.rpc_loc_ioctl_data_u_type_u.apn_profiles[0].pdp_type = LOC_APN_PROFILE_PDN_TYPE_IPV4;
       memcpy(&(ioctl_data.rpc_loc_ioctl_data_u_type_u.apn_profiles[0].apn_name), loc_eng_data.apn_name, apn_len+1);
+
       loc_eng_ioctl (loc_eng_data.client_handle,
                      RPC_LOC_IOCTL_SET_LBS_APN_PROFILE,
                      &ioctl_data,
@@ -2164,8 +2214,6 @@ static void loc_eng_delete_aiding_data_action(GpsAidingData bits)
    if (ret_val == RPC_LOC_API_RPC_MODEM_RESTART) {
       loc_eng_set_deferred_action(DEFERRED_ACTION_MODEM_DOWN_DETECTED, NULL);
    }
-
-   LOC_LOGV("loc_eng_delete_aiding_data_action: %s\n", log_succ_fail_string(ret_val));
 }
 
 /*===========================================================================
@@ -2211,7 +2259,7 @@ static void loc_eng_report_agps_status(AGpsType type,
          (int) type, (int) status,  (int) ipv4_addr);
 
    agpsStatus.size      = sizeof(agpsStatus);
-   agpsStatus.type      = type;
+   agpsStatus.type      = (AGPS_TYPE_INVALID == type) ? AGPS_TYPE_SUPL : type;
    agpsStatus.status    = status;
    agpsStatus.ipv4_addr = ipv4_addr;
    if (ipv6_addr != NULL) {
@@ -2250,20 +2298,22 @@ SIDE EFFECTS
    N/A
 
 ===========================================================================*/
-static void loc_eng_process_atl_action(AGpsStatusValue status)
+static void loc_eng_process_atl_action(rpc_loc_server_connection_handle conn_handle,
+                                       AGpsStatusValue status, AGpsType agps_type)
 
 {
-  AGpsType                            agps_type =AGPS_TYPE_ANY;
    boolean                             ret_val;
+
+LOC_LOGE("loc_eng_process_atl_action,handle = %d; status = %d; agps_type = %d\n", conn_handle, status, agps_type);
 
    //Check if the incoming connection handle already has a atl state which exists and get associated session index
    int session_index = 0;
-   session_index = loc_eng_get_index(loc_eng_data.conn_handle);
+   session_index = loc_eng_get_index(conn_handle);
    if (session_index == MAX_NUM_ATL_CONNECTIONS)
    {
      //An error has occured and so print out an error message and return. End the call flow
      LOC_LOGE("loc_eng_process_conn_request- session index error,handle = %d\n",
-             loc_eng_data.conn_handle);
+             conn_handle);
      return;
    }
    LOC_LOGD("loc_eng_process_atl_action.session_index = %x, active_session_state = %x ,"
@@ -2278,7 +2328,7 @@ static void loc_eng_process_atl_action(AGpsStatusValue status)
       if(loc_eng_data.atl_conn_info[session_index].conn_state == LOC_CONN_IDLE)
       {
        loc_eng_data.atl_conn_info[session_index].conn_state = LOC_CONN_OPEN_REQ;
-        loc_eng_data.atl_conn_info[session_index].conn_handle = loc_eng_data.conn_handle;
+        loc_eng_data.atl_conn_info[session_index].conn_handle = conn_handle;
        if (check_if_any_connection(LOC_CONN_OPEN, session_index))
        {
        //PPP connection has already been opened for some other handle. So simply acknowledge the modem.
@@ -2303,14 +2353,14 @@ static void loc_eng_process_atl_action(AGpsStatusValue status)
          //In this case the open request has come in for a handle which is already in
          //CLOSE_REQ.  Here we ack the modem a failure for this request as it came in
          //even before the modem got the ack for the precedding close request for this handle.
-         LOC_LOGE("ATL Open req came in for handle %d when in CLOSE_REQ state", loc_eng_data.conn_handle);
+         LOC_LOGE("ATL Open req came in for handle %d when in CLOSE_REQ state", conn_handle);
          loc_eng_data.atl_conn_info[session_index].conn_state = LOC_CONN_OPEN_REQ;
          loc_eng_ioctl_data_open_status(FAILURE);
       }else
       {//In this case the open request has come in for a handle which is already in OPEN_REQ.
        //Here ack to the modem request will be sent when we get an equivalent ack from
        //the Connectivity Manager.
-         LOC_LOGD("ATL Open req came in for handle %d when in OPEN_REQ state", loc_eng_data.conn_handle);
+         LOC_LOGD("ATL Open req came in for handle %d when in OPEN_REQ state", conn_handle);
       }
 
    }else if (status == GPS_RELEASE_AGPS_DATA_CONN)
@@ -2337,14 +2387,14 @@ static void loc_eng_process_atl_action(AGpsStatusValue status)
         //In this case the close request has come in for a handle which is already in
          //OPEN_REQ.  In this case we ack the modem a failure for this request as it came in
          //even before the modem got the ack for the precedding open request for this handle.
-         LOC_LOGE("ATL Close req came in for handle %d when in OPEN_REQ state", loc_eng_data.conn_handle);
+         LOC_LOGE("ATL Close req came in for handle %d when in OPEN_REQ state", conn_handle);
          loc_eng_data.atl_conn_info[session_index].conn_state = LOC_CONN_CLOSE_REQ;
          loc_eng_ioctl_data_close_status(FAILURE);
        }else
        {//In this case the close request has come in for a handle which is already in CLOSE_REQ.
        //In this case an ack to the modem request will be sent when we get an equivalent ack
        //from the Connectivity Manager.
-         LOC_LOGD("ATL Open req came in for handle %d when in CLOSE_REQ state", loc_eng_data.conn_handle);
+         LOC_LOGD("ATL Open req came in for handle %d when in CLOSE_REQ state", conn_handle);
        }
    }
 }
@@ -2467,6 +2517,9 @@ static void loc_eng_deferred_action_thread(void* arg)
       boolean         data_connection_failed;
       rpc_loc_event_mask_type         loc_event;
       rpc_loc_event_payload_u_type    loc_event_payload;
+      AGpsType        agpsConnType;
+      rpc_loc_server_connection_handle  agpsConnHandle;
+
 
       // Wait until we are signalled to do a deferred action, or exit
       pthread_mutex_lock(&loc_eng_data.deferred_action_mutex);
@@ -2501,6 +2554,8 @@ static void loc_eng_deferred_action_thread(void* arg)
       engine_status = loc_eng_data.engine_status;
       aiding_data_for_deletion = loc_eng_data.aiding_data_for_deletion;
       status = loc_eng_data.agps_status;
+      agpsConnType = loc_eng_data.conn_type;
+      agpsConnHandle = loc_eng_data.conn_handle;
       loc_eng_data.agps_status = 0;
 
       // perform all actions after releasing the mutex to avoid blocking RPCs from the ARM9
@@ -2539,17 +2594,17 @@ static void loc_eng_deferred_action_thread(void* arg)
       }else if(flags & DEFERRED_ACTION_AGPS_DATA_CLOSED)
       {
          loc_eng_ioctl_data_close_status(SUCCESS);
-         loc_eng_data.data_connection_is_on = FALSE;
+         loc_eng_data.data_connection_bearer = AGPS_APN_BEARER_INVALID;
       }else if(flags & DEFERRED_ACTION_AGPS_DATA_FAILED)
       {
-         if(loc_eng_data.data_connection_is_on == TRUE)
+         if(loc_eng_data.data_connection_bearer != AGPS_APN_BEARER_INVALID)
          {
             loc_eng_ioctl_data_open_status(FAILURE);
          }else
          {
             loc_eng_ioctl_data_close_status(FAILURE);
          }
-         loc_eng_data.data_connection_is_on = FALSE;
+         loc_eng_data.data_connection_bearer = AGPS_APN_BEARER_INVALID;
       }
       if (flags & (DEFERRED_ACTION_AGPS_DATA_SUCCESS |
                    DEFERRED_ACTION_AGPS_DATA_CLOSED |
@@ -2579,7 +2634,7 @@ static void loc_eng_deferred_action_thread(void* arg)
       // ATL open/close actions
       if (status != 0 )
       {
-         loc_eng_process_atl_action(status);
+          loc_eng_process_atl_action(agpsConnHandle, status, agpsConnType);
          status = 0;
       }
    }

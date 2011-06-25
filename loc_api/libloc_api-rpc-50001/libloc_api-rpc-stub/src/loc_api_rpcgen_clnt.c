@@ -144,3 +144,12 @@ rpc_loc_api_null_0x00050005(void *argp, void *clnt_res, CLIENT *clnt)
         (xdrproc_t) xdr_void, (caddr_t) clnt_res,
         TIMEOUT));
 }
+
+enum clnt_stat
+rpc_loc_api_null_0x00050006(void *argp, void *clnt_res, CLIENT *clnt)
+{
+    return (clnt_call(clnt, rpc_loc_api_null,
+        (xdrproc_t) xdr_void, (caddr_t) argp,
+        (xdrproc_t) xdr_void, (caddr_t) clnt_res,
+        TIMEOUT));
+}
