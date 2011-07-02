@@ -27,16 +27,24 @@
  */
 
 #include "qmi.h"
-#include "qmi_cci_target.h"
 #include "qmi_client.h"
 #include "qmi_idl_lib.h"
+
+#ifdef FEATURE_LOC_API_V02_QNX_MOD
+#include "qmi_cci_target_ext.h"
+#else
+#include "qmi_cci_target.h"
 #include "qmi_cci_common.h"
+#endif //FEATURE_QCCI_QNX_MOD
+
 #include <string.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include "loc_api_v02_client.h"
 
+#define LOG_NDEBUG 0
 #define LOG_TAG "loc_api_v02"
 
 #include "loc_util_log.h"
@@ -48,9 +56,9 @@
 #define LOC_CLIENT_VALID_HANDLE (1234)
 
 // timeout before send_msg_sync should return
-#define LOC_CLIENT_ACK_TIMEOUT (5000)
+#define LOC_CLIENT_ACK_TIMEOUT (1000)
 // timeout before a sync request should return
-#define LOC_CLIENT_SYNC_REQ_TIMEOUT (5000)
+#define LOC_CLIENT_SYNC_REQ_TIMEOUT (1000)
 
 //External functions to send  a synchronous request
 // these functions need to defined per platform
@@ -89,72 +97,72 @@ static locClientEventIndTableStructT locClientEventIndTable[]= {
   // position report ind
   { QMI_LOC_EVENT_POSITION_REPORT_IND_V02,
     sizeof(qmiLocEventPositionReportIndMsgT_v02),
-    QMI_LOC_EVENT_POSITION_REPORT_V02},
+    QMI_LOC_EVENT_MASK_POSITION_REPORT_V02 },
 
   // satellite report ind
   { QMI_LOC_EVENT_GNSS_SV_INFO_IND_V02,
     sizeof(qmiLocEventGnssSvInfoIndMsgT_v02),
-    QMI_LOC_EVENT_SATELLITE_REPORT_V02},
+    QMI_LOC_EVENT_MASK_GNSS_SV_INFO_V02 },
 
   // NMEA report ind
   { QMI_LOC_EVENT_NMEA_IND_V02,
     sizeof(qmiLocEventNmeaIndMsgT_v02),
-    QMI_LOC_EVENT_NMEA_POSITION_REPORT_V02 },
+    QMI_LOC_EVENT_MASK_NMEA_V02 },
 
   //NI event ind
   { QMI_LOC_EVENT_NI_NOTIFY_VERIFY_REQ_IND_V02,
     sizeof(qmiLocEventNiNotifyVerifyReqIndMsgT_v02),
-    QMI_LOC_EVENT_NI_NOTIFY_VERIFY_REQUEST_V02},
+    QMI_LOC_EVENT_MASK_NI_NOTIFY_VERIFY_REQ_V02 },
 
   //Time Injection Request Ind
-  { QMI_LOC_EVENT_TIME_INJECT_REQ_IND_V02,
-    sizeof(qmiLocEventTimeInjectReqIndMsgT_v02),
-    QMI_LOC_EVENT_TIME_INJECTION_REQUEST_V02 },
+  { QMI_LOC_EVENT_INJECT_TIME_REQ_IND_V02,
+    sizeof(qmiLocEventInjectTimeReqIndMsgT_v02),
+    QMI_LOC_EVENT_MASK_INJECT_TIME_REQ_V02 },
 
   //Predicted Orbits Injection Request
-  { QMI_LOC_EVENT_PREDICTED_ORBITS_INJECT_REQ_IND_V02,
-    sizeof(qmiLocEventPredictedOrbitsInjectReqIndMsgT_v02),
-    QMI_LOC_EVENT_PREDICTED_ORBITS_REQUEST_V02 },
+  { QMI_LOC_EVENT_INJECT_PREDICTED_ORBITS_REQ_IND_V02,
+    sizeof(qmiLocEventInjectPredictedOrbitsReqIndMsgT_v02),
+    QMI_LOC_EVENT_MASK_INJECT_PREDICTED_ORBITS_REQ_V02 },
 
   //Position Injection Request Ind
-  { QMI_LOC_EVENT_POSITION_INJECT_REQ_IND_V02,
-    sizeof(qmiLocEventPositionInjectionReqIndMsgT_v02),
-    QMI_LOC_EVENT_POSITION_INJECTION_REQUEST_V02 } ,
+  { QMI_LOC_EVENT_INJECT_POSITION_REQ_IND_V02,
+    sizeof(qmiLocEventInjectPositionReqIndMsgT_v02),
+    QMI_LOC_EVENT_MASK_INJECT_POSITION_REQ_V02 } ,
 
   //Engine State Report Ind
   { QMI_LOC_EVENT_ENGINE_STATE_IND_V02,
     sizeof(qmiLocEventEngineStateIndMsgT_v02),
-    QMI_LOC_EVENT_ENGINE_STATE_REPORT_V02 },
+    QMI_LOC_EVENT_MASK_ENGINE_STATE_V02 },
 
   //Fix Session State Report Ind
   { QMI_LOC_EVENT_FIX_SESSION_STATE_IND_V02,
     sizeof(qmiLocEventFixSessionStateIndMsgT_v02),
-    QMI_LOC_EVENT_FIX_SESSION_STATUS_REPORT_V02 },
+    QMI_LOC_EVENT_MASK_FIX_SESSION_STATE_V02 },
 
   //Wifi Request Indication
   { QMI_LOC_EVENT_WIFI_REQ_IND_V02,
-    sizeof(qmiLocEventWifiRequestIndMsgT_v02),
-    QMI_LOC_EVENT_WIFI_REQUEST_V02 },
+    sizeof(qmiLocEventWifiReqIndMsgT_v02),
+    QMI_LOC_EVENT_MASK_WIFI_REQ_V02 },
 
   //Sensor Streaming Ready Status Ind
   { QMI_LOC_EVENT_SENSOR_STREAMING_READY_STATUS_IND_V02,
     sizeof(qmiLocEventSensorStreamingReadyStatusIndMsgT_v02),
-    QMI_LOC_EVENT_SPI_STREAMING_REQUEST_V02 },
+    QMI_LOC_EVENT_MASK_SENSOR_STREAMING_READY_STATUS_V02 },
 
   // Time Sync Request Indication
   { QMI_LOC_EVENT_TIME_SYNC_REQ_IND_V02,
     sizeof(qmiLocEventTimeSyncReqIndMsgT_v02),
-    QMI_LOC_EVENT_TIME_SYNC_REQUEST_V02 },
+    QMI_LOC_EVENT_MASK_TIME_SYNC_REQ_V02 },
 
   //Set Spi Streaming Report Event
   { QMI_LOC_EVENT_SET_SPI_STREAMING_REPORT_IND_V02,
     sizeof(qmiLocEventSetSpiStreamingReportIndMsgT_v02),
-    QMI_LOC_EVENT_SPI_STREAMING_REQUEST_V02 },
+    QMI_LOC_EVENT_MASK_SET_SPI_STREAMING_REPORT_V02 },
 
   //Location Server Connection Request event
   { QMI_LOC_EVENT_LOCATION_SERVER_CONNECTION_REQ_IND_V02,
     sizeof(qmiLocEventLocationServerConnectionReqIndMsgT_v02),
-    QMI_LOC_EVENT_LOCATION_SERVER_REQUEST_V02 }
+    QMI_LOC_EVENT_MASK_LOCATION_SERVER_CONNECTION_REQ_V02 }
 };
 
 typedef struct
@@ -299,10 +307,17 @@ static locClientRespIndTableStructT locClientRespIndTable[]= {
 
    //Location server connection status
    { QMI_LOC_INFORM_LOCATION_SERVER_CONN_STATUS_IND_V02,
-     sizeof(qmiLocInformLocationServerConnStatusIndMsgT_v02)}
+     sizeof(qmiLocInformLocationServerConnStatusIndMsgT_v02)},
+
+   //Set Protocol Config Parameters
+   { QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_IND_V02,
+     sizeof(qmiLocSetProtocolConfigParametersIndMsgT_v02)},
+
+   //Get Protocol Config Parameters
+   { QMI_LOC_GET_PROTOCOL_CONFIG_PARAMETERS_IND_V02,
+     sizeof(qmiLocGetProtocolConfigParametersIndMsgT_v02)}
 
 };
-
 
 
 /** whether indication is an event or a response */
@@ -325,10 +340,11 @@ typedef struct
 // internal state of the Loc Client
 static locClientInternalState gLocClientState;
 
-//qmi_cci stuff, need to remove(???)
+#ifndef FEATURE_LOC_API_V02_QNX_MOD
+//qmi_cci stuff, need to remove later
 extern qmi_cci_xport_ops_type ops;
-extern qmi_cci_xport_ops_type ipc_router_ops, udp_ops;
-
+extern qmi_cci_xport_ops_type ipc_router_ops;
+#endif //FEATURE_LOC_API_V02_QNX_MOD
 /*===========================================================================
  *
  *                          FUNCTION DECLARATION
@@ -479,7 +495,7 @@ static bool isClientRegisteredForEvent(uint32_t eventIndId)
 static bool locClientHandlePosReportInd
 (
  uint32_t        msg_id,
- const void*     *ind_buf,
+ const void*     ind_buf,
  uint32_t        ind_buf_len
 )
 {
@@ -508,13 +524,31 @@ static bool locClientHandlePosReportInd
 static bool locClientHandleSatReportInd
 (
  uint32_t        msg_id,
- const void*     *ind_buf,
+ const void*     ind_buf,
  uint32_t        ind_buf_len
 )
 {
   // validate sat reports
+  int idx = 0;
+  qmiLocEventGnssSvInfoIndMsgT_v02 *satReport =
+    (qmiLocEventGnssSvInfoIndMsgT_v02 *)ind_buf;
+
+  LOC_UTIL_LOGV ("%s:%d]: len = %u , altitude assumed = %u, num SV's = %u"
+                 " validity = %d \n ", __func__, __LINE__,
+                 ind_buf_len, satReport->altitudeAssumed,
+                 satReport->svList_len, satReport->svList_valid);
+  //Log SV report
+  for( idx = 0; idx <satReport->svList_len; idx++ )
+  {
+    LOC_UTIL_LOGV("%s:%d]: valid_mask = %x, prn = %u, system = %d, "
+                  "status = %d \n", __func__, __LINE__,
+                  satReport->svList[idx].validMask, satReport->svList[idx].prn,
+                  satReport->svList[idx].system, satReport->svList[idx].svStatus);
+  }
+
    return true;
 }
+
 
 /** locClientHandleNmeaReportInd
  *  @brief Validate a NMEA report indication.
@@ -528,7 +562,7 @@ static bool locClientHandleSatReportInd
 static bool locClientHandleNmeaReportInd
 (
  uint32_t        msg_id,
- const void*     *ind_buf,
+ const void*     ind_buf,
  uint32_t        ind_buf_len
 )
 {
@@ -551,7 +585,7 @@ static bool locClientHandleNmeaReportInd
 static bool locClientHandleGetServiceRevisionRespInd
 (
  uint32_t        msg_id,
- const void*     *ind_buf,
+ const void*     ind_buf,
  uint32_t        ind_buf_len
 )
 {
@@ -570,7 +604,7 @@ static bool locClientHandleGetServiceRevisionRespInd
 
 static bool locClientHandleIndication(
   uint32_t        indId,
-  void            *indBuffer,
+  void*           indBuffer,
   size_t          indSize
  )
 {
@@ -609,7 +643,7 @@ static bool locClientHandleIndication(
     }
 
     // handle Time Inject request Ind
-    case QMI_LOC_EVENT_TIME_INJECT_REQ_IND_V02:
+    case QMI_LOC_EVENT_INJECT_TIME_REQ_IND_V02:
     {
      // locClientHandleTimeInjectReqInd(user_handle, msg_id, ind_buf, ind_buf_len);
       status = true;
@@ -617,7 +651,7 @@ static bool locClientHandleIndication(
     }
 
     // handle XTRA data Inject request Ind
-    case QMI_LOC_EVENT_PREDICTED_ORBITS_INJECT_REQ_IND_V02:
+    case QMI_LOC_EVENT_INJECT_PREDICTED_ORBITS_REQ_IND_V02:
     {
      // locClientHandleXtraInjectReqInd(user_handle, msg_id, ind_buf, ind_buf_len);
       status = true;
@@ -625,7 +659,7 @@ static bool locClientHandleIndication(
     }
 
     // handle position inject request Ind
-    case QMI_LOC_EVENT_POSITION_INJECT_REQ_IND_V02:
+    case QMI_LOC_EVENT_INJECT_POSITION_REQ_IND_V02:
     {
      // locClientHandlePositionInjectReqInd(user_handle, msg_id, ind_buf, ind_buf_len);
       status = true;
@@ -713,6 +747,13 @@ static bool locClientHandleIndication(
       status = true;
       break;
     }
+
+    case QMI_LOC_GET_PROTOCOL_CONFIG_PARAMETERS_IND_V02:
+    {
+      //locClientHandleGetProtocolConfigParametersInd(user_handle, msg_id, ind_buf, ind_buf_len);
+      status = true;
+      break;
+    }
     // for indications that only have a "status" field
     case QMI_LOC_NI_USER_RESPONSE_IND_V02:
     case QMI_LOC_INJECT_UTC_TIME_IND_V02:
@@ -732,6 +773,7 @@ static bool locClientHandleIndication(
     case QMI_LOC_SET_CRADLE_MOUNT_CONFIG_IND_V02:
     case QMI_LOC_SET_EXTERNAL_POWER_CONFIG_IND_V02:
     case QMI_LOC_INFORM_LOCATION_SERVER_CONN_STATUS_IND_V02:
+    case QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_IND_V02:
     {
       status = true;
       break;
@@ -840,7 +882,7 @@ static void locClientIndCb
     }
 
     rc = qmi_client_message_decode(user_handle,QMI_IDL_INDICATION, msg_id,
-                                ind_buf, ind_buf_len, indBuffer, indSize);
+                                   ind_buf, ind_buf_len, indBuffer, indSize);
 
     if( rc == QMI_NO_ERR )
     {
@@ -1188,6 +1230,18 @@ static bool validateRequest(
       break;
     }
 
+    case QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_REQ_V02:
+    {
+      *pOutLen = sizeof(qmiLocSetProtocolConfigParametersReqMsgT_v02);
+      break;
+    }
+
+    case QMI_LOC_GET_PROTOCOL_CONFIG_PARAMETERS_REQ_V02:
+    {
+      *pOutLen = sizeof(qmiLocGetProtocolConfigParametersReqMsgT_v02);
+      break;
+    }
+
     // ALL requests with no payload
     case QMI_LOC_GET_SERVICE_REVISION_REQ_V02:
     case QMI_LOC_GET_FIX_CRITERIA_REQ_V02:
@@ -1313,11 +1367,10 @@ static locClientStatusEnumType locClientQmiCtrlPointInit(qmi_client_type *pQmiCl
 
 //TBD : qmi_cci stuff, need to remove
   LOC_UTIL_LOGV("%s:%d]: starting transport\n", __func__, __LINE__);
-#ifdef UDP_XPORT
-  qmi_cci_xport_start(&udp_ops, NULL);
-#else
+
+#ifndef FEATURE_LOC_API_V02_QNX_MOD
   qmi_cci_xport_start(&ipc_router_ops, NULL);
-#endif
+#endif //FEATURE_LOC_API_V02_QNX_MOD
 
   // register for service notifications
   rc = qmi_client_notifier_init(locClientServiceObject, &os_params, &notifier);

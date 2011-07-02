@@ -1,7 +1,7 @@
 $(SYMLINK): GPS_LINK_SO := $(LOCAL_MODULE).so
 $(SYMLINK): $(LOCAL_INSTALLED_MODULE) $(LOCAL_PATH)/Android.mk
 	@echo "Symlink: $@ -> $(GPS_LINK_SO)"
-	@rm -rf $@
+	@rm -f $@
 	$(hide) ln -sf $(GPS_LINK_SO) $@
 
 ALL_DEFAULT_INSTALLED_MODULES += $(SYMLINK)

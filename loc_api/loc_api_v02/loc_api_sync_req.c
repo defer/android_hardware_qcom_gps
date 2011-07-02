@@ -39,7 +39,11 @@
 #include "loc_api_sync_req.h"
 
 /* Logging */
+// Uncomment to log verbose logs
+//#define LOG_NDEBUG 0
 
+// log debug logs
+#define LOG_NDDEBUG 1
 #define LOG_TAG "loc_api_sync_req"
 #include "loc_util_log.h"
 
