@@ -1360,7 +1360,7 @@ static void loc_eng_report_status (const rpc_loc_status_event_s_type *status_rep
    }
 
    // Session End is not reported during Android navigating state
-   if (status != GPS_STATUS_NONE && !(status == GPS_STATUS_SESSION_END && loc_eng_data.navigating))
+   if (status != GPS_STATUS_NONE && !(status == GPS_STATUS_SESSION_END && loc_eng_data.navigating) && !(status == GPS_STATUS_SESSION_BEGIN && !loc_eng_data.navigating))
    {
       LOC_LOGV("loc_eng_report_status: issue callback with status %d\n", status);
 
