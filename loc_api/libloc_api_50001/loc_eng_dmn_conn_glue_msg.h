@@ -36,16 +36,6 @@ extern "C" {
 
 #include <linux/types.h>
 #include "loc_eng_dmn_conn_glue_pipe.h"
-/* key_id
- *     'm': daemon manager ctrl task
- *     'b': connection bridge ctrl task
- *     'l': loc api
- */
-
-struct msgbuf {
-    long mtype;
-    char mtext[1];
-};
 
 int loc_eng_dmn_conn_glue_msgget(const char * q_path, int mode);
 int loc_eng_dmn_conn_glue_msgremove(const char * q_path, int msgqid);

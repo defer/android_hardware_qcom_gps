@@ -33,6 +33,7 @@
 #include <arpa/inet.h>
 
 enum {
+    /* 0x0 - 0xEF is reserved for daemon internal */
     GPSONE_LOC_API_IF_REQUEST   = 0xF0,
     GPSONE_LOC_API_IF_RELEASE,
     GPSONE_LOC_API_RESPONSE,

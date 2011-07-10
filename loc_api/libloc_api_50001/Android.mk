@@ -29,17 +29,19 @@ LOCAL_SRC_FILES += \
     loc_eng_ni.cpp \
     loc_eng_log.cpp \
     loc_eng_cfg.cpp \
+    loc_eng_msg.cpp \
     gps.c
 
 ifeq ($(FEATURE_GNSS_BIT_API), true)
 LOCAL_CFLAGS += -DFEATURE_GNSS_BIT_API
+endif # FEATURE_GNSS_BIT_API
+
 LOCAL_SRC_FILES += \
     loc_eng_dmn_conn.cpp \
     loc_eng_dmn_conn_handler.cpp \
     loc_eng_dmn_conn_thread_helper.c \
     loc_eng_dmn_conn_glue_msg.c \
     loc_eng_dmn_conn_glue_pipe.c
-endif # FEATURE_GNSS_BIT_API
 
 ## Check if GPS is unsupported
 ifeq ($(BOARD_VENDOR_QCOM_GPS_LOC_API_AMSS_VERSION),50001)

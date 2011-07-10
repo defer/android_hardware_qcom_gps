@@ -41,6 +41,8 @@
 #include <loc_api_rpc_glue.h>
 
 #include <loc_eng.h>
+#include <loc_eng_msg.h>
+#include <loc_eng_msg_id.h>
 
 #define LOG_TAG "libloc"
 #include <utils/Log.h>
@@ -60,8 +62,7 @@ const GpsXtraInterface sLocEngXTRAInterface =
 {
     sizeof(GpsXtraInterface),
     qct_loc_eng_xtra_init,
-    qct_loc_eng_inject_xtra_data,
-    /* qct_loc_eng_inject_xtra_data_proxy, */ // This func buffers xtra data if GPS is in-session
+    qct_loc_eng_inject_xtra_data_proxy
 };
 
 /*===========================================================================
@@ -207,8 +208,6 @@ int loc_eng_inject_xtra_data_in_buffer()
 {
    int rc = 0;
 
-   pthread_mutex_lock(&loc_eng_data.xtra_module_data.lock);
-
    if (loc_eng_data.xtra_module_data.xtra_data_for_injection)
    {
       if (qct_loc_eng_inject_xtra_data(
@@ -225,8 +224,6 @@ int loc_eng_inject_xtra_data_in_buffer()
       loc_eng_data.xtra_module_data.xtra_data_for_injection = NULL;
       loc_eng_data.xtra_module_data.xtra_data_len = 0;
    }
-
-   pthread_mutex_unlock(&loc_eng_data.xtra_module_data.lock);
 
    return rc;
 }
@@ -250,23 +247,20 @@ SIDE EFFECTS
 ===========================================================================*/
 static int qct_loc_eng_inject_xtra_data_proxy(char* data, int length)
 {
-   if (!data || !length) return -1;
+   struct loc_eng_msg_inject_xtra_data msg;
+   msg.msgid = LOC_ENG_MSG_INJECT_XTRA_DATA;
 
-   pthread_mutex_lock(&loc_eng_data.xtra_module_data.lock);
+   if (!data || !length) return -1;
 
    char *buf = (char*) malloc(length);
    if (buf)
    {
       memcpy(buf, data, length);
-      loc_eng_data.xtra_module_data.xtra_data_for_injection = buf;
-      loc_eng_data.xtra_module_data.xtra_data_len = length;
-   }
-
-   pthread_mutex_unlock(&loc_eng_data.xtra_module_data.lock);
-
-   if (loc_eng_data.engine_status != GPS_STATUS_ENGINE_ON)
-   {
-      pthread_cond_signal(&loc_eng_data.deferred_action_cond);
+      msg.xtra_data_for_injection = buf;
+      msg.xtra_data_len = length;
+      loc_eng_msgsnd( loc_eng_data.deferred_q, &msg, sizeof(msg));
+   } else {
+      LOC_LOGE("malloc failed");
    }
 
    return 0;

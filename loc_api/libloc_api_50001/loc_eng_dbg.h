@@ -86,17 +86,17 @@ if (gps_conf.DEBUG_LEVEL >= 5) { LOGV(__VA_ARGS__); }
 
 #include <stdio.h>
 
-#define FPRINTF fprintf
+#define PRINTF printf
 
-#define LOC_LOGE(...) FPRINTF(stderr, __VA_ARGS__)
+#define LOC_LOGE(format, x...) PRINTF("%s: %d] " format "\n", __func__, __LINE__, ##x)
 
-#define LOC_LOGW(...) FPRINTF(stderr, __VA_ARGS__)
+#define LOC_LOGW(format, x...) PRINTF("%s: %d] " format "\n", __func__, __LINE__, ##x)
 
-#define LOC_LOGI(...) FPRINTF(stderr, __VA_ARGS__)
+#define LOC_LOGI(format, x...) PRINTF("%s: %d] " format "\n", __func__, __LINE__, ##x)
 
-#define LOC_LOGD(...) FPRINTF(stderr, __VA_ARGS__)
+#define LOC_LOGD(format, x...) PRINTF("%s: %d] " format "\n", __func__, __LINE__, ##x)
 
-#define LOC_LOGV(...) FPRINTF(stderr, __VA_ARGS__)
+#define LOC_LOGV(format, x...) PRINTF("%s: %d] " format "\n", __func__, __LINE__, ##x)
 
 #endif /* DEBUG_X86 */
 

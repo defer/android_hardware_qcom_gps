@@ -1,4 +1,4 @@
-/* Copyright (c) 2009,2011 Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2011, Code Aurora Forum. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -26,24 +26,44 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+#ifndef LOC_ENG_MSG_ID_H
+#define LOC_ENG_MSG_ID_H
 
-#ifndef LOC_ENG_XTRA_H
-#define LOC_ENG_XTRA_H
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
-#include <hardware/gps.h>
+struct msgbuf {
+    unsigned int msgsz;
+    int msgid;
+};
 
-extern const GpsXtraInterface sLocEngXTRAInterface;
-extern int loc_eng_inject_xtra_data_in_buffer();
+enum {
+    /* 0x 0 - 0xEF is reserved for daemon internal */
+    /* 0xF0 - 0x1FF is reserved for daemon & framework communication */
+    LOC_ENG_MSG_QUIT = 0x200,
 
-// Module data
-typedef struct
-{
-   // loc_eng_ioctl_cb_data_s_type   ioctl_cb_data;
-   gps_xtra_download_request      download_request_cb;
+    LOC_ENG_MSG_LOC_EVENT,
+    LOC_ENG_MSG_MODEM_DOWN,
+    LOC_ENG_MSG_MODEM_UP,
 
-   // XTRA data buffer
-   char                          *xtra_data_for_injection;  // NULL if no pending data
-   int                            xtra_data_len;
-} loc_eng_xtra_data_s_type;
+    LOC_ENG_MSG_START_FIX,
+    LOC_ENG_MSG_STOP_FIX,
+    LOC_ENG_MSG_INJECT_XTRA_DATA,
+    LOC_ENG_MSG_DELETE_AIDING_DATA,
 
-#endif // LOC_ENG_XTRA_H
+    LOC_ENG_MSG_UPDATE_NETWORK_AVAILABILITY,
+
+    LOC_ENG_MSG_IOCTL,
+    LOC_ENG_MSG_MUTE_SESSION,
+
+    LOC_ENG_MSG_AGPS_DATA_OPEN_STATUS,
+    LOC_ENG_MSG_AGPS_DATA_CLOSE_STATUS,
+    LOC_ENG_MSG_AGPS_DATA_FAILED,
+};
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* LOC_ENG_MSG_ID_H */

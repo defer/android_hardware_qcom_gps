@@ -110,7 +110,6 @@ typedef struct
    // used to defer stopping the GPS engine until AGPS data calls are done
    boolean                         agps_request_pending;
    boolean                         stop_request_pending;
-   pthread_mutex_t                 deferred_stop_mutex;
    loc_eng_xtra_data_s_type       xtra_module_data;
    // data from loc_event_cb
    rpc_loc_event_mask_type        loc_event;
@@ -121,7 +120,7 @@ typedef struct
    AGpsBearerType                 data_connection_bearer;
 
    // ATL variables
-   char                           apn_name[100];
+   char                           apn_name[101];
    // Adequate instances of ATL variables for cases where we have simultaneous
    // connections to MPC & PDE
    loc_eng_atl_info_s_type       atl_conn_info[MAX_NUM_ATL_CONNECTIONS];
@@ -134,23 +133,13 @@ typedef struct
    // Aiding data information to be deleted, aiding data can only be deleted when GPS engine is off
    GpsAidingData                  aiding_data_for_deletion;
 
-   // IOCTL CB lock
-   pthread_mutex_t                ioctl_cb_lock;
-
    // Data variables used by deferred action thread
    pthread_t                      deferred_action_thread;
+   int                            deferred_q;
 
-   // Timer thread (wakes up every second)
-   pthread_t                      timer_thread;
-
-   // Mutex used by deferred action thread
-   pthread_mutex_t                deferred_action_mutex;
-   // Condition variable used by deferred action thread
-   pthread_cond_t                 deferred_action_cond;
    // flags for pending events for deferred action thread
    unsigned int                   deferred_action_flags;
    // For muting session broadcast
-   pthread_mutex_t                mute_session_lock;
    loc_mute_session_e_type        mute_session_state;
     // [0] - supl version
     // [1] - position_mode
