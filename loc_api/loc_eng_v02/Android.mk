@@ -24,12 +24,8 @@ LOCAL_CFLAGS += \
      -D_ANDROID_
 
 ## Includes
-LOCAL_C_INCLUDES += \
-     $(TOP)/hardware/qcom/gps/loc_api/loc_api_v02 \
-     $(QC_PROP_ROOT)/qmi-framework/inc \
-     $(QC_PROP_ROOT)/qmi-framework/qcci/inc \
-     $(QC_PROP_ROOT)/qmi-framework/qcsi/inc \
-     $(QC_PROP_ROOT)/qmi-framework/common/inc
+LOCAL_C_INCLUDES := $(LOCAL_PATH)/../loc_api_v02
+LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/qmi-framework/inc
 
 LOCAL_PRELINK_MODULE := false
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
