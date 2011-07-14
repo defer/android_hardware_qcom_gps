@@ -34,7 +34,7 @@ extern "C"
 {
 #endif
 #include "loc_api_rpc_glue.h"
-#define LOC_SYNC_CALL_BUFFER_SIZE 8
+#define LOC_SYNC_CALL_SLOTS_MAX 8
 
 typedef struct {
    pthread_mutex_t                lock;
@@ -46,50 +46,35 @@ typedef struct {
    pthread_cond_t                 loc_cb_arrived_cond;
 
    /* Callback waiting data block, protected by loc_cb_data_mutex */
-   boolean                        loc_cb_is_selected;            /* is cb selected? */
-   boolean                        loc_cb_is_waiting;             /* is waiting?     */
-   boolean                        loc_cb_has_arrived;            /* callback has arrived */
+   boolean                        in_use;
+   boolean                        signal_sent;
+   boolean                        not_available;
    rpc_loc_event_mask_type        loc_cb_wait_event_mask;        /* event to wait for */
    rpc_loc_ioctl_e_type           ioctl_type;                    /* ioctl to wait for */
    rpc_loc_event_payload_u_type   loc_cb_received_payload;       /* received payload */
    rpc_loc_event_mask_type        loc_cb_received_event_mask;    /* received event   */
-} loc_sync_call_data_s_type;
+} loc_sync_call_slot_s_type;
 
 typedef struct {
-   pthread_mutex_t                lock;
-   int                            size;
-   boolean                        in_use;  /* at least one sync call is active */
-   boolean                        slot_in_use[LOC_SYNC_CALL_BUFFER_SIZE];
-   loc_sync_call_data_s_type      slots[LOC_SYNC_CALL_BUFFER_SIZE];
-} loc_sync_call_data_array_s_type;
+   int                            num_of_slots;
+   loc_sync_call_slot_s_type      slots[LOC_SYNC_CALL_SLOTS_MAX];
+} loc_sync_call_slot_array_s_type;
 
 /* Init function */
-extern void loc_api_sync_call_init();
+void loc_api_sync_call_init();
 
-/* Select the callback to wait for, e.g., IOCTL REPORT */
-extern int loc_api_select_callback(
-      rpc_loc_client_handle_type       loc_handle,           /* Client handle */
-      rpc_loc_event_mask_type          event_mask,           /* Event mask to wait for */
-      rpc_loc_ioctl_e_type             ioctl_type            /* IOCTL type to wait for */
-);
-
-/* Wait for the call back after an API call, returns 0 if successful */
-extern int loc_api_wait_callback(
-      int select_id,        /* ID from loc_select_callback() */
-      int timeout_seconds,  /* Timeout in this number of seconds  */
-      rpc_loc_event_payload_u_type     *callback_payload,    /* Pointer to callback payload buffer, can be NULL */
-      rpc_loc_ioctl_callback_s_type    *ioctl_payload        /* Pointer to IOCTL payload, can be NULL */
-);
+/* Destroy function */
+void loc_api_sync_call_destroy();
 
 /* Process Loc API callbacks to wake up blocked user threads */
-extern void loc_api_callback_process_sync_call(
+void loc_api_callback_process_sync_call(
       rpc_loc_client_handle_type            loc_handle,             /* handle of the client */
       rpc_loc_event_mask_type               loc_event,              /* event mask           */
       const rpc_loc_event_payload_u_type*   loc_event_payload       /* payload              */
 );
 
 /* Reentrant synchronous IOCTL call, using Loc API return code */
-extern int loc_api_sync_ioctl
+int loc_api_sync_ioctl
 (
       rpc_loc_client_handle_type           handle,
       rpc_loc_ioctl_e_type                 ioctl_type,
