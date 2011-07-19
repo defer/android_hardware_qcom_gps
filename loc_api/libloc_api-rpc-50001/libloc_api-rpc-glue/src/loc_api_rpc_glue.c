@@ -58,6 +58,9 @@
 #define LOG_NDDEBUG 0
 #include <utils/Log.h>
 
+/* Logging Improvement */
+#include "loc_dbg.h"
+
 /* Uncomment to force LOGD messages */
 // #define LOGD LOGI
 
@@ -86,7 +89,7 @@ loc_glue_cb_entry_s_type loc_glue_callback_table[LOC_API_CB_MAX_CLIENTS];
 #define RPC_CALLBACK_FUNC_VERSION(a,v,b) RPC_CALLBACK_FUNC_VERSION_BASE(a,v,b)
 
 #define LOC_GLUE_CHECK_INIT(ret_type) \
-   if (loc_api_clnt == NULL) { return (ret_type) RPC_LOC_API_RPC_FAILURE; }
+   if (loc_api_clnt == NULL) { EXIT_LOG_CALLFLOW(%d, RPC_LOC_API_RPC_FAILURE); return (ret_type) RPC_LOC_API_RPC_FAILURE; }
 
 #define LOC_GLUE_CHECK_RESULT(stat, ret_type) \
   if (stat != RPC_SUCCESS) { \
@@ -298,7 +301,10 @@ rpc_loc_client_handle_type loc_open (
       clnt_reset_notif_cb      rpc_cb
 )
 {
+    ENTRY_LOG();
    LOC_GLUE_CHECK_INIT(rpc_loc_client_handle_type);
+
+    rpc_loc_client_handle_type ret_val;
 
    rpc_loc_open_args args;
    args.event_reg_mask = event_reg_mask;
@@ -330,7 +336,8 @@ rpc_loc_client_handle_type loc_open (
    if (i == LOC_API_CB_MAX_CLIENTS)
    {
       LOGE("Too many clients opened at once...\n");
-      return RPC_LOC_CLIENT_HANDLE_INVALID;
+      ret_val = RPC_LOC_CLIENT_HANDLE_INVALID;
+        goto exit;
    }
 
    args.event_callback = loc_glue_callback_table[i].cb_id;
@@ -345,7 +352,12 @@ rpc_loc_client_handle_type loc_open (
    /* save the handle in the table */
    loc_glue_callback_table[i].handle = (rpc_loc_client_handle_type) rets.loc_open_result;
 
-   return (rpc_loc_client_handle_type) rets.loc_open_result;
+    ret_val = (rpc_loc_client_handle_type) rets.loc_open_result;
+
+exit:
+    EXIT_LOG_CALLFLOW(%p, ret_val);
+    return ret_val;
+
 }
 
 int32 loc_close
@@ -353,7 +365,10 @@ int32 loc_close
       rpc_loc_client_handle_type handle
 )
 {
+    ENTRY_LOG();
    LOC_GLUE_CHECK_INIT(int32);
+
+    int32 ret_val;
 
    rpc_loc_close_args args;
    args.handle = handle;
@@ -366,7 +381,11 @@ int32 loc_close
    loc_clear(handle);
 
    LOC_GLUE_CHECK_RESULT(stat, int32);
-   return (int32) rets.loc_close_result;
+   ret_val = (int32) rets.loc_close_result;
+
+exit:
+    EXIT_LOG_CALLFLOW(%d, ret_val);
+    return ret_val;
 }
 
 void loc_clear(rpc_loc_client_handle_type handle) {
@@ -395,7 +414,10 @@ int32 loc_start_fix
       rpc_loc_client_handle_type handle
 )
 {
+    ENTRY_LOG();
    LOC_GLUE_CHECK_INIT(int32);
+
+    int32 ret_val;
 
    rpc_loc_start_fix_args args;
    args.handle = handle;
@@ -406,7 +428,11 @@ int32 loc_start_fix
    stat = RPC_FUNC_VERSION(rpc_loc_start_fix_, RPC_LOC_START_FIX_VERSION)(&args, &rets, loc_api_clnt);
    LOC_GLUE_CHECK_RESULT(stat, int32);
 
-   return (int32) rets.loc_start_fix_result;
+   ret_val = (int32) rets.loc_start_fix_result;
+
+exit:
+    EXIT_LOG_CALLFLOW(%d, ret_val);
+    return ret_val;
 }
 
 int32 loc_stop_fix
@@ -414,7 +440,10 @@ int32 loc_stop_fix
       rpc_loc_client_handle_type handle
 )
 {
+    ENTRY_LOG();
    LOC_GLUE_CHECK_INIT(int32);
+
+    int32 ret_val;
 
    rpc_loc_stop_fix_args args;
    args.handle = handle;
@@ -425,7 +454,11 @@ int32 loc_stop_fix
    stat = RPC_FUNC_VERSION(rpc_loc_stop_fix_, RPC_LOC_STOP_FIX_VERSION)(&args, &rets, loc_api_clnt);
    LOC_GLUE_CHECK_RESULT(stat, int32);
 
-   return (int32) rets.loc_stop_fix_result;
+   ret_val = (int32) rets.loc_stop_fix_result;
+
+exit:
+    EXIT_LOG_CALLFLOW(%d, ret_val);
+    return ret_val;
 }
 
 int32 loc_ioctl
@@ -435,7 +468,10 @@ int32 loc_ioctl
       rpc_loc_ioctl_data_u_type*           ioctl_data
 )
 {
+    ENTRY_LOG();
    LOC_GLUE_CHECK_INIT(int32);
+
+    int32 ret_val;
 
    rpc_loc_ioctl_args args;
    args.handle = handle;
@@ -519,7 +555,11 @@ int32 loc_ioctl
    stat = RPC_FUNC_VERSION(rpc_loc_ioctl_, RPC_LOC_IOCTL_VERSION)(&args, &rets, loc_api_clnt);
    LOC_GLUE_CHECK_RESULT(stat, int32);
 
-   return (int32) rets.loc_ioctl_result;
+   ret_val = (int32) rets.loc_ioctl_result;
+
+exit:
+    EXIT_LOG_CALLFLOW(%d, ret_val);
+    return ret_val;
 }
 
 /* Returns 0 if error */

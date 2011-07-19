@@ -47,9 +47,9 @@ typedef unsigned char boolean;
 #include <loc_eng_ioctl.h>
 #include <loc_eng_xtra.h>
 #include <loc_eng_ni.h>
-#include <loc_eng_log.h>
 #include <loc_eng_cfg.h>
-#include <loc_eng_dbg.h>
+#include <loc_log.h>
+#include <loc_dbg.h>
 
 #define LOC_IOCTL_DEFAULT_TIMEOUT 1000 // 1000 milli-seconds
 

@@ -27,16 +27,19 @@
  *
  */
 
-#ifndef LOC_ENG_LOG_H
-#define LOC_ENG_LOG_H
+#ifndef LOC_LOG_H
+#define LOC_LOG_H
 
-extern int loc_eng_callback_log_header(
+#include "hardware/gps.h"
+#include "loc_api_rpcgen_common_rpc.h"
+
+extern int loc_callback_log_header(
       rpc_loc_client_handle_type            client_handle,          /* client handle        */
       rpc_loc_event_mask_type               loc_event,              /* event mask           */
       const rpc_loc_event_payload_u_type*   loc_event_payload       /* payload              */
 );
 
-extern int loc_eng_callback_log(
+extern int loc_callback_log(
       rpc_loc_event_mask_type               loc_event,              /* event mask           */
       const rpc_loc_event_payload_u_type*   loc_event_payload       /* payload              */
 );
@@ -50,6 +53,6 @@ extern const char* loc_get_fix_session_state_name(rpc_loc_fix_session_state_e_ty
 extern const char* log_succ_fail_string(int is_succ);
 extern const char* loc_get_gps_status_name(GpsStatusValue gps_status);
 
-extern char *loc_eng_get_time(char *time_string);
+extern char *loc_get_time(char *time_string);
 
-#endif /* LOC_ENG_LOG_H */
+#endif /* LOC_LOG_H */

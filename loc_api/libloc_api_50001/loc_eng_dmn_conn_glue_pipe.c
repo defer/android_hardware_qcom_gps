@@ -36,10 +36,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include <loc_eng_dbg.h>
-
 #include "loc_eng_dmn_conn_glue_pipe.h"
-#include "loc_eng_dbg.h"
+#include "loc_dbg.h"
 
 /*===========================================================================
 FUNCTION    loc_eng_dmn_conn_glue_pipeget

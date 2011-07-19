@@ -28,7 +28,6 @@
  */
 
 #define LOG_NDDEBUG 0
-#define LOG_NIDEBUG 0
 
 #include <stdio.h>
 #include <stdlib.h>

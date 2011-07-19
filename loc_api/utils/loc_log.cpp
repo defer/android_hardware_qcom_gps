@@ -37,18 +37,17 @@
 #include <unistd.h>
 #include <time.h>
 
-#include <hardware/gps.h>
+#include "hardware/gps.h"
 
-#include <rpc/rpc.h>
-#include <loc_api_rpc_glue.h>
-#include <loc_eng.h>
+#include "rpc/rpc.h"
+#include "loc_api_rpcgen_common_rpc.h"
+#include "loc_api_fixup.h"
 
 #define LOG_TAG "libloc"
 #include <utils/Log.h>
 
-// comment this out to enable logging
-// #undef LOGD
-// #define LOGD(...) {}
+#include "loc_dbg.h"
+
 
 typedef struct
 {
@@ -60,8 +59,11 @@ typedef struct
 
 #define UNKNOWN_STR "UNKNOWN"
 
+/* Logging Mechanism */
+loc_logger_s_type loc_logger;
+
 /* Event names */
-loc_name_val_s_type loc_eng_event_name[] =
+loc_name_val_s_type loc_event_name[] =
    {
       NAME_VAL( RPC_LOC_EVENT_PARSED_POSITION_REPORT ),
       NAME_VAL( RPC_LOC_EVENT_SATELLITE_REPORT ),
@@ -74,7 +76,7 @@ loc_name_val_s_type loc_eng_event_name[] =
       NAME_VAL( RPC_LOC_EVENT_STATUS_REPORT ),
       NAME_VAL( RPC_LOC_EVENT_WPS_NEEDED_REQUEST ),
    };
-int loc_event_num = sizeof loc_eng_event_name / sizeof(loc_name_val_s_type);
+int loc_event_num = sizeof loc_event_name / sizeof(loc_name_val_s_type);
 
 /* IOCTL Type names */
 loc_name_val_s_type loc_ioctl_type_name[] =
@@ -185,7 +187,7 @@ loc_name_val_s_type gps_status_name[] =
 int gps_status_num = sizeof gps_status_name / sizeof(loc_name_val_s_type);
 
 /* Get names from value */
-static const char* loc_eng_get_name_from_mask(loc_name_val_s_type table[], int table_size, long mask)
+static const char* loc_get_name_from_mask(loc_name_val_s_type table[], int table_size, long mask)
 {
    int i;
    for (i = 0; i < table_size; i++)
@@ -199,7 +201,7 @@ static const char* loc_eng_get_name_from_mask(loc_name_val_s_type table[], int t
 }
 
 /* Get names from value */
-static const char* loc_eng_get_name_from_val(loc_name_val_s_type table[], int table_size, long value)
+static const char* loc_get_name_from_val(loc_name_val_s_type table[], int table_size, long value)
 {
    int i;
    for (i = 0; i < table_size; i++)
@@ -215,49 +217,49 @@ static const char* loc_eng_get_name_from_val(loc_name_val_s_type table[], int ta
 /* Finds the first event found in the mask */
 const char* loc_get_event_name(rpc_loc_event_mask_type loc_event_mask)
 {
-   return loc_eng_get_name_from_mask(loc_eng_event_name, loc_event_num,
+   return loc_get_name_from_mask(loc_event_name, loc_event_num,
          (long) loc_event_mask);
 }
 
 /* Finds IOCTL type name */
 const char* loc_get_ioctl_type_name(rpc_loc_ioctl_e_type ioctl_type)
 {
-   return loc_eng_get_name_from_val(loc_ioctl_type_name, loc_ioctl_type_num,
+   return loc_get_name_from_val(loc_ioctl_type_name, loc_ioctl_type_num,
          (long) ioctl_type);
 }
 
 /* Finds IOCTL status name */
 const char* loc_get_ioctl_status_name(uint32 status)
 {
-   return loc_eng_get_name_from_val(loc_ioctl_status_name, loc_ioctl_status_num,
+   return loc_get_name_from_val(loc_ioctl_status_name, loc_ioctl_status_num,
          (long) status);
 }
 
 /* Finds session status name */
 const char* loc_get_sess_status_name(rpc_loc_session_status_e_type status)
 {
-   return loc_eng_get_name_from_val(loc_sess_status_name, loc_sess_status_num,
+   return loc_get_name_from_val(loc_sess_status_name, loc_sess_status_num,
          (long) status);
 }
 
 /* Find engine state name */
 const char* loc_get_engine_state_name(rpc_loc_engine_state_e_type state)
 {
-   return loc_eng_get_name_from_val(loc_engine_state_name, loc_engine_state_num,
+   return loc_get_name_from_val(loc_engine_state_name, loc_engine_state_num,
          (long) state);
 }
 
 /* Find engine state name */
 const char* loc_get_fix_session_state_name(rpc_loc_fix_session_state_e_type state)
 {
-   return loc_eng_get_name_from_val(loc_fix_session_state_name, loc_fix_session_state_num,
+   return loc_get_name_from_val(loc_fix_session_state_name, loc_fix_session_state_num,
          (long) state);
 }
 
 /* Find Android GPS status name */
 const char* loc_get_gps_status_name(GpsStatusValue gps_status)
 {
-   return loc_eng_get_name_from_val(gps_status_name, gps_status_num,
+   return loc_get_name_from_val(gps_status_name, gps_status_num,
          (long) gps_status);
 }
 
@@ -366,7 +368,7 @@ static void log_satellite_report(const rpc_loc_gnss_info_s_type *gnss)
 
 /*===========================================================================
 
-FUNCTION loc_eng_get_time
+FUNCTION loc_get_time
 
 DESCRIPTION
    Logs a callback event header.
@@ -378,7 +380,7 @@ RETURN VALUE
    The time string
 
 ===========================================================================*/
-char *loc_eng_get_time(char *time_string)
+char *loc_get_time(char *time_string)
 {
    struct timeval now;     /* sec and usec     */
    struct tm now_tm;       /* broken-down time */
@@ -394,7 +396,7 @@ char *loc_eng_get_time(char *time_string)
 }
 
 /* Logs a callback event header */
-int loc_eng_callback_log_header(
+int loc_callback_log_header(
       rpc_loc_client_handle_type            client_handle,
       rpc_loc_event_mask_type               loc_event,              /* event mask           */
       const rpc_loc_event_payload_u_type*   loc_event_payload       /* payload              */
@@ -409,7 +411,7 @@ int loc_eng_callback_log_header(
 
    /* Event header */
    LOC_LOGD("\nEvent %s (client %d)\n",
-         /* loc_eng_get_time(time_string), */
+         /* loc_get_time(time_string), */
          event_name,
          (int) client_handle);
 
@@ -417,7 +419,7 @@ int loc_eng_callback_log_header(
 }
 
 /* Logs a callback event */
-int loc_eng_callback_log(
+int loc_callback_log(
       rpc_loc_event_mask_type               loc_event,              /* event mask           */
       const rpc_loc_event_payload_u_type*   loc_event_payload       /* payload              */
 )
@@ -442,3 +444,54 @@ int loc_eng_callback_log(
 
    return 0;
 }
+
+/*===========================================================================
+FUNCTION loc_logger_init
+
+DESCRIPTION
+   Initializes the state of DEBUG_LEVEL and TIMESTAMP
+
+DEPENDENCIES
+   N/A
+
+RETURN VALUE
+   None
+
+SIDE EFFECTS
+   N/A
+===========================================================================*/
+void loc_logger_init(unsigned long debug, unsigned long timestamp)
+{
+   loc_logger.DEBUG_LEVEL = debug;
+   loc_logger.TIMESTAMP   = timestamp;
+}
+
+
+/*===========================================================================
+FUNCTION get_timestamp
+
+DESCRIPTION
+   Generates a timestamp using the current system time
+
+DEPENDENCIES
+   N/A
+
+RETURN VALUE
+   Char pointer to the parameter str
+
+SIDE EFFECTS
+   N/A
+===========================================================================*/
+char * get_timestamp(char *str)
+{
+  struct timeval tv;
+  struct timezone tz;
+  int hh, mm, ss;
+  gettimeofday(&tv, &tz);
+  hh = tv.tv_sec/3600%24;
+  mm = (tv.tv_sec%3600)/60;
+  ss = tv.tv_sec%60;
+  sprintf(str, "%02d:%02d:%02d.%06ld", hh, mm, ss, tv.tv_usec);
+  return str;
+}
+

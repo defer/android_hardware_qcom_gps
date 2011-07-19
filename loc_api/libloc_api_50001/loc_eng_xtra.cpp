@@ -47,6 +47,8 @@
 #define LOG_TAG "libloc"
 #include <utils/Log.h>
 
+#include "loc_dbg.h"
+
 // comment this out to enable logging
 // #undef LOGD
 // #define LOGD(...) {}

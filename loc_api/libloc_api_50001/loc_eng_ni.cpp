@@ -28,7 +28,6 @@
  */
 
 #define LOG_NDDEBUG 0
-#define LOG_NIDEBUG 0
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -46,6 +45,8 @@
 
 #define LOG_TAG "libloc"
 #include <utils/Log.h>
+
+#include "loc_dbg.h"
 
 // comment this out to enable logging
 // #undef LOGD
@@ -544,6 +545,7 @@ static void loc_ni_request_handler(const char *msg, const rpc_loc_ni_event_s_typ
       /* Notify callback */
       if (loc_eng_data.ni_notify_cb != NULL)
       {
+            CALLBACK_LOG_CALLFLOW("ni_notify_cb");
          loc_eng_data.ni_notify_cb(&notif);
       }
    }

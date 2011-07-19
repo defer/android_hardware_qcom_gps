@@ -66,7 +66,8 @@ loc_param_s_type loc_parameter_table[] =
                    4 - Debug, 5 - Verbose  */
   {"DEBUG_LEVEL",                 &gps_conf.DEBUG_LEVEL,          'n'},
   {"SUPL_VER",                    &gps_conf.SUPL_VER,             'n'},
-  {"CAPABILITIES",                &gps_conf.CAPABILITIES,         'n'}
+  {"CAPABILITIES",                &gps_conf.CAPABILITIES,         'n'},
+  {"TIMESTAMP",                   &gps_conf.TIMESTAMP,            'n'},
 };
 
 int loc_param_num = sizeof(loc_parameter_table) / sizeof(loc_param_s_type);
@@ -96,6 +97,10 @@ static void loc_default_parameters()
    gps_conf.DEBUG_LEVEL = 3; /* debug level */
    gps_conf.SUPL_VER = 0x10000;
    gps_conf.CAPABILITIES = 0x7;
+   gps_conf.TIMESTAMP = 0;
+
+  /* reset logging mechanism */
+  loc_logger_init(3, 0);
 }
 
 /*===========================================================================
@@ -229,11 +234,14 @@ void loc_read_gps_conf(void)
                LOC_LOGD("loc_read_gps_conf: PARAM %s = %d\n", param_name, param_value);
                break;
             default:
-               LOC_LOGE("loc_read_gps_conf: PARAM %s parameter type must be n or n", param_name);
+               LOC_LOGE("loc_read_gps_conf: PARAM %s parameter type must be n or s", param_name);
             }
          }
       }
    }
 
    fclose(gps_conf_fp);
+
+   /* Initialize logging mechanism with parsed data */
+   loc_logger_init(gps_conf.DEBUG_LEVEL, gps_conf.TIMESTAMP);
 }

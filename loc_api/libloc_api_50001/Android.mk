@@ -20,14 +20,14 @@ LOCAL_MODULE := libloc_eng_v01.$(BOARD_VENDOR_QCOM_GPS_LOC_API_HARDWARE)
 LOCAL_SHARED_LIBRARIES := \
     librpc \
     libutils \
-    libcutils
+    libcutils \
+    libgps.utils
 
 LOCAL_SRC_FILES += \
     loc_eng.cpp \
     loc_eng_ioctl.cpp \
     loc_eng_xtra.cpp \
     loc_eng_ni.cpp \
-    loc_eng_log.cpp \
     loc_eng_cfg.cpp \
     loc_eng_msg.cpp \
     gps.c
@@ -60,6 +60,7 @@ LOCAL_CFLAGS += \
 LOCAL_C_INCLUDES:= \
   $(TARGET_OUT_HEADERS)/libcommondefs-rpc/inc \
   $(TARGET_OUT_HEADERS)/librpc \
+  $(TARGET_OUT_HEADERS)/gps.utils
 
 ifeq ($(BOARD_VENDOR_QCOM_GPS_LOC_API_AMSS_VERSION),50001)
 LOCAL_C_INCLUDES += \

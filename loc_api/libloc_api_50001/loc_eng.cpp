@@ -58,7 +58,8 @@
 #include <loc_eng_msg_id.h>
 
 #define LOG_TAG "libloc"
-#include <utils/Log.h>
+#include "loc_dbg.h"
+#include "loc_log.h"
 
 #define DEBUG_NI_REQUEST_EMU 0
 
@@ -181,6 +182,9 @@ int    c2k_host_set = 0;
 char   c2k_host_buf[101];
 int    c2k_port_buf;
 
+// Logging Improvements
+const char *boolStr[]={"False","True"};
+
 /*********************************************************************
  * Initialization checking macros
  *********************************************************************/
@@ -189,6 +193,7 @@ int    c2k_port_buf;
   { \
      /* Not intialized, abort */ \
      LOC_LOGE("%s: GPS not initialized.", x); \
+      EXIT_LOG(%s,x); \
      return c; \
   }
 #define INIT_CHECK(x) INIT_CHECK_RET(x, RPC_LOC_API_INVALID_HANDLE)
@@ -213,6 +218,9 @@ SIDE EFFECTS
 ===========================================================================*/
 const GpsInterface* gps_get_hardware_interface ()
 {
+    ENTRY_LOG();
+    const GpsInterface* ret_val;
+
    char propBuf[PROPERTY_VALUE_MAX];
 
    // check to see if GPS should be disabled
@@ -220,10 +228,15 @@ const GpsInterface* gps_get_hardware_interface ()
    if (propBuf[0] == '1')
    {
       LOC_LOGD("gps_get_interface returning NULL because gps.disable=1\n");
-      return NULL;
+      ret_val = NULL;
+        goto exit;
    }
 
-   return &sLocEngInterface;
+   ret_val = &sLocEngInterface;
+
+exit:
+    EXIT_LOG(%p, ret_val);
+    return ret_val;
 }
 
 /*===========================================================================
@@ -245,15 +258,20 @@ SIDE EFFECTS
 ===========================================================================*/
 static int loc_eng_init(GpsCallbacks* callbacks)
 {
-   LOC_LOGD("loc_eng_init entering");
+   ENTRY_LOG_CALLFLOW();
+   int ret_val;
+
    if (loc_eng_inited) {
        LOC_LOGD("loc_eng_init. already initialized so return SUCCESS\n");
-       return 0;
+       ret_val = 0;
+       goto exit;
    }
 
    // Start the LOC api RPC service (if not started yet)
-   if (0 == loc_api_glue_init())
-      return 0;
+   if (0 == loc_api_glue_init()){
+        ret_val = 0;
+        goto exit;
+     }
 
 
    // Process gps.conf
@@ -300,11 +318,18 @@ static int loc_eng_init(GpsCallbacks* callbacks)
    loc_eng_reinit();
 
    loc_eng_inited = 1;
-   return 0;
+   ret_val = 0;
+
+exit:
+   EXIT_LOG(%d, ret_val);
+   return ret_val;
 }
 
 static int loc_eng_reinit()
 {
+    ENTRY_LOG();
+    int ret_val;
+
    // Open client
    rpc_loc_event_mask_type event = RPC_LOC_EVENT_PARSED_POSITION_REPORT |
                                    RPC_LOC_EVENT_SATELLITE_REPORT |
@@ -327,7 +352,10 @@ static int loc_eng_reinit()
                   LOC_IOCTL_DEFAULT_TIMEOUT,
                   NULL);
 
-   return 0;
+   ret_val = 0;
+
+    EXIT_LOG(%d, ret_val);
+    return ret_val;
 }
 
 /*===========================================================================
@@ -349,7 +377,8 @@ SIDE EFFECTS
 ===========================================================================*/
 static int loc_eng_deinit()
 {
-   LOC_LOGD("loc_eng_deinit called");
+   ENTRY_LOG();
+    int ret_val;
 
    if (loc_eng_data.navigating)
    {
@@ -392,7 +421,10 @@ static int loc_eng_deinit()
    /* @todo destroy resource by loc_api_glue_init() */
 
    loc_eng_inited = 0;
-   return 0;
+    ret_val = 0;
+
+    EXIT_LOG(%d, ret_val);
+    return ret_val;
 }
 
 /*===========================================================================
@@ -416,16 +448,21 @@ SIDE EFFECTS
 
 static void loc_eng_cleanup()
 {
+   ENTRY_LOG_CALLFLOW();
    INIT_CHECK_VOID("loc_eng_cleanup");
 
 #if DISABLE_CLEANUP
-    return;
+    LOC_LOGD("cleanup disabled");
+   goto exit;
 #else
 
    // clean up
    loc_eng_deinit();
 
 #endif
+
+exit:
+    EXIT_LOG(%s, VOID_RET);
 }
 
 
@@ -447,18 +484,23 @@ SIDE EFFECTS
 ===========================================================================*/
 static int loc_eng_start()
 {
+   ENTRY_LOG_CALLFLOW();
    INIT_CHECK("loc_eng_start");
 
    struct loc_eng_msg_start_fix msg;
    msg.msgid = LOC_ENG_MSG_START_FIX;
    loc_eng_msgsnd( loc_eng_data.deferred_q, &msg, sizeof(msg));
-   return 0;
+   int ret_val = 0;
+
+   EXIT_LOG(%d, ret_val);
+   return ret_val;
 }
 
 static int loc_eng_start_handler()
 {
    int ret_val;
-   LOC_LOGD("loc_eng_start called");
+   ENTRY_LOG();
+
    ret_val = loc_start_fix(loc_eng_data.client_handle);
 
    if (ret_val != RPC_LOC_API_SUCCESS)
@@ -473,6 +515,7 @@ static int loc_eng_start_handler()
       loc_eng_data.navigating = TRUE;
    }
 
+   EXIT_LOG(%d, ret_val);
    return ret_val;
 }
 
@@ -494,19 +537,24 @@ SIDE EFFECTS
 ===========================================================================*/
 static int loc_eng_stop()
 {
-    INIT_CHECK("loc_eng_stop");
+   ENTRY_LOG_CALLFLOW();
+   INIT_CHECK("loc_eng_stop");
 
     struct loc_eng_msg_stop_fix msg;
     msg.msgid = LOC_ENG_MSG_STOP_FIX;
 
     loc_eng_msgsnd( loc_eng_data.deferred_q, &msg, sizeof(msg));
-    return 0;
+
+    int ret_val = 0;
+
+    EXIT_LOG(%d, ret_val);
+    return ret_val;
 }
 
 static int loc_eng_stop_handler()
 {
    int ret_val;
-   LOC_LOGD("loc_eng_stop called");
+   ENTRY_LOG();
 
    ret_val = loc_stop_fix(loc_eng_data.client_handle);
    if (ret_val != RPC_LOC_API_SUCCESS)
@@ -523,7 +571,9 @@ static int loc_eng_stop_handler()
    }
    loc_eng_data.navigating = FALSE;
 
-   return ret_val;
+exit:
+    EXIT_LOG(%d, ret_val);
+    return ret_val;
 }
 
 /*===========================================================================
@@ -544,13 +594,16 @@ SIDE EFFECTS
 ===========================================================================*/
 void loc_eng_mute_one_session()
 {
+   ENTRY_LOG();
+
    INIT_CHECK_VOID("loc_eng_mute_one_session");
-   LOC_LOGD("loc_eng_mute_one_session");
 
    struct loc_eng_msg_mute_session msg;
    msg.msgid = LOC_ENG_MSG_MUTE_SESSION;
 
    loc_eng_msgsnd( loc_eng_data.deferred_q, &msg, sizeof(msg));
+
+   EXIT_LOG(%s, VOID_RET);
 }
 
 /*===========================================================================
@@ -572,6 +625,8 @@ SIDE EFFECTS
 static int  loc_eng_set_position_mode(GpsPositionMode mode, GpsPositionRecurrence recurrence,
             uint32_t min_interval, uint32_t preferred_accuracy, uint32_t preferred_time)
 {
+    ENTRY_LOG_CALLFLOW();
+
    INIT_CHECK("loc_eng_set_position_mode");
 
    rpc_loc_ioctl_data_u_type*    ioctl_data = &loc_eng_data.position_mode;
@@ -645,6 +700,7 @@ static int  loc_eng_set_position_mode(GpsPositionMode mode, GpsPositionRecurrenc
       }
    }
 
+    EXIT_LOG(%d, ret_val);
    return ret_val;
 }
 
@@ -666,6 +722,7 @@ SIDE EFFECTS
 ===========================================================================*/
 static int loc_eng_inject_time(GpsUtcTime time, int64_t timeReference, int uncertainty)
 {
+    ENTRY_LOG_CALLFLOW();
    INIT_CHECK("loc_eng_inject_time");
 
    rpc_loc_ioctl_data_u_type        ioctl_data;
@@ -696,6 +753,7 @@ static int loc_eng_inject_time(GpsUtcTime time, int64_t timeReference, int uncer
       }
    }
 
+   EXIT_LOG(%d, ret_val);
    return ret_val;
 }
 
@@ -717,6 +775,7 @@ SIDE EFFECTS
 ===========================================================================*/
 static int loc_eng_inject_location(double latitude, double longitude, float accuracy)
 {
+    ENTRY_LOG_CALLFLOW();
    INIT_CHECK("loc_eng_inject_location");
 
    /* IOCTL data */
@@ -760,6 +819,7 @@ static int loc_eng_inject_location(double latitude, double longitude, float accu
       }
    }
 
+   EXIT_LOG(%d, ret_val);
    return ret_val;
 }
 
@@ -785,6 +845,7 @@ SIDE EFFECTS
 ===========================================================================*/
 static void loc_eng_delete_aiding_data(GpsAidingData f)
 {
+    ENTRY_LOG_CALLFLOW();
     INIT_CHECK_VOID("loc_eng_delete_aiding_data");
 
     struct loc_eng_msg_delete_aiding_data msg;
@@ -792,6 +853,8 @@ static void loc_eng_delete_aiding_data(GpsAidingData f)
     msg.type = f;
 
     loc_eng_msgsnd( loc_eng_data.deferred_q, &msg, sizeof(msg));
+
+    EXIT_LOG(%s, VOID_RET);
 }
 
 /*===========================================================================
@@ -812,27 +875,38 @@ SIDE EFFECTS
 ===========================================================================*/
 static const void* loc_eng_get_extension(const char* name)
 {
+    ENTRY_LOG_CALLFLOW();
+    const void* ret_val;
+
    if (strcmp(name, GPS_XTRA_INTERFACE) == 0)
    {
-      return &sLocEngXTRAInterface;
+      ret_val = &sLocEngXTRAInterface;
+        goto exit;
    }
 
    else if (strcmp(name, AGPS_INTERFACE) == 0)
    {
-      return &sLocEngAGpsInterface;
+      ret_val = &sLocEngAGpsInterface;
+        goto exit;
    }
 
    else if (strcmp(name, GPS_NI_INTERFACE) == 0)
    {
-      return &sLocEngNiInterface;
+      ret_val = &sLocEngNiInterface;
+        goto exit;
    }
 
    else if (strcmp(name, AGPS_RIL_INTERFACE) == 0)
    {
-      return &sLocEngAGpsRilInterface;
+      ret_val = &sLocEngAGpsRilInterface;
+        goto exit;
    }
 
-   return NULL;
+   ret_val = NULL;
+
+exit:
+    EXIT_LOG(%p, ret_val);
+    return ret_val;
 }
 
 /*===========================================================================
@@ -853,6 +927,8 @@ SIDE EFFECTS
 ===========================================================================*/
 static void loc_inform_gps_status(GpsStatusValue status)
 {
+    ENTRY_LOG();
+
    static GpsStatusValue last_status = GPS_STATUS_NONE;
 
    GpsStatus gs = { sizeof(gs),status };
@@ -861,17 +937,21 @@ static void loc_inform_gps_status(GpsStatusValue status)
 
    if (loc_eng_data.status_cb)
    {
+        CALLBACK_LOG_CALLFLOW("status_cb");
       loc_eng_data.status_cb(&gs);
 
       // Restore session begin if needed
       if (status == GPS_STATUS_ENGINE_ON && last_status == GPS_STATUS_SESSION_BEGIN)
       {
          GpsStatus gs_sess_begin = { sizeof(gs_sess_begin),GPS_STATUS_SESSION_BEGIN };
+            CALLBACK_LOG_CALLFLOW("status_cb");
          loc_eng_data.status_cb(&gs_sess_begin);
       }
    }
 
    last_status = status;
+
+    EXIT_LOG(%s, VOID_RET);
 }
 
 #if DEBUG_NI_REQUEST_EMU == 1
@@ -893,9 +973,12 @@ SIDE EFFECTS
 ===========================================================================*/
 static void* emulate_ni_request(void* arg)
 {
+    ENTRY_LOG();
+    void* ret_val;
+
    static int busy = 0;
 
-   if (busy) return NULL;
+   if (busy) { ret_val = NULL; goto exit; }
 
    busy = 1;
 
@@ -945,7 +1028,11 @@ static void* emulate_ni_request(void* arg)
 
    busy = 0;
 
-   return NULL;
+   ret_val = NULL;
+
+exit:
+    EXIT_LOG(%p, ret_val);
+    return ret_val;
 }
 #endif /* DEBUG_NI_REQUEST_EMU */
 
@@ -972,13 +1059,19 @@ static int32 loc_event_cb
       const rpc_loc_event_payload_u_type*  loc_event_payload
 )
 {
-   if(loc_event == RPC_LOC_EVENT_IOCTL_REPORT)
-      return RPC_LOC_API_SUCCESS;
+    ENTRY_LOG();
+    INIT_CHECK("loc_event_cb");
+    int32 ret_val;
+
+   if(loc_event == RPC_LOC_EVENT_IOCTL_REPORT) {
+      ret_val = RPC_LOC_API_SUCCESS;
+        goto exit;
+    }
 
    loc_eng_data.acquire_wakelock_cb();
    INIT_CHECK("loc_event_cb");
    LOC_LOGD("loc_event %d", (int) loc_event);
-   loc_eng_callback_log_header(client_handle, loc_event, loc_event_payload);
+   loc_callback_log_header(client_handle, loc_event, loc_event_payload);
 
    struct loc_eng_msg_loc_event msg;
    msg.msgid = LOC_ENG_MSG_LOC_EVENT;
@@ -989,8 +1082,11 @@ static int32 loc_event_cb
    loc_eng_msgsnd( loc_eng_data.deferred_q, &msg, sizeof(msg));
 
    loc_eng_data.release_wakelock_cb();
-   return RPC_LOC_API_SUCCESS;//We simply want to return sucess here as we do not want to
+   ret_val = RPC_LOC_API_SUCCESS;//We simply want to return sucess here as we do not want to
                               // cause any issues in RPC thread context
+exit:
+    EXIT_LOG(%d, ret_val);
+    return ret_val;
 }
 
 /*===========================================================================
@@ -1010,6 +1106,7 @@ SIDE EFFECTS
 
 ===========================================================================*/
 static void loc_eng_rpc_global_cb(CLIENT* clnt, enum rpc_reset_event event) {
+     ENTRY_LOG_CALLFLOW();
     switch (event) {
     case RPC_SUBSYSTEM_RESTART_BEGIN:
         loc_eng_send_modem_restart_msg(LOC_ENG_MSG_MODEM_DOWN, NULL);
@@ -1017,6 +1114,7 @@ static void loc_eng_rpc_global_cb(CLIENT* clnt, enum rpc_reset_event event) {
     case RPC_SUBSYSTEM_RESTART_END:
         loc_eng_send_modem_restart_msg(LOC_ENG_MSG_MODEM_UP, NULL);
     }
+    EXIT_LOG(%s, VOID_RET);
 }
 
 /*===========================================================================
@@ -1037,6 +1135,8 @@ SIDE EFFECTS
 ===========================================================================*/
 static void loc_eng_report_position(const rpc_loc_parsed_position_s_type *location_report_ptr)
 {
+    ENTRY_LOG();
+
    GpsLocation location;
 
    memset(&location, 0, sizeof (GpsLocation));
@@ -1115,19 +1215,21 @@ static void loc_eng_report_position(const rpc_loc_parsed_position_s_type *locati
 
          if (loc_eng_data.location_cb != NULL && !filter_out)
          {
-            LOC_LOGV("loc_eng_report_position: fire callback\n");
+                CALLBACK_LOG_CALLFLOW("location_cb");
             loc_eng_data.location_cb(&location);
          }
       }
       else
       {
-         LOC_LOGV("loc_eng_report_position: ignore position report when session status = %d\n", location_report_ptr->session_status);
+         LOC_LOGD("loc_eng_report_position: ignore position report when session status = %d\n", location_report_ptr->session_status);
       }
    }
    else
    {
-      LOC_LOGV("loc_eng_report_position: ignore position report when session status is not set\n");
+      LOC_LOGD("loc_eng_report_position: ignore position report when session status is not set\n");
    }
+
+    EXIT_LOG(%s, VOID_RET);
 }
 
 /*===========================================================================
@@ -1148,6 +1250,8 @@ SIDE EFFECTS
 ===========================================================================*/
 static void loc_eng_report_sv (const rpc_loc_gnss_info_s_type *gnss_report_ptr)
 {
+    ENTRY_LOG();
+
    GpsSvStatus     SvStatus;
    int             num_svs_max, i;
     const rpc_loc_sv_info_s_type *sv_info_ptr;
@@ -1238,11 +1342,14 @@ static void loc_eng_report_sv (const rpc_loc_gnss_info_s_type *gnss_report_ptr)
       }
    }
 
-   // LOC_LOGD ("num_svs = %d, eph mask = %d, alm mask = %d\n", SvStatus.num_svs, SvStatus.ephemeris_mask, SvStatus.almanac_mask );
+   LOC_LOGD ("num_svs = %d, eph mask = %d, alm mask = %d\n", SvStatus.num_svs, SvStatus.ephemeris_mask, SvStatus.almanac_mask );
    if ((SvStatus.num_svs != 0) && (loc_eng_data.sv_status_cb != NULL))
    {
-      loc_eng_data.sv_status_cb(&SvStatus);
+        CALLBACK_LOG_CALLFLOW("sv_status_cb");
+        loc_eng_data.sv_status_cb(&SvStatus);
    }
+
+    EXIT_LOG(%s, VOID_RET);
 }
 
 /*===========================================================================
@@ -1263,6 +1370,8 @@ SIDE EFFECTS
 ===========================================================================*/
 static void loc_eng_report_status (const rpc_loc_status_event_s_type *status_report_ptr)
 {
+   ENTRY_LOG();
+
    GpsStatusValue status;
 
    LOC_LOGD("loc_eng_report_status: event = %d engine_state = %d\n",
@@ -1301,7 +1410,7 @@ static void loc_eng_report_status (const rpc_loc_status_event_s_type *status_rep
    {
       if (loc_eng_data.mute_session_state == LOC_MUTE_SESS_WAIT)
       {
-         LOC_LOGV("loc_eng_report_status: mute_session_state changed from WAIT to IN SESSION");
+         LOC_LOGD("loc_eng_report_status: mute_session_state changed from WAIT to IN SESSION");
          loc_eng_data.mute_session_state = LOC_MUTE_SESS_IN_SESSION;
       }
    }
@@ -1310,14 +1419,14 @@ static void loc_eng_report_status (const rpc_loc_status_event_s_type *status_rep
    if (loc_eng_data.mute_session_state == LOC_MUTE_SESS_IN_SESSION &&
        (status == GPS_STATUS_SESSION_END || status == GPS_STATUS_ENGINE_OFF))
    {
-      LOC_LOGV("loc_eng_report_status: mute_session_state changed from IN SESSION to NONE");
+      LOC_LOGD("loc_eng_report_status: mute_session_state changed from IN SESSION to NONE");
       loc_eng_data.mute_session_state = LOC_MUTE_SESS_NONE;
    }
 
    // Session End is not reported during Android navigating state
    if (status != GPS_STATUS_NONE && !(status == GPS_STATUS_SESSION_END && loc_eng_data.navigating) && !(status == GPS_STATUS_SESSION_BEGIN && !loc_eng_data.navigating))
    {
-      LOC_LOGV("loc_eng_report_status: issue callback with status %d\n", status);
+      LOC_LOGD("loc_eng_report_status: issue callback with status %d\n", status);
 
       if (loc_eng_data.mute_session_state != LOC_MUTE_SESS_IN_SESSION)
       {
@@ -1325,7 +1434,7 @@ static void loc_eng_report_status (const rpc_loc_status_event_s_type *status_rep
          loc_inform_gps_status(status);
       }
       else {
-         LOC_LOGV("loc_eng_report_status: muting the status report.");
+         LOC_LOGD("loc_eng_report_status: muting the status report.");
       }
    }
 
@@ -1340,6 +1449,8 @@ static void loc_eng_report_status (const rpc_loc_status_event_s_type *status_rep
    {
       loc_eng_data.fix_session_status = status;
    }
+
+    EXIT_LOG(%s, VOID_RET);
 }
 
 /*===========================================================================
@@ -1360,6 +1471,8 @@ SIDE EFFECTS
 ===========================================================================*/
 static void loc_eng_report_nmea(const rpc_loc_nmea_report_s_type *nmea_report_ptr)
 {
+    ENTRY_LOG();
+
    if (loc_eng_data.nmea_cb != NULL)
    {
       struct timeval tv;
@@ -1368,9 +1481,11 @@ static void loc_eng_report_nmea(const rpc_loc_nmea_report_s_type *nmea_report_pt
       long long now = tv.tv_sec * 1000LL + tv.tv_usec / 1000;
 
 #if (AMSS_VERSION==3200)
+        CALLBACK_LOG_CALLFLOW("nmea_cb");
       loc_eng_data.nmea_cb(now, nmea_report_ptr->nmea_sentences.nmea_sentences_val,
             nmea_report_ptr->nmea_sentences.nmea_sentences_len);
 #else
+        CALLBACK_LOG_CALLFLOW("nmea_cb");
       loc_eng_data.nmea_cb(now, nmea_report_ptr->nmea_sentences, nmea_report_ptr->length);
       LOC_LOGD("loc_eng_report_nmea: $%c%c%c\n",
          nmea_report_ptr->nmea_sentences[3], nmea_report_ptr->nmea_sentences[4],
@@ -1378,6 +1493,8 @@ static void loc_eng_report_nmea(const rpc_loc_nmea_report_s_type *nmea_report_pt
 
 #endif /* #if (AMSS_VERSION==3200) */
    }
+
+    EXIT_LOG(%s, VOID_RET);
 }
 
 /*===========================================================================
@@ -1398,6 +1515,8 @@ SIDE EFFECTS
 ===========================================================================*/
 static void loc_eng_process_conn_request (const rpc_loc_server_request_s_type *server_request_ptr)
 {
+    ENTRY_LOG();
+
    LOC_LOGD("loc_eng_process_conn_request: get loc event location server request, event = %d\n", server_request_ptr->event);
 
    switch (server_request_ptr->event)
@@ -1423,6 +1542,8 @@ static void loc_eng_process_conn_request (const rpc_loc_server_request_s_type *s
       break;
    }
 
+
+    EXIT_LOG(%s, VOID_RET);
 }
 
 /*===========================================================================
@@ -1444,6 +1565,8 @@ SIDE EFFECTS
 static void loc_eng_process_loc_event (rpc_loc_event_mask_type loc_event,
         rpc_loc_event_payload_u_type* loc_event_payload)
 {
+    ENTRY_LOG();
+
    LOC_LOGD("loc_eng_process_loc_event: %x\n", (int) loc_event);
    // Parsed report
    if ( (loc_event & RPC_LOC_EVENT_PARSED_POSITION_REPORT) &&
@@ -1484,6 +1607,7 @@ static void loc_eng_process_loc_event (rpc_loc_event_mask_type loc_event,
          // Call Registered callback
          if (loc_eng_data.xtra_module_data.download_request_cb != NULL)
          {
+                CALLBACK_LOG_CALLFLOW("xtra_module_data.download_request_cb");
             loc_eng_data.xtra_module_data.download_request_cb();
          }
       }
@@ -1508,6 +1632,8 @@ static void loc_eng_process_loc_event (rpc_loc_event_mask_type loc_event,
    }
 
    loc_eng_ni_callback(loc_event, loc_event_payload);
+
+    EXIT_LOG(%s, VOID_RET);
 }
 /*===========================================================================
 FUNCTION    loc_eng_agps_reinit
@@ -1527,6 +1653,8 @@ SIDE EFFECTS
 ===========================================================================*/
 static void loc_eng_agps_reinit()
 {
+    ENTRY_LOG();
+
    // Data connection for AGPS
    memset(loc_eng_data.apn_name, 0, sizeof loc_eng_data.apn_name);
    loc_eng_data.data_connection_bearer = AGPS_APN_BEARER_INVALID;
@@ -1548,6 +1676,8 @@ static void loc_eng_agps_reinit()
    {
       loc_eng_set_server(AGPS_TYPE_C2K, c2k_host_buf, c2k_port_buf);
    }
+
+    EXIT_LOG(%s, VOID_RET);
 }
 /*===========================================================================
 FUNCTION    loc_eng_agps_init
@@ -1567,9 +1697,13 @@ SIDE EFFECTS
 ===========================================================================*/
 static void loc_eng_agps_init(AGpsCallbacks* callbacks)
 {
+    ENTRY_LOG_CALLFLOW();
+
    loc_eng_data.agps_status_cb = callbacks->status_cb;
 
    loc_eng_agps_reinit();
+
+    EXIT_LOG(%s, VOID_RET);
 }
 
 /*===========================================================================
@@ -1590,8 +1724,10 @@ SIDE EFFECTS
 ===========================================================================*/
 static void loc_eng_ioctl_data_open_status(int is_succ)
 {
+    ENTRY_LOG();
     rpc_loc_ioctl_data_u_type           ioctl_data;
     int                                 ret_val;
+
 
     //Go through all the active connection states to determine which command to send to LOC MW and the
     //state machine updates that need to be done
@@ -1672,6 +1808,8 @@ static void loc_eng_ioctl_data_open_status(int is_succ)
                                     NULL);
         }
     }
+
+    EXIT_LOG(%s, VOID_RET);
 }
 /*===========================================================================
 FUNCTION    loc_eng_ioctl_data_close_status
@@ -1690,6 +1828,8 @@ SIDE EFFECTS
 ===========================================================================*/
 static void loc_eng_ioctl_data_close_status(int is_succ)
 {
+    ENTRY_LOG();
+
    rpc_loc_server_close_status_s_type *conn_close_status_ptr;
    rpc_loc_ioctl_data_u_type           ioctl_data;
    time_t                              time_now;
@@ -1727,6 +1867,8 @@ static void loc_eng_ioctl_data_close_status(int is_succ)
          loc_eng_data.atl_conn_info[i].conn_handle = INVALID_ATL_CONNECTION_HANDLE;
       }
    }
+
+    EXIT_LOG(%s, VOID_RET);
 }
 
 /*===========================================================================
@@ -1748,7 +1890,10 @@ SIDE EFFECTS
 ===========================================================================*/
 static int loc_eng_data_conn_open(const char* apn, AGpsBearerType bearerType)
 {
+   ENTRY_LOG_CALLFLOW();
    INIT_CHECK("loc_eng_data_conn_open");
+
+   int ret_val;
 
    LOC_LOGD("loc_eng_data_conn_open APN name = [%s]", apn);
    if (apn == NULL)
@@ -1774,7 +1919,10 @@ static int loc_eng_data_conn_open(const char* apn, AGpsBearerType bearerType)
 
    loc_eng_msgsnd( loc_eng_data.deferred_q, &msg, sizeof(msg));
 
-   return 0;
+   ret_val = 0;
+
+   EXIT_LOG(%d, ret_val);
+   return ret_val;
 }
 
 /*===========================================================================
@@ -1796,16 +1944,19 @@ SIDE EFFECTS
 ===========================================================================*/
 static int loc_eng_data_conn_closed()
 {
+   ENTRY_LOG_CALLFLOW();
    INIT_CHECK("loc_eng_data_conn_closed");
-
-   LOC_LOGD("loc_eng_data_conn_closed");
+   int ret_val;
 
    struct loc_eng_msg_agps_close_status msg;
    msg.msgid = LOC_ENG_MSG_AGPS_DATA_CLOSE_STATUS;
 
    loc_eng_msgsnd( loc_eng_data.deferred_q, &msg, sizeof(msg));
 
-   return 0;
+   ret_val = 0;
+
+   EXIT_LOG(%d, ret_val);
+   return ret_val;
 }
 
 /*===========================================================================
@@ -1827,15 +1978,18 @@ SIDE EFFECTS
 ===========================================================================*/
 int loc_eng_data_conn_failed()
 {
+   ENTRY_LOG_CALLFLOW();
    INIT_CHECK("loc_eng_data_conn_failed");
-
-   LOC_LOGD("loc_eng_data_conn_failed");
+   int ret_val;
 
    struct loc_eng_msg_agps_failed msg;
    msg.msgid = LOC_ENG_MSG_AGPS_DATA_FAILED;
 
    loc_eng_msgsnd( loc_eng_data.deferred_q, &msg, sizeof(msg));
-   return 0;
+   ret_val = 0;
+
+   EXIT_LOG(%d, ret_val);
+   return ret_val;
 }
 
 /*===========================================================================
@@ -1858,7 +2012,10 @@ SIDE EFFECTS
 ===========================================================================*/
 static int loc_eng_set_apn (const char* apn)
 {
+    ENTRY_LOG();
    INIT_CHECK("loc_eng_set_apn");
+
+    int ret_val;
 
    int apn_len;
 
@@ -1899,7 +2056,10 @@ static int loc_eng_set_apn (const char* apn)
                      NULL);
    }
 
-   return 0;
+   ret_val = 0;
+
+    EXIT_LOG(%d, ret_val);
+    return ret_val;
 }
 
 /*===========================================================================
@@ -1921,6 +2081,9 @@ SIDE EFFECTS
 ===========================================================================*/
 static boolean resolve_in_addr(const char *host_addr, struct in_addr *in_addr_ptr)
 {
+    ENTRY_LOG();
+    boolean ret_val;
+
    struct hostent             *hp;
    hp = gethostbyname(host_addr);
    if (hp != NULL) /* DNS OK */
@@ -1934,11 +2097,16 @@ static boolean resolve_in_addr(const char *host_addr, struct in_addr *in_addr_pt
       {
          /* IP not valid */
          LOC_LOGE("DNS query on '%s' failed\n", host_addr);
-         return FALSE;
+         ret_val = FALSE;
+            goto exit;
       }
    }
 
-   return TRUE;
+   ret_val = TRUE;
+
+exit:
+    EXIT_LOG(%s, boolStr[ret_val!=0]);
+    return ret_val;
 }
 
 /*===========================================================================
@@ -1960,6 +2128,8 @@ SIDE EFFECTS
 ===========================================================================*/
 static int loc_eng_set_server(AGpsType type, const char* hostname, int port)
 {
+    ENTRY_LOG();
+
    unsigned                          len;
    rpc_loc_ioctl_data_u_type         ioctl_data;
    rpc_loc_server_info_s_type       *server_info_ptr;
@@ -1975,7 +2145,8 @@ static int loc_eng_set_server(AGpsType type, const char* hostname, int port)
    if (len >= sizeof url)
    {
       LOC_LOGE("loc_eng_set_server, URL too long (len=%d).\n", len);
-      return -1;
+      ret_val = -1;
+        goto exit;
    }
 
    // Actual length
@@ -2005,7 +2176,8 @@ static int loc_eng_set_server(AGpsType type, const char* hostname, int port)
       if (!resolve_in_addr(hostname, &addr))
       {
          LOC_LOGE("loc_eng_set_server, hostname %s cannot be resolved.\n", hostname);
-         return -2;
+         ret_val = -2;
+            goto exit;
       }
 
       ioctl_cmd = RPC_LOC_IOCTL_SET_CDMA_PDE_SERVER_ADDR;
@@ -2021,7 +2193,8 @@ static int loc_eng_set_server(AGpsType type, const char* hostname, int port)
       break;
    default:
       LOC_LOGE("loc_eng_set_server, unknown server type = %d", (int) type);
-      return 0; /* note: error not indicated, since JNI doesn't check */
+      ret_val = 0; /* note: error not indicated, since JNI doesn't check */
+        goto exit;
    }
 
    ret_val = loc_eng_deferred_ioctl (loc_eng_data.client_handle,
@@ -2032,14 +2205,16 @@ static int loc_eng_set_server(AGpsType type, const char* hostname, int port)
 
    if (ret_val != RPC_LOC_API_SUCCESS)
    {
-      LOC_LOGE("loc_eng_set_server failed\n");
+      LOC_LOGD("loc_eng_set_server failed\n");
    }
    else
    {
-      LOC_LOGV("loc_eng_set_server successful\n");
+      LOC_LOGD("loc_eng_set_server successful\n");
    }
 
-   return ret_val;
+exit:
+    EXIT_LOG(%d, ret_val);
+    return ret_val;
 }
 
 /*===========================================================================
@@ -2062,6 +2237,9 @@ SIDE EFFECTS
 ===========================================================================*/
 static int loc_eng_set_server_proxy(AGpsType type, const char* hostname, int port)
 {
+    ENTRY_LOG_CALLFLOW();
+    int ret_val;
+
    if (loc_eng_inited)
    {
       loc_eng_set_server(type, hostname, port);
@@ -2085,7 +2263,10 @@ static int loc_eng_set_server_proxy(AGpsType type, const char* hostname, int por
          LOC_LOGE("loc_eng_set_server_proxy, unknown server type = %d", (int) type);
       }
    }
-   return 0;
+   ret_val = 0;
+
+    EXIT_LOG(%d, ret_val);
+    return ret_val;
 }
 
 // Below stub functions are members of sLocEngAGpsRilInterface
@@ -2114,6 +2295,7 @@ SIDE EFFECTS
 ===========================================================================*/
 static void loc_eng_agps_ril_update_network_availability(int available, const char* apn)
 {
+   ENTRY_LOG();
    struct loc_eng_msg_update_network_availability msg;
 
    int apn_len = strlen (apn);
@@ -2129,10 +2311,12 @@ static void loc_eng_agps_ril_update_network_availability(int available, const ch
 
    loc_eng_msgsnd( loc_eng_data.deferred_q, &msg, sizeof(msg));
 
+   EXIT_LOG(%s, VOID_RET);
 }
 
 static void loc_eng_agps_ril_update_network_availability_action(int available, const char* apn)
 {
+    ENTRY_LOG();
     rpc_loc_ioctl_data_u_type ioctl_data = {RPC_LOC_IOCTL_SET_DATA_ENABLE, {0}};
 
     ioctl_data.rpc_loc_ioctl_data_u_type_u.data_enable = available;
@@ -2143,6 +2327,8 @@ static void loc_eng_agps_ril_update_network_availability_action(int available, c
                    NULL);
 
     loc_eng_set_apn(apn);
+
+    EXIT_LOG(%s, VOID_RET);
 }
 
 /*===========================================================================
@@ -2164,6 +2350,7 @@ SIDE EFFECTS
 ===========================================================================*/
 static void loc_eng_delete_aiding_data_action(GpsAidingData bits)
 {
+    ENTRY_LOG();
     rpc_loc_ioctl_data_u_type ioctl_data = {RPC_LOC_IOCTL_DELETE_ASSIST_DATA, {0}};
    rpc_loc_assist_data_delete_s_type  *assist_data_ptr;
    int                                ret_val;
@@ -2180,6 +2367,7 @@ static void loc_eng_delete_aiding_data_action(GpsAidingData bits)
       loc_eng_send_modem_restart_msg(LOC_ENG_MSG_MODEM_DOWN, NULL);
    }
    LOC_LOGV("loc_eng_delete_aiding_data_action: %s\n", log_succ_fail_string(ret_val == RPC_LOC_API_SUCCESS));
+   EXIT_LOG(%s, VOID_RET);
 }
 
 /*===========================================================================
@@ -2214,11 +2402,13 @@ static void loc_eng_report_agps_status(AGpsType type,
                                        unsigned long ipv4_addr,
                                        unsigned char * ipv6_addr)
 {
+    ENTRY_LOG();
+
    AGpsStatus agpsStatus;
    if (loc_eng_data.agps_status_cb == NULL)
    {
       LOC_LOGE("loc_eng_report_agps_status, callback not initialized.\n");
-      return;
+      goto exit;
    }
 
    LOC_LOGD("loc_eng_report_agps_status, type = %d, status = %d, ipv4_addr = %d\n",
@@ -2236,13 +2426,18 @@ static void loc_eng_report_agps_status(AGpsType type,
    switch (status)
    {
       case GPS_REQUEST_AGPS_DATA_CONN:
+            CALLBACK_LOG_CALLFLOW("agps_status_cb");
          loc_eng_data.agps_status_cb(&agpsStatus);
          break;
       case GPS_RELEASE_AGPS_DATA_CONN:
          // This will not close always-on connection. Comment out if it does.
+            CALLBACK_LOG_CALLFLOW("agps_status_cb");
          loc_eng_data.agps_status_cb(&agpsStatus);
          break;
    }
+
+exit:
+    EXIT_LOG(%s, VOID_RET);
 
 }
 
@@ -2268,6 +2463,8 @@ static void loc_eng_process_atl_action(rpc_loc_server_connection_handle conn_han
                                        AGpsStatusValue status, AGpsType agps_type)
 
 {
+    ENTRY_LOG();
+
    boolean                             ret_val;
 
    LOC_LOGD("loc_eng_process_atl_action,handle = 0x%lx; status = %d; agps_type = %d\n", (long) conn_handle, status, agps_type);
@@ -2280,7 +2477,7 @@ static void loc_eng_process_atl_action(rpc_loc_server_connection_handle conn_han
      //An error has occured and so print out an error message and return. End the call flow
      LOC_LOGE("loc_eng_process_conn_request- session index error,handle = %d\n",
              (int) loc_eng_data.conn_handle);
-     return;
+     goto exit;
    }
    LOC_LOGD("loc_eng_process_atl_action.session_index = %x, active_session_state = %x ,"
             "active_session_handle = %x session_active %d\n", session_index,
@@ -2363,6 +2560,9 @@ static void loc_eng_process_atl_action(rpc_loc_server_connection_handle conn_han
          LOC_LOGD("ATL Open req came in for handle %d when in CLOSE_REQ state", (int) loc_eng_data.conn_handle);
        }
    }
+
+exit:
+    EXIT_LOG(%s, VOID_RET);
 }
 
 /*===========================================================================
@@ -2384,6 +2584,9 @@ SIDE EFFECTS
 
 ===========================================================================*/
 void loc_eng_report_modem_state(rpc_loc_engine_state_e_type state) {
+
+    ENTRY_LOG();
+
    rpc_loc_status_event_s_type status = {RPC_LOC_STATUS_EVENT_ENGINE_STATE,
                                          {RPC_LOC_STATUS_EVENT_ENGINE_STATE,
                                           {RPC_LOC_ENGINE_STATE_OFF}}};
@@ -2420,6 +2623,8 @@ void loc_eng_report_modem_state(rpc_loc_engine_state_e_type state) {
            }
        }
    }
+
+    EXIT_LOG(%s, VOID_RET);
 }
 
 /*===========================================================================
@@ -2439,6 +2644,8 @@ SIDE EFFECTS
 
 ===========================================================================*/
 static void loc_eng_send_modem_restart_msg(int msgid, voidFuncPtr setupLocked) {
+    ENTRY_LOG();
+
     struct loc_eng_msg_modem_restart msg;
     msg.msgid = msgid;
     loc_eng_msgsnd( loc_eng_data.deferred_q, &msg, sizeof(msg));
@@ -2446,6 +2653,7 @@ static void loc_eng_send_modem_restart_msg(int msgid, voidFuncPtr setupLocked) {
     if (NULL != setupLocked)
         (*setupLocked)();
 
+    EXIT_LOG(%s, VOID_RET);
 }
 
 /*===========================================================================
@@ -2467,6 +2675,7 @@ SIDE EFFECTS
 ===========================================================================*/
 static void loc_eng_deferred_action_thread(void* arg)
 {
+   ENTRY_LOG();
    union loc_eng_msg msg;
    static int cnt = 0;
 
@@ -2505,7 +2714,7 @@ static void loc_eng_deferred_action_thread(void* arg)
                         (int32) msg.loc_event.client_handle, (int32) loc_eng_data.client_handle);
                   break;
                }
-               loc_eng_callback_log(  msg.loc_event.loc_event,
+               loc_callback_log(  msg.loc_event.loc_event,
                                     & msg.loc_event.loc_event_payload);
                loc_eng_process_loc_event(  msg.loc_event.loc_event,
                                          & msg.loc_event.loc_event_payload);
@@ -2615,7 +2824,7 @@ static void loc_eng_deferred_action_thread(void* arg)
    loc_eng_data.release_wakelock_cb();
    loc_eng_data.deferred_action_thread = 0;
 
-   LOC_LOGD("loc_eng_deferred_action_thread exiting\n");
+   EXIT_LOG(%s, VOID_RET);
 }
 
 /*===========================================================================
@@ -2640,6 +2849,7 @@ static int loc_eng_deferred_ioctl( rpc_loc_client_handle_type    handle,
                                    uint32                        timeout_msec,
                                    rpc_loc_ioctl_callback_s_type *cb_data_ptr)
 {
+    ENTRY_LOG();
     struct loc_eng_msg_ioctl msg;
     msg.msgid = LOC_ENG_MSG_IOCTL;
     msg.client_handle = handle;
@@ -2649,7 +2859,10 @@ static int loc_eng_deferred_ioctl( rpc_loc_client_handle_type    handle,
     msg.cb_data_ptr = cb_data_ptr;
 
     loc_eng_msgsnd( loc_eng_data.deferred_q, &msg, sizeof(msg));
-    return 0;
+    int ret_val = 0;
+
+    EXIT_LOG(%d, ret_val);
+    return ret_val;
 }
 
 /*===========================================================================
@@ -2671,6 +2884,8 @@ SIDE EFFECTS
 ===========================================================================*/
 void loc_eng_if_wakeup(int if_req, unsigned is_supl, unsigned long ipv4_addr, unsigned char * ipv6_addr)
 {
+    ENTRY_LOG();
+
    AGpsType                            agps_type;
 
    agps_type = is_supl? AGPS_TYPE_SUPL : AGPS_TYPE_ANY;  // No C2k?
@@ -2695,6 +2910,8 @@ void loc_eng_if_wakeup(int if_req, unsigned is_supl, unsigned long ipv4_addr, un
             ipv6_addr
       );
    }
+
+    EXIT_LOG(%s, VOID_RET);
 }
 
 // for gps.c
@@ -2721,6 +2938,9 @@ SIDE EFFECTS
 ===========================================================================*/
 static int loc_eng_get_index(rpc_loc_server_connection_handle active_conn_handle)
 {
+    ENTRY_LOG();
+    int ret_val;
+
    int i = 0;
    //search through all the active sessions to determine the correct session index
     for (i=0;i < MAX_NUM_ATL_CONNECTIONS;i++)
@@ -2728,8 +2948,10 @@ static int loc_eng_get_index(rpc_loc_server_connection_handle active_conn_handle
       LOC_LOGD("In loc_eng_get_index Index: %d Active: %d ConnHandle: %d\n", i, loc_eng_data.atl_conn_info[i].active,
                (int) loc_eng_data.atl_conn_info[i].conn_handle);
       if((loc_eng_data.atl_conn_info[i].active == TRUE) &&
-         (loc_eng_data.atl_conn_info[i].conn_handle == active_conn_handle))
-         return i;
+         (loc_eng_data.atl_conn_info[i].conn_handle == active_conn_handle)) {
+         ret_val = i;
+            goto exit;
+        }
     }
    //If we come here there is no exiting record for this connection handle and so we create a new one
     for (i=0;i < MAX_NUM_ATL_CONNECTIONS;i++)
@@ -2741,11 +2963,16 @@ static int loc_eng_get_index(rpc_loc_server_connection_handle active_conn_handle
          loc_eng_data.atl_conn_info[i].conn_handle = active_conn_handle;
          LOC_LOGD("In loc_eng_get_index Index: %d Active: %d ConnHandle: %d \n", i, loc_eng_data.atl_conn_info[i].active,
                (int) loc_eng_data.atl_conn_info[i].conn_handle);
-         return i;
+         ret_val = i;
+         goto exit;
       }
     }
    //If we reach this point an error has occurred
-   return MAX_NUM_ATL_CONNECTIONS;
+   ret_val = MAX_NUM_ATL_CONNECTIONS;
+
+exit:
+    EXIT_LOG(%d, ret_val);
+    return ret_val;
 }
 
 /*===========================================================================
@@ -2767,16 +2994,26 @@ SIDE EFFECTS
 ===========================================================================*/
 static boolean check_if_any_connection(loc_eng_atl_session_state_e_type conn_state,int session_index)
 {
+        ENTRY_LOG();
+        boolean ret_val;
+
       int i=0;
       for(i=0;i < MAX_NUM_ATL_CONNECTIONS; i++)
       {
          if(i == session_index)
             continue; //skip this record as we want to check all others
 
-         if(loc_eng_data.atl_conn_info[i].active == TRUE && loc_eng_data.atl_conn_info[i].conn_state == conn_state)
-            return TRUE;
+         if(loc_eng_data.atl_conn_info[i].active == TRUE && loc_eng_data.atl_conn_info[i].conn_state == conn_state) {
+            ret_val = TRUE;
+                goto exit;
+            }
       }
-      return FALSE;
+
+      ret_val = FALSE;
+
+exit:
+        EXIT_LOG(%s, boolStr[ret_val!=0]);
+        return ret_val;
 }
 
 /*===========================================================================
@@ -2798,13 +3035,22 @@ SIDE EFFECTS
 ===========================================================================*/
 static boolean check_if_all_connection(loc_eng_atl_session_state_e_type conn_state,int session_index)
 {
+      ENTRY_LOG();
+      boolean ret_val;
+
       for(int i=0;i < MAX_NUM_ATL_CONNECTIONS; i++)
       {
          if(i == session_index)
             continue; //skip this record as we want to check all others
 
-         if(loc_eng_data.atl_conn_info[i].conn_state != conn_state)
-            return FALSE;
+         if(loc_eng_data.atl_conn_info[i].conn_state != conn_state) {
+            ret_val = FALSE;
+             goto exit;
+         }
       }
-      return TRUE;
+      ret_val = TRUE;
+
+exit:
+      EXIT_LOG(%s, boolStr[ret_val!=0]);
+      return ret_val;
 }
