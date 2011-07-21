@@ -40,6 +40,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <time.h>
+#include <dlfcn.h>
 
 #include <rpc/rpc.h>
 #include <rpc/clnt.h>
@@ -56,6 +57,8 @@
 #include <loc_eng_dmn_conn.h>
 #include <loc_eng_msg.h>
 #include <loc_eng_msg_id.h>
+
+#include "ulp.h"
 
 #define LOG_TAG "libloc"
 #include "loc_dbg.h"
@@ -133,6 +136,8 @@ static void loc_eng_agps_ril_set_set_id(AGpsSetIDType type, const char* setid);
 static void loc_eng_agps_ril_ni_message(uint8_t *msg, size_t len);
 static void loc_eng_agps_ril_update_network_state(int connected, int type, int roaming, const char* extra_info);
 static void loc_eng_agps_ril_update_network_availability(int avaiable, const char* apn);
+static bool loc_eng_inject_raw_command(char* command, int length);
+static int loc_eng_update_criteria(UlpLocationCriteria criteria);
 
 // Defines the GpsInterface in gps.h
 static const GpsInterface sLocEngInterface =
@@ -147,6 +152,7 @@ static const GpsInterface sLocEngInterface =
    loc_eng_delete_aiding_data,
    loc_eng_set_position_mode,
    loc_eng_get_extension,
+   loc_eng_update_criteria
 };
 
 static const AGpsInterface sLocEngAGpsInterface =
@@ -170,9 +176,16 @@ static const AGpsRilInterface sLocEngAGpsRilInterface =
    loc_eng_agps_ril_update_network_availability
 };
 
+static const InjectRawCmdInterface sLocEngInjectRawCmdInterface =
+{
+   sizeof(InjectRawCmdInterface),
+   loc_eng_inject_raw_command
+};
+
 // Global data structure for location engine
 loc_eng_data_s_type loc_eng_data;
 int loc_eng_inited = 0; /* not initialized */
+char extra_data[100];
 
 // Address buffers, for addressing setting before init
 int    supl_host_set = 0;
@@ -184,6 +197,10 @@ int    c2k_port_buf;
 
 // Logging Improvements
 const char *boolStr[]={"False","True"};
+
+// ULP integration
+static const ulpInterface* locEngUlpInf = NULL;
+static int loc_eng_ulp_init() ;
 
 /*********************************************************************
  * Initialization checking macros
@@ -301,6 +318,7 @@ static int loc_eng_init(GpsCallbacks* callbacks)
    // Create threads (if not yet created)
    loc_eng_msgget( &loc_eng_data.deferred_q);
    loc_eng_data.deferred_action_thread = callbacks->create_thread_cb("loc_api",loc_eng_deferred_action_thread, NULL);
+   loc_eng_ulp_init();
 #ifdef FEATURE_GNSS_BIT_API
    {
        char baseband[PROPERTY_VALUE_MAX];
@@ -397,6 +415,13 @@ static int loc_eng_deinit()
       pthread_join(loc_eng_data.deferred_action_thread, &ignoredValue);
       loc_eng_msgremove( loc_eng_data.deferred_q);
       loc_eng_data.deferred_action_thread = NULL;
+   }
+
+   // De-initialize ulp
+   if (locEngUlpInf != NULL)
+   {
+      locEngUlpInf->destroy ();
+      locEngUlpInf = NULL;
    }
 
    if (loc_eng_data.client_opened)
@@ -498,10 +523,20 @@ static int loc_eng_start()
 
 static int loc_eng_start_handler()
 {
-   int ret_val;
+   int ret_val = 1;
    ENTRY_LOG();
 
-   ret_val = loc_start_fix(loc_eng_data.client_handle);
+   /* returns 1 if the ULP module is not enabled,
+      return 0 (map to RPC_LOC_API_SUCCESS if ULP is started properly to get the fix) */
+   if (locEngUlpInf != NULL)
+   {
+       ret_val = locEngUlpInf->start_fix ();
+   }
+   if (ret_val == 1) {
+       LOC_LOGE("loc_eng: ULP is not registered! calling loc_start_fix\n");
+       ret_val = loc_start_fix(loc_eng_data.client_handle);
+   }
+
 
    if (ret_val != RPC_LOC_API_SUCCESS)
    {
@@ -555,6 +590,12 @@ static int loc_eng_stop_handler()
 {
    int ret_val;
    ENTRY_LOG();
+
+   // Stops the ULP
+   if (locEngUlpInf != NULL)
+   {
+      locEngUlpInf->stop_fix ();
+   }
 
    ret_val = loc_stop_fix(loc_eng_data.client_handle);
    if (ret_val != RPC_LOC_API_SUCCESS)
@@ -900,6 +941,15 @@ static const void* loc_eng_get_extension(const char* name)
    {
       ret_val = &sLocEngAGpsRilInterface;
         goto exit;
+   }
+   else if (strcmp(name, ULP_RAW_CMD_INTERFACE) == 0)
+   {
+      ret_val = &sLocEngInjectRawCmdInterface;
+      goto exit;
+   }
+   else
+   {
+      LOC_LOGE ("get_extension: Invalid interface passed in\n");
    }
 
    ret_val = NULL;
@@ -3053,4 +3103,163 @@ static boolean check_if_all_connection(loc_eng_atl_session_state_e_type conn_sta
 exit:
       EXIT_LOG(%s, boolStr[ret_val!=0]);
       return ret_val;
+}
+
+/*===========================================================================
+FUNCTION loc_eng_report_position_ulp
+
+DESCRIPTION
+   Report a ULP position
+         p_ulp_pos_absolute, ULP position in absolute coordinates
+
+DEPENDENCIES
+   None
+
+RETURN VALUE
+   0: SUCCESS
+   others: error
+
+SIDE EFFECTS
+   N/A
+
+===========================================================================*/
+static int loc_eng_report_position_ulp (const rpc_loc_parsed_position_s_type* location_report_ptr,
+                                         unsigned int   ext_data_length,
+                                         unsigned char* ext_data)
+{
+  ENTRY_LOG();
+  int ret_val;
+  rpc_loc_event_payload_u_type event_payload;
+
+  if (ext_data_length > sizeof (extra_data))
+  {
+      ext_data_length = sizeof (extra_data);
+  }
+
+  memcpy(extra_data,
+         ext_data,
+         ext_data_length);
+
+  if (loc_eng_inited == 1)
+  {
+    event_payload.disc = RPC_LOC_EVENT_PARSED_POSITION_REPORT;
+    event_payload.rpc_loc_event_payload_u_type_u.parsed_location_report = *location_report_ptr;
+    loc_event_cb(loc_eng_data.client_handle,
+                 RPC_LOC_EVENT_PARSED_POSITION_REPORT,
+                 &event_payload);
+    ret_val = 0;
+    goto exit;
+  }
+  ret_val = -1;
+exit:
+  EXIT_LOG(%d, ret_val);
+  return ret_val;
+}
+
+/*===========================================================================
+FUNCTION loc_eng_ulp_init
+
+DESCRIPTION
+   This function dynamically loads the libulp.so and calls
+   its init function to start up the ulp module
+
+DEPENDENCIES
+   None
+
+RETURN VALUE
+   0: no error
+   -1: errors
+
+SIDE EFFECTS
+   N/A
+
+===========================================================================*/
+static int loc_eng_ulp_init()
+{
+    ENTRY_LOG();
+    int ret_val;
+    void *handle;
+    const char *error;
+    get_ulp_interface* get_ulp_inf;
+
+    handle = dlopen ("libulp.so", RTLD_NOW);
+    if (!handle)
+    {
+        LOGE ("%s, dlopen for libulp.so failed\n", __func__);
+        ret_val = -1;
+        goto exit;
+    }
+    dlerror();    /* Clear any existing error */
+
+    get_ulp_inf = (get_ulp_interface*) dlsym(handle, "ulp_get_interface");
+    if ((error = dlerror()) != NULL)  {
+        LOGE ("%s, dlsym for ulpInterface failed, error = %s\n", __func__, error);
+        ret_val = -1;
+        goto exit;
+    }
+
+    locEngUlpInf = get_ulp_inf();
+
+    // Initialize the ULP interface
+    locEngUlpInf->init (loc_eng_report_position_ulp);
+
+    ret_val = 0;
+exit:
+  EXIT_LOG(%d, ret_val);
+  return ret_val;
+
+}
+
+/*===========================================================================
+FUNCTION    loc_eng_inject_raw_command
+
+DESCRIPTION
+   This is used to send special test modem commands from the applications
+   down into the HAL
+DEPENDENCIES
+   N/A
+
+RETURN VALUE
+   0: success
+
+SIDE EFFECTS
+   N/A
+
+===========================================================================*/
+static bool loc_eng_inject_raw_command(char* command, int length)
+{
+   ENTRY_LOG();
+   boolean ret_val;
+   LOC_LOGD("loc_eng_send_extra_command: %s\n", command);
+   ret_val = TRUE;
+exit:
+    EXIT_LOG(%s, boolStr[ret_val!=0]);
+    return ret_val;
+}
+/*===========================================================================
+FUNCTION    loc_eng_update_criteria
+
+DESCRIPTION
+   This is used to inform the ULP module of new unique criteria that are passed
+   in by the applications
+DEPENDENCIES
+   N/A
+
+RETURN VALUE
+   0: success
+
+SIDE EFFECTS
+   N/A
+
+===========================================================================*/
+static int loc_eng_update_criteria(UlpLocationCriteria criteria)
+{
+   ENTRY_LOG();
+   int ret_val;
+   LOC_LOGD("loc_eng_update_criteria: \n");
+   ret_val = 0;
+exit:
+  EXIT_LOG(%d, ret_val);
+  return ret_val;
+
 }

@@ -21,7 +21,8 @@ LOCAL_SHARED_LIBRARIES := \
     librpc \
     libutils \
     libcutils \
-    libgps.utils
+    libgps.utils \
+    libdl
 
 LOCAL_SRC_FILES += \
     loc_eng.cpp \
@@ -68,6 +69,7 @@ LOCAL_C_INCLUDES += \
         $(TARGET_OUT_HEADERS)/libloc_api-rpc-qc/rpc_inc \
         $(TARGET_OUT_HEADERS)/loc_api/rpcgen/inc \
         $(TARGET_OUT_HEADERS)/libcommondefs/rpcgen/inc \
+        hardware/qcom/gps/loc_api/ulp/inc \
         hardware/msm7k/librpc
 else
 LOCAL_C_INCLUDES += \
