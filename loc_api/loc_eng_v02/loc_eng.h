@@ -31,7 +31,7 @@
 #define LOC_ENG_H
 
 // Uncomment to keep all LOG messages (LOGD, LOGI, LOGV, etc.)
-// #define LOG_NDEBUG 0
+#define LOG_NDEBUG 0
 
 #include <stdbool.h>
 #include "loc_api_v02_client.h"
