@@ -59,7 +59,7 @@
 #include <utils/Log.h>
 
 /* Logging Improvement */
-#include "loc_dbg.h"
+#include "log_util.h"
 
 /* Uncomment to force LOGD messages */
 // #define LOGD LOGI

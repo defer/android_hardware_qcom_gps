@@ -23,7 +23,7 @@ LOCAL_SHARED_LIBRARIES:= \
     libutils \
     libcutils \
     libcommondefs \
-   libgps.utils
+    libgps.utils
 
 LOCAL_STATIC_LIBRARIES := \
     libloc_api_rpcgen

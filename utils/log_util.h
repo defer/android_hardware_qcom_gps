@@ -45,11 +45,9 @@
 //verbose logs
 #define UTIL_LOGV(...) printf(__VA_ARGS__)
 
-// get around strl*: not found in glibc
-// TBD:look for presence of eglibc other libraries
-// with strlcpy supported.
-#define strlcpy(X,Y,Z) strcpy(X,Y)
-#define strlcat(X,Y,Z) strcat(X,Y)
+// Fake Log.h in host test environment will account for
+// strlcpy and strlcat not being found.
+#include <utils/Log.h>
 
 #elif defined(_ANDROID_)
 
@@ -68,5 +66,129 @@
 
 #endif //LOG_UTIL_OFF_TARGET
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+/*=============================================================================
+ *
+ *                         LOC LOGGER TYPE DECLARATION
+ *
+ *============================================================================*/
+/* LOC LOGGER */
+typedef struct loc_logger_s
+{
+  unsigned long  DEBUG_LEVEL;
+  unsigned long  TIMESTAMP;
+} loc_logger_s_type;
+
+/*=============================================================================
+ *
+ *                               EXTERNAL DATA
+ *
+ *============================================================================*/
+extern loc_logger_s_type loc_logger;
+
+/*=============================================================================
+ *
+ *                        MODULE EXPORTED FUNCTIONS
+ *
+ *============================================================================*/
+extern void loc_logger_init(unsigned long debug, unsigned long timestamp);
+extern char* get_timestamp(char* str);
+
+
+#include <utils/Log.h>
+
+#ifndef DEBUG_DMN_LOC_API
+
+/* LOGGING MACROS */
+#define LOC_LOGE(...) \
+if (loc_logger.DEBUG_LEVEL >= 1) { LOGE("E/"__VA_ARGS__); }
+
+#define LOC_LOGW(...) \
+if (loc_logger.DEBUG_LEVEL >= 2) { LOGE("W/"__VA_ARGS__); }
+
+#define LOC_LOGI(...) \
+if (loc_logger.DEBUG_LEVEL >= 3) { LOGE("I/"__VA_ARGS__); }
+
+#define LOC_LOGD(...) \
+if (loc_logger.DEBUG_LEVEL >= 4) { LOGE("D/"__VA_ARGS__); }
+
+#define LOC_LOGV(...) \
+if (loc_logger.DEBUG_LEVEL >= 5) { LOGE("V/"__VA_ARGS__); }
+
+#else /* DEBUG_DMN_LOC_API */
+
+#define LOC_LOGE(...) LOGE("E/"__VA_ARGS__)
+
+#define LOC_LOGW(...) LOGW("W/"__VA_ARGS__)
+
+#define LOC_LOGI(...) LOGI("I/"__VA_ARGS__)
+
+#define LOC_LOGD(...) LOGD("D/"__VA_ARGS__)
+
+#define LOC_LOGV(...) LOGV("V/"__VA_ARGS__)
+
+#endif /* DEBUG_DMN_LOC_API */
+
+
+/*=============================================================================
+ *
+ *                          LOGGING IMPROVEMENT MACROS
+ *
+ *============================================================================*/
+extern const char *boolStr[];
+#define VOID_RET "None"
+#define CALLFLOW_TAG "callflow -->"
+
+#define ENTRY_LOG()                                                                                                    \
+do { if (loc_logger.TIMESTAMP) {                                                                                       \
+             char time_stamp[32];                                                                                      \
+             LOC_LOGV("[%s] %s called, line %d", get_timestamp(time_stamp), __func__, __LINE__);                       \
+        } else    {                                                                                                    \
+          LOC_LOGV("%s called, line %d", __func__, __LINE__);                                                          \
+          }                                                                                                            \
+    } while (0)
+
+#define EXIT_LOG(SPECIFIER, RETVAL)                                                                                    \
+do { if (loc_logger.TIMESTAMP) {                                                                                       \
+             char time_stamp[32];                                                                                      \
+             LOC_LOGV("[%s] %s finished, line %d", get_timestamp(time_stamp), __func__, __LINE__);                     \
+        } else {                                                                                                       \
+          LOC_LOGV("%s finished, line %d, returned" #SPECIFIER, __func__, __LINE__, RETVAL);                           \
+          }                                                                                                            \
+    } while (0)
+
+#define ENTRY_LOG_CALLFLOW()                                                                                           \
+do { if (loc_logger.TIMESTAMP) {                                                                                       \
+             char time_stamp[32];                                                                                      \
+             LOC_LOGI("[%s] %s %s called, line %d", get_timestamp(time_stamp), CALLFLOW_TAG, __func__, __LINE__);      \
+        } else {                                                                                                       \
+          LOC_LOGI("%s %s called, line %d", CALLFLOW_TAG, __func__, __LINE__);                                         \
+          }                                                                                                            \
+    } while (0)
+
+#define EXIT_LOG_CALLFLOW(SPECIFIER, RETVAL)                                                                           \
+do { if (loc_logger.TIMESTAMP) {                                                                                       \
+             char time_stamp[32];                                                                                      \
+             LOC_LOGI("[%s] %s %s finished, line %d", get_timestamp(time_stamp), CALLFLOW_TAG, __func__, __LINE__);    \
+        } else {                                                                                                       \
+          LOC_LOGI("%s %s finished, line %d, returned" #SPECIFIER, CALLFLOW_TAG, __func__, __LINE__, RETVAL);          \
+          }                                                                                                            \
+    } while (0)
+
+#define CALLBACK_LOG_CALLFLOW(CALLBACK_NAME)                                                                           \
+do { if (loc_logger.TIMESTAMP) {                                                                                       \
+             char time_stamp[32];                                                                                      \
+             LOC_LOGI("[%s] %s %s fired, line %d", get_timestamp(time_stamp), CALLFLOW_TAG, CALLBACK_NAME, __LINE__);  \
+        } else {                                                                                                       \
+          LOC_LOGI("%s %s fired, line %d", CALLFLOW_TAG, CALLBACK_NAME, __LINE__);                                     \
+          }                                                                                                            \
+    } while (0)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // __LOG_UTIL_H__

@@ -28,7 +28,7 @@
  */
 #include <stdio.h>
 
-#include "loc_dbg.h"
+#include "log_util.h"
 #include "loc_eng_dmn_conn_thread_helper.h"
 
 /*===========================================================================

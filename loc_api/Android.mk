@@ -9,7 +9,6 @@ GPS_DIR_LIST += $(LOCAL_PATH)/libloc_api-rpc-50001/
 GPS_DIR_LIST += $(LOCAL_PATH)/libloc_api-rpc/
 GPS_DIR_LIST += $(LOCAL_PATH)/libloc_api/
 GPS_DIR_LIST += $(LOCAL_PATH)/libloc_api_50001/
-GPS_DIR_LIST += $(LOCAL_PATH)/utils/
 endif #TARGET_NO_RPC
 
 #add QMI libraries

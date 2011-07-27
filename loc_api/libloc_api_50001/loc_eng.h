@@ -49,7 +49,7 @@ typedef unsigned char boolean;
 #include <loc_eng_ni.h>
 #include <loc_eng_cfg.h>
 #include <loc_log.h>
-#include <loc_dbg.h>
+#include <log_util.h>
 
 #define LOC_IOCTL_DEFAULT_TIMEOUT 1000 // 1000 milli-seconds
 

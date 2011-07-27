@@ -37,7 +37,7 @@
 #include <sys/stat.h>
 
 #include "loc_eng_dmn_conn_glue_pipe.h"
-#include "loc_dbg.h"
+#include "log_util.h"
 
 /*===========================================================================
 FUNCTION    loc_eng_dmn_conn_glue_pipeget

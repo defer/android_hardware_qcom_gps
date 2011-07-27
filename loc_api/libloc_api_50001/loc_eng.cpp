@@ -61,7 +61,7 @@
 #include "ulp.h"
 
 #define LOG_TAG "libloc"
-#include "loc_dbg.h"
+#include "log_util.h"
 #include "loc_log.h"
 
 #define DEBUG_NI_REQUEST_EMU 0
@@ -676,7 +676,7 @@ static int  loc_eng_set_position_mode(GpsPositionMode mode, GpsPositionRecurrenc
    rpc_loc_operation_mode_e_type op_mode;
    int                          ret_val;
 
-   LOGD ("loc_eng_set_position mode, client = %d, interval = %d, mode = %d\n",
+   LOC_LOGD ("loc_eng_set_position mode, client = %d, interval = %d, mode = %d\n",
             (int32) loc_eng_data.client_handle, min_interval, mode);
 
    switch (mode)
