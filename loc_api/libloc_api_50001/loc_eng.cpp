@@ -1109,7 +1109,7 @@ static int32 loc_event_cb
       const rpc_loc_event_payload_u_type*  loc_event_payload
 )
 {
-    ENTRY_LOG();
+    MODEM_LOG_CALLFLOW();
     INIT_CHECK("loc_event_cb");
     int32 ret_val;
 
@@ -1156,7 +1156,7 @@ SIDE EFFECTS
 
 ===========================================================================*/
 static void loc_eng_rpc_global_cb(CLIENT* clnt, enum rpc_reset_event event) {
-     ENTRY_LOG_CALLFLOW();
+    MODEM_LOG_CALLFLOW();
     switch (event) {
     case RPC_SUBSYSTEM_RESTART_BEGIN:
         loc_eng_send_modem_restart_msg(LOC_ENG_MSG_MODEM_DOWN, NULL);
