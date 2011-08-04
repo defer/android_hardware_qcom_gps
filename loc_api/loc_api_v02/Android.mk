@@ -23,11 +23,7 @@ LOCAL_CFLAGS += \
      -D_ANDROID_
 
 ## Includes
-LOCAL_C_INCLUDES += \
-        $(QC_PROP_ROOT)/qmi-framework/inc \
-        $(QC_PROP_ROOT)/qmi-framework/qcci/inc \
-        $(QC_PROP_ROOT)/qmi-framework/qcsi/inc \
-        $(QC_PROP_ROOT)/qmi-framework/common/inc
+LOCAL_C_INCLUDES := $(TARGET_OUT_HEADERS)/qmi-framework/inc
 
 LOCAL_PRELINK_MODULE := false
 include $(BUILD_SHARED_LIBRARY)
