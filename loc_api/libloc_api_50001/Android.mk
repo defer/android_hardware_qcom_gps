@@ -13,12 +13,39 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 
+LOCAL_MODULE := libloc_adapter
+
+LOCAL_SHARED_LIBRARIES := \
+    libutils \
+    libcutils \
+    libgps.utils
+
+LOCAL_SRC_FILES += \
+    loc_eng_log.cpp \
+    LocApiAdapter.cpp
+
+LOCAL_CFLAGS += \
+     -fno-short-enums \
+     -D_ANDROID_
+
+LOCAL_C_INCLUDES:= \
+    $(TARGET_OUT_HEADERS)/gps.utils
+
+LOCAL_COPY_HEADERS_TO:= libloc_adapter/
+LOCAL_COPY_HEADERS:= \
+   LocApiAdapter.h
+
+LOCAL_PRELINK_MODULE := false
+
+include $(BUILD_SHARED_LIBRARY)
+
+include $(CLEAR_VARS)
+
 LOCAL_MODULE := libloc_eng_v01.$(BOARD_VENDOR_QCOM_GPS_LOC_API_HARDWARE)
 
 ## Libs
 
 LOCAL_SHARED_LIBRARIES := \
-    librpc \
     libutils \
     libcutils \
     libgps.utils \
@@ -26,7 +53,6 @@ LOCAL_SHARED_LIBRARIES := \
 
 LOCAL_SRC_FILES += \
     loc_eng.cpp \
-    loc_eng_ioctl.cpp \
     loc_eng_xtra.cpp \
     loc_eng_ni.cpp \
     loc_eng_cfg.cpp \
@@ -46,7 +72,8 @@ LOCAL_SRC_FILES += \
 
 ## Check if GPS is unsupported
 ifeq ($(BOARD_VENDOR_QCOM_GPS_LOC_API_AMSS_VERSION),50001)
-    LOCAL_SHARED_LIBRARIES += libloc_api-rpc-qc
+    LOCAL_SHARED_LIBRARIES += libloc_api-rpc-qc \
+                              libloc_adapter
 else
     LOCAL_STATIC_LIBRARIES:= libloc_api-rpc
 endif
@@ -54,23 +81,16 @@ endif
 LOCAL_CFLAGS += \
      -fno-short-enums \
      -D_ANDROID_ \
-     -DUSE_QCOM_AUTO_RPC \
      -DAMSS_VERSION=$(BOARD_VENDOR_QCOM_GPS_LOC_API_AMSS_VERSION)
 
 ## Includes
 LOCAL_C_INCLUDES:= \
-  $(TARGET_OUT_HEADERS)/libcommondefs-rpc/inc \
-  $(TARGET_OUT_HEADERS)/librpc \
   $(TARGET_OUT_HEADERS)/gps.utils
 
 ifeq ($(BOARD_VENDOR_QCOM_GPS_LOC_API_AMSS_VERSION),50001)
 LOCAL_C_INCLUDES += \
-        $(TARGET_OUT_HEADERS)/libloc_api-rpc-qc \
-        $(TARGET_OUT_HEADERS)/libloc_api-rpc-qc/rpc_inc \
-        $(TARGET_OUT_HEADERS)/loc_api/rpcgen/inc \
-        $(TARGET_OUT_HEADERS)/libcommondefs/rpcgen/inc \
-        hardware/qcom/gps/loc_api/ulp/inc \
-        hardware/msm7k/librpc
+        $(TARGET_OUT_HEADERS)/gps.utils \
+        hardware/qcom/gps/loc_api/ulp/inc
 else
 LOCAL_C_INCLUDES += \
         $(TARGET_OUT_HEADERS)/libloc_api-rpc \

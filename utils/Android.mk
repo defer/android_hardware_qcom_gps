@@ -22,14 +22,7 @@ LOCAL_CFLAGS += \
      -D_ANDROID_
 
 ## Includes
-LOCAL_C_INCLUDES:= \
-   $(TARGET_OUT_HEADERS)/librpc \
-   $(TARGET_OUT_HEADERS)/loc_api/rpcgen/inc \
-   $(TARGET_OUT_HEADERS)/libloc-rpc/rpc_inc \
-   $(TARGET_OUT_HEADERS)/libloc_api-rpc-qc/rpc_inc \
-   $(TARGET_OUT_HEADERS)/libcommondefs-rpc \
-   $(TARGET_OUT_HEADERS)/libcommondefs/rpcgen/inc \
-   hardware/msm7k/librpc
+LOCAL_C_INCLUDES:=
 
 LOCAL_COPY_HEADERS_TO:= gps.utils/
 LOCAL_COPY_HEADERS:= \

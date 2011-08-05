@@ -1,4 +1,4 @@
-/* Copyright (c) 2009,2011 Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2011 Code Aurora Forum. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -27,16 +27,31 @@
  *
  */
 
-#ifndef LOC_ENG_IOCTL_H
-#define LOC_ENG_IOCTL_H
+#ifndef LOC_ENG_LOG_H
+#define LOC_ENG_LOG_H
 
-extern int loc_eng_ioctl
-(
-      rpc_loc_client_handle_type           handle,
-      rpc_loc_ioctl_e_type                 ioctl_type,
-      rpc_loc_ioctl_data_u_type*           ioctl_data_ptr,
-      uint32                               timeout_msec,
-      rpc_loc_ioctl_callback_s_type       *cb_data_ptr
-);
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
-#endif // LOC_ENG_IOCTL_H
+#include <ctype.h>
+#include <hardware/gps.h>
+#include "loc_eng_msg_id.h"
+
+const char* loc_get_gps_status_name(GpsStatusValue gps_status);
+const char* loc_get_msg_name(int id);
+const char* loc_get_position_mode_name(GpsPositionMode mode);
+const char* loc_get_position_recurrence_name(GpsPositionRecurrence recur);
+const char* loc_get_aiding_data_mask_names(GpsAidingData data);
+const char* loc_get_agps_type_name(AGpsType type);
+const char* loc_get_ni_type_name(GpsNiType type);
+const char* loc_get_ni_response_name(GpsUserResponseType response);
+const char* loc_get_ni_encoding_name(GpsNiEncodingType encoding);
+const char* loc_get_agps_bear_name(AGpsBearerType bear);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* LOC_ENG_LOG_H */

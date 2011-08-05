@@ -158,7 +158,7 @@ do { if (loc_logger.TIMESTAMP) {                                                
              char time_stamp[32];                                                                                      \
              LOC_LOGV("[%s] %s finished, line %d", get_timestamp(time_stamp), __func__, __LINE__);                     \
         } else {                                                                                                       \
-          LOC_LOGV("%s finished, line %d, returned" #SPECIFIER, __func__, __LINE__, RETVAL);                           \
+          LOC_LOGV("%s finished, line %d, returned " #SPECIFIER, __func__, __LINE__, RETVAL);                           \
           }                                                                                                            \
     } while (0)
 

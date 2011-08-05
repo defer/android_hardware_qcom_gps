@@ -44,6 +44,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <loc_api_log.h>
 
 #include <rpc/rpc.h>
 
@@ -76,8 +77,9 @@ typedef struct
 {
     uint32 cb_id;                        /* same as rpc/types.h */
     loc_event_cb_f_type *cb_func;      /* callback func */
-    clnt_reset_notif_cb rpc_cb; /* callback from RPC */
+    loc_reset_notif_cb_f_type *rpc_cb; /* callback from RPC */
     rpc_loc_client_handle_type handle; /* stores handle for client closing */
+    void* user;                        /* user's own data handle */
 } loc_glue_cb_entry_s_type;
 
 loc_glue_cb_entry_s_type loc_glue_callback_table[LOC_API_CB_MAX_CLIENTS];
@@ -104,44 +106,45 @@ bool_t rpc_loc_event_cb_f_type_svc(
       rpc_loc_event_cb_f_type_rets *ret,
       struct svc_req *req)
 {
-   // The lower word of cd_id is the index
-   int index = argp->cb_id & 0xFFFF;
+    // The lower word of cd_id is the index
+    int index = argp->cb_id & 0xFFFF;
 
-   /* Callback not registered, or unexpected ID (shouldn't happen) */
-   if (index > LOC_API_CB_MAX_CLIENTS || loc_glue_callback_table[index].cb_func == NULL)
-   {
-      LOGE("Warning: No callback handler.\n");
-      ret->loc_event_cb_f_type_result = 0;
-      return 1; /* simply return */
-   }
+    /* Callback not registered, or unexpected ID (shouldn't happen) */
+    if (index > LOC_API_CB_MAX_CLIENTS || loc_glue_callback_table[index].cb_func == NULL)
+    {
+        LOGE("Warning: No callback handler %d.\n", index);
+        ret->loc_event_cb_f_type_result = 0;
+        return 1; /* simply return */
+    }
 
-   LOGV("proc: %x  prog: %x  vers: %x\n",
+    LOGV("proc: %x  prog: %x  vers: %x\n",
          (int) req->rq_proc,
          (int) req->rq_prog,
          (int) req->rq_vers);
 
-   LOGV("Callback received: %x (cb_id=0x%X handle=%d ret_ptr=%d)\n",
+    LOGV("Callback received: %x (cb_id=0x%X handle=%d ret_ptr=%d)\n",
          (int) argp->loc_event,
          (int) argp->cb_id,
          (int) argp->loc_handle,
          (int) ret);
 
-   /* Forward callback to real callback procedure */
-   rpc_loc_client_handle_type        loc_handle = argp->loc_handle;
-   rpc_loc_event_mask_type           loc_event  = argp->loc_event;
-   const rpc_loc_event_payload_u_type*  loc_event_payload =
-      (const rpc_loc_event_payload_u_type*) argp->loc_event_payload;
+    /* Forward callback to real callback procedure */
+    rpc_loc_client_handle_type        loc_handle = argp->loc_handle;
+    rpc_loc_event_mask_type           loc_event  = argp->loc_event;
+    const rpc_loc_event_payload_u_type*  loc_event_payload =
+        (const rpc_loc_event_payload_u_type*) argp->loc_event_payload;
 
-   /* Gives control to synchronous call handler */
-   loc_api_callback_process_sync_call(loc_handle, loc_event, loc_event_payload);
+    /* Gives control to synchronous call handler */
+    loc_api_callback_process_sync_call(loc_handle, loc_event, loc_event_payload);
 
-   int32 rc = (loc_glue_callback_table[index].cb_func)(loc_handle, loc_event, loc_event_payload);
+    int32 rc = (loc_glue_callback_table[index].cb_func)(loc_glue_callback_table[index].user,
+                                                        loc_handle, loc_event, loc_event_payload);
 
-   LOGV("cb_func=0x%x", (unsigned) loc_glue_callback_table[index].cb_func);
+    LOGV("cb_func=0x%x", (unsigned) loc_glue_callback_table[index].cb_func);
 
-   ret->loc_event_cb_f_type_result = rc;
+    ret->loc_event_cb_f_type_result = rc;
 
-   return 1; /* ok */
+    return 1; /* ok */
 }
 
 int loc_apicbprog_freeresult (SVCXPRT *transp, xdrproc_t xdr_result, caddr_t result)
@@ -235,7 +238,7 @@ static void loc_api_glue_rpc_cb(CLIENT* client, enum rpc_reset_event event)
     int i;
     for (i = 0; i < LOC_API_CB_MAX_CLIENTS; i++) {
         if (NULL != loc_glue_callback_table[i].rpc_cb) {
-            loc_glue_callback_table[i].rpc_cb(client, event);
+            loc_glue_callback_table[i].rpc_cb(loc_glue_callback_table[i].user, client, event);
         }
     }
 }
@@ -264,6 +267,8 @@ int loc_api_glue_init(void)
           loc_glue_callback_table[i].cb_id = i | (pid << 16);
           loc_glue_callback_table[i].cb_func = NULL;
           loc_glue_callback_table[i].handle = -1;
+          loc_glue_callback_table[i].rpc_cb = NULL;
+          loc_glue_callback_table[i].user = NULL;
       }
 
       /* Print msg */
@@ -296,61 +301,64 @@ int loc_api_glue_init(void)
 }
 
 rpc_loc_client_handle_type loc_open (
-      rpc_loc_event_mask_type       event_reg_mask,
-      loc_event_cb_f_type      *event_callback,
-      clnt_reset_notif_cb      rpc_cb
+    rpc_loc_event_mask_type       event_reg_mask,
+    loc_event_cb_f_type           *event_callback,
+    loc_reset_notif_cb_f_type     *rpc_cb,
+    void*                         userData
 )
 {
     ENTRY_LOG();
-   LOC_GLUE_CHECK_INIT(rpc_loc_client_handle_type);
+    LOC_GLUE_CHECK_INIT(rpc_loc_client_handle_type);
 
     rpc_loc_client_handle_type ret_val;
 
-   rpc_loc_open_args args;
-   args.event_reg_mask = event_reg_mask;
+    rpc_loc_open_args args;
+    args.event_reg_mask = event_reg_mask;
 
-   int i;
-   for (i = 0; i < LOC_API_CB_MAX_CLIENTS; i++)
-   {
-          if (loc_glue_callback_table[i].cb_func == event_callback)
-          {
-              LOGW("Client already opened service (callback=0x%X)...\n",
-                (unsigned int) event_callback);
-              break;
-          }
-   }
+    int i;
+    for (i = 0; i < LOC_API_CB_MAX_CLIENTS; i++)
+    {
+        if (loc_glue_callback_table[i].cb_func == event_callback ||
+            loc_glue_callback_table[i].user == userData)
+        {
+            LOGW("Client already opened service (callback=0x%X)...\n",
+                 (unsigned int) event_callback);
+            break;
+        }
+    }
 
-   if (i == LOC_API_CB_MAX_CLIENTS)
-   {
-       for (i = 0; i < LOC_API_CB_MAX_CLIENTS; i++)
-       {
-           if (loc_glue_callback_table[i].cb_func == NULL)
-           {
-               loc_glue_callback_table[i].cb_func = event_callback;
-               loc_glue_callback_table[i].rpc_cb = rpc_cb;
-               break;
-           }
-       }
-   }
+    if (i == LOC_API_CB_MAX_CLIENTS)
+    {
+        for (i = 0; i < LOC_API_CB_MAX_CLIENTS; i++)
+        {
+            if (loc_glue_callback_table[i].cb_func == NULL)
+            {
+                loc_glue_callback_table[i].cb_func = event_callback;
+                loc_glue_callback_table[i].rpc_cb = rpc_cb;
+                loc_glue_callback_table[i].user = userData;
+                break;
+            }
+        }
+    }
 
-   if (i == LOC_API_CB_MAX_CLIENTS)
-   {
-      LOGE("Too many clients opened at once...\n");
-      ret_val = RPC_LOC_CLIENT_HANDLE_INVALID;
+    if (i == LOC_API_CB_MAX_CLIENTS)
+    {
+        LOGE("Too many clients opened at once...\n");
+        ret_val = RPC_LOC_CLIENT_HANDLE_INVALID;
         goto exit;
-   }
+    }
 
-   args.event_callback = loc_glue_callback_table[i].cb_id;
-   LOGV("cb_id=%d, func=0x%x", i, (unsigned int) event_callback);
+    args.event_callback = loc_glue_callback_table[i].cb_id;
+    LOGV("cb_id=%d, func=0x%x", i, (unsigned int) event_callback);
 
-   rpc_loc_open_rets rets;
-   enum clnt_stat stat = RPC_SUCCESS;
+    rpc_loc_open_rets rets;
+    enum clnt_stat stat = RPC_SUCCESS;
 
-   stat = RPC_FUNC_VERSION(rpc_loc_open_, RPC_LOC_OPEN_VERSION)(&args, &rets, loc_api_clnt);
-   LOC_GLUE_CHECK_RESULT(stat, int32);
+    stat = RPC_FUNC_VERSION(rpc_loc_open_, RPC_LOC_OPEN_VERSION)(&args, &rets, loc_api_clnt);
+    LOC_GLUE_CHECK_RESULT(stat, int32);
 
-   /* save the handle in the table */
-   loc_glue_callback_table[i].handle = (rpc_loc_client_handle_type) rets.loc_open_result;
+    /* save the handle in the table */
+    loc_glue_callback_table[i].handle = (rpc_loc_client_handle_type) rets.loc_open_result;
 
     ret_val = (rpc_loc_client_handle_type) rets.loc_open_result;
 
@@ -366,24 +374,23 @@ int32 loc_close
 )
 {
     ENTRY_LOG();
-   LOC_GLUE_CHECK_INIT(int32);
+    LOC_GLUE_CHECK_INIT(int32);
 
     int32 ret_val;
 
-   rpc_loc_close_args args;
-   args.handle = handle;
+    rpc_loc_close_args args;
+    args.handle = handle;
 
-   rpc_loc_close_rets rets;
-   enum clnt_stat stat = RPC_SUCCESS;
+    rpc_loc_close_rets rets;
+    enum clnt_stat stat = RPC_SUCCESS;
 
-   stat = RPC_FUNC_VERSION(rpc_loc_close_, RPC_LOC_CLOSE_VERSION)(&args, &rets, loc_api_clnt);
+    stat = RPC_FUNC_VERSION(rpc_loc_close_, RPC_LOC_CLOSE_VERSION)(&args, &rets, loc_api_clnt);
 
-   loc_clear(handle);
+    loc_clear(handle);
 
-   LOC_GLUE_CHECK_RESULT(stat, int32);
-   ret_val = (int32) rets.loc_close_result;
+    LOC_GLUE_CHECK_RESULT(stat, int32);
+    ret_val = (int32) rets.loc_close_result;
 
-exit:
     EXIT_LOG_CALLFLOW(%d, ret_val);
     return ret_val;
 }
@@ -415,22 +422,21 @@ int32 loc_start_fix
 )
 {
     ENTRY_LOG();
-   LOC_GLUE_CHECK_INIT(int32);
+    LOC_GLUE_CHECK_INIT(int32);
 
     int32 ret_val;
 
-   rpc_loc_start_fix_args args;
-   args.handle = handle;
+    rpc_loc_start_fix_args args;
+    args.handle = handle;
 
-   rpc_loc_start_fix_rets rets;
-   enum clnt_stat stat = RPC_SUCCESS;
+    rpc_loc_start_fix_rets rets;
+    enum clnt_stat stat = RPC_SUCCESS;
 
-   stat = RPC_FUNC_VERSION(rpc_loc_start_fix_, RPC_LOC_START_FIX_VERSION)(&args, &rets, loc_api_clnt);
-   LOC_GLUE_CHECK_RESULT(stat, int32);
+    stat = RPC_FUNC_VERSION(rpc_loc_start_fix_, RPC_LOC_START_FIX_VERSION)(&args, &rets, loc_api_clnt);
+    LOC_GLUE_CHECK_RESULT(stat, int32);
 
-   ret_val = (int32) rets.loc_start_fix_result;
+    ret_val = (int32) rets.loc_start_fix_result;
 
-exit:
     EXIT_LOG_CALLFLOW(%d, ret_val);
     return ret_val;
 }
@@ -441,22 +447,21 @@ int32 loc_stop_fix
 )
 {
     ENTRY_LOG();
-   LOC_GLUE_CHECK_INIT(int32);
+    LOC_GLUE_CHECK_INIT(int32);
 
     int32 ret_val;
 
-   rpc_loc_stop_fix_args args;
-   args.handle = handle;
+    rpc_loc_stop_fix_args args;
+    args.handle = handle;
 
-   rpc_loc_stop_fix_rets rets;
-   enum clnt_stat stat = RPC_SUCCESS;
+    rpc_loc_stop_fix_rets rets;
+    enum clnt_stat stat = RPC_SUCCESS;
 
-   stat = RPC_FUNC_VERSION(rpc_loc_stop_fix_, RPC_LOC_STOP_FIX_VERSION)(&args, &rets, loc_api_clnt);
-   LOC_GLUE_CHECK_RESULT(stat, int32);
+    stat = RPC_FUNC_VERSION(rpc_loc_stop_fix_, RPC_LOC_STOP_FIX_VERSION)(&args, &rets, loc_api_clnt);
+    LOC_GLUE_CHECK_RESULT(stat, int32);
 
-   ret_val = (int32) rets.loc_stop_fix_result;
+    ret_val = (int32) rets.loc_stop_fix_result;
 
-exit:
     EXIT_LOG_CALLFLOW(%d, ret_val);
     return ret_val;
 }
@@ -469,95 +474,94 @@ int32 loc_ioctl
 )
 {
     ENTRY_LOG();
-   LOC_GLUE_CHECK_INIT(int32);
+    LOC_GLUE_CHECK_INIT(int32);
 
     int32 ret_val;
 
-   rpc_loc_ioctl_args args;
-   args.handle = handle;
-   args.ioctl_data = ioctl_data;
-   args.ioctl_type = ioctl_type;
-   if (ioctl_data != NULL)
-   {
-      /* Assign ioctl union discriminator */
-      ioctl_data->disc = ioctl_type;
+    rpc_loc_ioctl_args args;
+    args.handle = handle;
+    args.ioctl_data = ioctl_data;
+    args.ioctl_type = ioctl_type;
+    if (ioctl_data != NULL)
+    {
+        /* Assign ioctl union discriminator */
+        ioctl_data->disc = ioctl_type;
 
-      /* In case the user hasn't filled in other disc fields,
-         automatically fill them in here */
-      switch (ioctl_type)
-      {
-      case RPC_LOC_IOCTL_GET_API_VERSION:
-         break;
-      case RPC_LOC_IOCTL_SET_FIX_CRITERIA:
-         break;
-      case RPC_LOC_IOCTL_GET_FIX_CRITERIA:
-         break;
-      case RPC_LOC_IOCTL_INFORM_NI_USER_RESPONSE:
-         break;
-      case RPC_LOC_IOCTL_INJECT_PREDICTED_ORBITS_DATA:
-         break;
-      case RPC_LOC_IOCTL_QUERY_PREDICTED_ORBITS_DATA_VALIDITY:
-         break;
-      case RPC_LOC_IOCTL_QUERY_PREDICTED_ORBITS_DATA_SOURCE:
-         break;
-      case RPC_LOC_IOCTL_SET_PREDICTED_ORBITS_DATA_AUTO_DOWNLOAD:
-         break;
-      case RPC_LOC_IOCTL_INJECT_UTC_TIME:
-         break;
-      case RPC_LOC_IOCTL_INJECT_RTC_VALUE:
-         break;
-      case RPC_LOC_IOCTL_INJECT_POSITION:
-         break;
-      case RPC_LOC_IOCTL_QUERY_ENGINE_STATE:
-         break;
-      case RPC_LOC_IOCTL_INFORM_SERVER_OPEN_STATUS:
-         break;
-      case RPC_LOC_IOCTL_INFORM_SERVER_CLOSE_STATUS:
-         break;
-      case RPC_LOC_IOCTL_SET_ENGINE_LOCK:
-         break;
-      case RPC_LOC_IOCTL_GET_ENGINE_LOCK:
-         break;
-      case RPC_LOC_IOCTL_SET_SBAS_CONFIG:
-         break;
-      case RPC_LOC_IOCTL_GET_SBAS_CONFIG:
-         break;
-      case RPC_LOC_IOCTL_SET_NMEA_TYPES:
-         break;
-      case RPC_LOC_IOCTL_GET_NMEA_TYPES:
-         break;
-      case RPC_LOC_IOCTL_SET_CDMA_PDE_SERVER_ADDR:
-      case RPC_LOC_IOCTL_SET_CDMA_MPC_SERVER_ADDR:
-      case RPC_LOC_IOCTL_SET_UMTS_SLP_SERVER_ADDR:
-      case RPC_LOC_IOCTL_SET_CUSTOM_PDE_SERVER_ADDR:
-         args.ioctl_data->rpc_loc_ioctl_data_u_type_u.server_addr.addr_info.disc =
-            args.ioctl_data->rpc_loc_ioctl_data_u_type_u.server_addr.addr_type;
-         break;
-      case RPC_LOC_IOCTL_GET_CDMA_PDE_SERVER_ADDR:
-      case RPC_LOC_IOCTL_GET_CDMA_MPC_SERVER_ADDR:
-      case RPC_LOC_IOCTL_GET_UMTS_SLP_SERVER_ADDR:
-      case RPC_LOC_IOCTL_GET_CUSTOM_PDE_SERVER_ADDR:
-         break;
-      case RPC_LOC_IOCTL_SET_ON_DEMAND_LPM:
-         break;
-      case RPC_LOC_IOCTL_GET_ON_DEMAND_LPM:
-         break;
-      case RPC_LOC_IOCTL_DELETE_ASSIST_DATA:
-         break;
-      default:
-         break;
-      } /* switch */
-   } /* ioctl_data != NULL */
+        /* In case the user hasn't filled in other disc fields,
+           automatically fill them in here */
+        switch (ioctl_type)
+        {
+        case RPC_LOC_IOCTL_GET_API_VERSION:
+            break;
+        case RPC_LOC_IOCTL_SET_FIX_CRITERIA:
+            break;
+        case RPC_LOC_IOCTL_GET_FIX_CRITERIA:
+            break;
+        case RPC_LOC_IOCTL_INFORM_NI_USER_RESPONSE:
+            break;
+        case RPC_LOC_IOCTL_INJECT_PREDICTED_ORBITS_DATA:
+            break;
+        case RPC_LOC_IOCTL_QUERY_PREDICTED_ORBITS_DATA_VALIDITY:
+            break;
+        case RPC_LOC_IOCTL_QUERY_PREDICTED_ORBITS_DATA_SOURCE:
+            break;
+        case RPC_LOC_IOCTL_SET_PREDICTED_ORBITS_DATA_AUTO_DOWNLOAD:
+            break;
+        case RPC_LOC_IOCTL_INJECT_UTC_TIME:
+            break;
+        case RPC_LOC_IOCTL_INJECT_RTC_VALUE:
+            break;
+        case RPC_LOC_IOCTL_INJECT_POSITION:
+            break;
+        case RPC_LOC_IOCTL_QUERY_ENGINE_STATE:
+            break;
+        case RPC_LOC_IOCTL_INFORM_SERVER_OPEN_STATUS:
+            break;
+        case RPC_LOC_IOCTL_INFORM_SERVER_CLOSE_STATUS:
+            break;
+        case RPC_LOC_IOCTL_SET_ENGINE_LOCK:
+            break;
+        case RPC_LOC_IOCTL_GET_ENGINE_LOCK:
+            break;
+        case RPC_LOC_IOCTL_SET_SBAS_CONFIG:
+            break;
+        case RPC_LOC_IOCTL_GET_SBAS_CONFIG:
+            break;
+        case RPC_LOC_IOCTL_SET_NMEA_TYPES:
+            break;
+        case RPC_LOC_IOCTL_GET_NMEA_TYPES:
+            break;
+        case RPC_LOC_IOCTL_SET_CDMA_PDE_SERVER_ADDR:
+        case RPC_LOC_IOCTL_SET_CDMA_MPC_SERVER_ADDR:
+        case RPC_LOC_IOCTL_SET_UMTS_SLP_SERVER_ADDR:
+        case RPC_LOC_IOCTL_SET_CUSTOM_PDE_SERVER_ADDR:
+            args.ioctl_data->rpc_loc_ioctl_data_u_type_u.server_addr.addr_info.disc =
+                args.ioctl_data->rpc_loc_ioctl_data_u_type_u.server_addr.addr_type;
+            break;
+        case RPC_LOC_IOCTL_GET_CDMA_PDE_SERVER_ADDR:
+        case RPC_LOC_IOCTL_GET_CDMA_MPC_SERVER_ADDR:
+        case RPC_LOC_IOCTL_GET_UMTS_SLP_SERVER_ADDR:
+        case RPC_LOC_IOCTL_GET_CUSTOM_PDE_SERVER_ADDR:
+            break;
+        case RPC_LOC_IOCTL_SET_ON_DEMAND_LPM:
+            break;
+        case RPC_LOC_IOCTL_GET_ON_DEMAND_LPM:
+            break;
+        case RPC_LOC_IOCTL_DELETE_ASSIST_DATA:
+            break;
+        default:
+            break;
+        } /* switch */
+    } /* ioctl_data != NULL */
 
-   rpc_loc_ioctl_rets rets;
-   enum clnt_stat stat = RPC_SUCCESS;
+    rpc_loc_ioctl_rets rets;
+    enum clnt_stat stat = RPC_SUCCESS;
 
-   stat = RPC_FUNC_VERSION(rpc_loc_ioctl_, RPC_LOC_IOCTL_VERSION)(&args, &rets, loc_api_clnt);
-   LOC_GLUE_CHECK_RESULT(stat, int32);
+    stat = RPC_FUNC_VERSION(rpc_loc_ioctl_, RPC_LOC_IOCTL_VERSION)(&args, &rets, loc_api_clnt);
+    LOC_GLUE_CHECK_RESULT(stat, int32);
 
-   ret_val = (int32) rets.loc_ioctl_result;
+    ret_val = (int32) rets.loc_ioctl_result;
 
-exit:
     EXIT_LOG_CALLFLOW(%d, ret_val);
     return ret_val;
 }
@@ -565,14 +569,54 @@ exit:
 /* Returns 0 if error */
 int32 loc_api_null(void)
 {
-   LOC_GLUE_CHECK_INIT(int32);
+    LOC_GLUE_CHECK_INIT(int32);
 
-   int32 rets;
-   enum clnt_stat stat = RPC_SUCCESS;
+    int32 rets;
+    enum clnt_stat stat = RPC_SUCCESS;
 
-   clnt_unregister_reset_notification_cb(loc_api_clnt);
-   stat = RPC_FUNC_VERSION(rpc_loc_api_null_, RPC_LOC_API_NULL_VERSION)(NULL, &rets, loc_api_clnt);
-   LOC_GLUE_CHECK_RESULT(stat, int32);
+    clnt_unregister_reset_notification_cb(loc_api_clnt);
+    stat = RPC_FUNC_VERSION(rpc_loc_api_null_, RPC_LOC_API_NULL_VERSION)(NULL, &rets, loc_api_clnt);
+    LOC_GLUE_CHECK_RESULT(stat, int32);
 
-   return (int32) rets;
+    return (int32) rets;
+}
+
+/*===========================================================================
+
+FUNCTION    loc_eng_ioctl
+
+DESCRIPTION
+   This function calls loc_ioctl and waits for the callback result before
+   returning back to the user.
+
+DEPENDENCIES
+   N/A
+
+RETURN VALUE
+   TRUE                 if successful
+   FALSE                if failed
+
+SIDE EFFECTS
+   N/A
+
+===========================================================================*/
+int loc_eng_ioctl
+(
+      rpc_loc_client_handle_type           handle,
+      rpc_loc_ioctl_e_type                 ioctl_type,
+      rpc_loc_ioctl_data_u_type*           ioctl_data_ptr,
+      uint32                               timeout_msec,
+      rpc_loc_ioctl_callback_s_type       *cb_data_ptr
+)
+{
+    int ret_val = RPC_LOC_API_SUCCESS;
+
+    ret_val = loc_api_sync_ioctl(handle, ioctl_type, ioctl_data_ptr, timeout_msec, cb_data_ptr);
+
+    LOC_LOGD("loc_eng_ioctl result: client = %d, ioctl_type = %s, returt %s\n",
+             (int32) handle,
+             loc_get_ioctl_type_name(ioctl_type),
+             loc_get_ioctl_status_name(ret_val) );
+
+    return ret_val;
 }

@@ -34,119 +34,336 @@
 // #endif /* __cplusplus */
 
 #include <stdlib.h>
-#include <rpc/rpc.h>
-#include "loc_api_rpc_glue.h"
+#include <string.h>
 #include "loc_eng.h"
+#include "loc_eng_log.h"
 #include "loc_eng_msg_id.h"
 
-struct loc_eng_msg_quit {
-    unsigned int msgsz;
-    int msgid;
+struct loc_eng_msg {
+    const int msgid;
+    inline loc_eng_msg(int id) :
+        msgid(id)
+    {
+        LOC_LOGV("creating msg %s", loc_get_msg_name(msgid));
+    }
+    virtual ~loc_eng_msg()
+    {
+        LOC_LOGV("deleting msg %s", loc_get_msg_name(msgid));
+    }
 };
 
-struct loc_eng_msg_loc_event {
-    unsigned int msgsz;
-    int msgid;
-    rpc_loc_client_handle_type client_handle;
-    rpc_loc_event_mask_type loc_event;
-    struct rpc_loc_event_payload_u_type loc_event_payload;
+struct loc_eng_msg_suple_version : public loc_eng_msg {
+    const int supl_version;
+    inline loc_eng_msg_suple_version(int version) :
+        loc_eng_msg(LOC_ENG_MSG_SUPL_VERSION),
+        supl_version(version)
+        {
+            LOC_LOGV("SUPL Version: %d", version);
+        }
 };
 
-struct loc_eng_msg_modem_restart {
-    unsigned int msgsz;
-    int msgid;
+struct loc_eng_msg_position_mode : public loc_eng_msg {
+    const GpsPositionMode pMode;
+    const GpsPositionRecurrence pRecurrence;
+    const uint32_t minInterval;
+    const uint32_t preferredAccuracy;
+    const uint32_t preferredTime;
+    inline loc_eng_msg_position_mode() :
+        loc_eng_msg(LOC_ENG_MSG_SET_POSITION_MODE),
+        pMode(0), pRecurrence(0), minInterval(0),
+        preferredAccuracy(0), preferredTime(0) {}
+    inline loc_eng_msg_position_mode(GpsPositionMode mode,
+                                     GpsPositionRecurrence recurrence,
+                                     uint32_t min_interval,
+                                     uint32_t preferred_accuracy,
+                                     uint32_t preferred_time) :
+        loc_eng_msg(LOC_ENG_MSG_SET_POSITION_MODE),
+        pMode(mode), pRecurrence(recurrence), minInterval(min_interval),
+        preferredAccuracy(preferred_accuracy), preferredTime(preferred_time)
+    {
+        LOC_LOGV("Position mode: %s\n  Position recurrence: %s\n  min interval: %d\n  preferred accuracy: %d\n  preferred time: %d",
+                 loc_get_position_mode_name(pMode),
+                 loc_get_position_recurrence_name(pRecurrence),
+                 minInterval,
+                 preferredAccuracy,
+                 preferredTime);
+    }
 };
 
-struct loc_eng_msg_start_fix {
-    unsigned int msgsz;
-    int msgid;
+struct loc_eng_msg_set_time : public loc_eng_msg {
+    const GpsUtcTime time;
+    const int64_t timeReference;
+    const int uncertainty;
+    inline loc_eng_msg_set_time(GpsUtcTime t,
+                                int64_t tf,
+                                int unc) :
+        loc_eng_msg(LOC_ENG_MSG_SET_TIME),
+        time(t), timeReference(tf), uncertainty(unc)
+    {
+        LOC_LOGV("time: %lld\n  timeReference: %lld\n  uncertainty: %d",
+                 time, timeReference, uncertainty);
+    }
 };
 
-struct loc_eng_msg_stop_fix {
-    unsigned int msgsz;
-    int msgid;
+struct loc_eng_msg_inject_location : public loc_eng_msg {
+    const double latitude;
+    const double longitude;
+    const float accuracy;
+    inline loc_eng_msg_inject_location(double lat, double longi, float accur) :
+        loc_eng_msg(LOC_ENG_MSG_INJECT_LOCATION),
+        latitude(lat), longitude(longi), accuracy(accur)
+    {
+        LOC_LOGV("latitude: %f\n  longitude: %f\n  accuracy: %f",
+                 latitude, longitude, accuracy);
+    }
 };
 
-struct loc_eng_msg_delete_aiding_data {
-    unsigned int msgsz;
-    int msgid;
-    GpsAidingData type;
+struct loc_eng_msg_delete_aiding_data : public loc_eng_msg {
+    const GpsAidingData type;
+    inline loc_eng_msg_delete_aiding_data(GpsAidingData data) :
+        loc_eng_msg(LOC_ENG_MSG_DELETE_AIDING_DATA), type(data)
+    {
+        LOC_LOGV("aiding data msak %d", type);
+    }
 };
 
-struct loc_eng_msg_update_network_availability {
-    unsigned int msgsz;
-    int msgid;
-    int available;
-    char apn_name[101];
+struct loc_eng_msg_report_position : public loc_eng_msg {
+    const GpsLocation location;
+    const boolean intermediate;
+    inline loc_eng_msg_report_position(GpsLocation loc, boolean intermed) :
+        loc_eng_msg(LOC_ENG_MSG_REPORT_POSITION),
+        location(loc), intermediate(intermed)
+    {
+        LOC_LOGV("flags: %d\n  source: %d\n  latitude: %f\n  longitude: %f\n  altitude: %f\n  speed: %f\n  bearing: %f\n  accuracy: %f\n  timestamp: %lld\n  rawDataSize: %d\n  rawData: %p\n  intermediate: %d",
+                 location.flags, location.position_source, location.latitude, location.longitude,
+                 location.altitude, location.speed, location.bearing, location.accuracy,
+                 location.timestamp, location.rawDataSize, location.rawData, intermediate);
+    }
 };
 
-struct loc_eng_msg_inject_xtra_data {
-    unsigned int msgsz;
-    int msgid;
-    int xtra_data_len;
-    char * xtra_data_for_injection;
+struct loc_eng_msg_report_sv : public loc_eng_msg {
+    const GpsSvStatus svStatus;
+    inline loc_eng_msg_report_sv(GpsSvStatus sv) :
+        loc_eng_msg(LOC_ENG_MSG_REPORT_SV), svStatus(sv)
+    {
+        LOC_LOGV("num sv: %d\n  ephemeris mask: %dxn  almanac mask: %x\n  used in fix mask: %x\n      sv: prn         snr       elevation      azimuth",
+                 svStatus.num_svs, svStatus.ephemeris_mask, svStatus.almanac_mask, svStatus.used_in_fix_mask);
+        for (int i = 0; i < svStatus.num_svs && i < GPS_MAX_SVS; i++) {
+            LOC_LOGV("   %d:   %d    %f    %f    %f\n  ",
+                     i,
+                     svStatus.sv_list[i].prn,
+                     svStatus.sv_list[i].snr,
+                     svStatus.sv_list[i].elevation,
+                     svStatus.sv_list[i].azimuth);
+        }
+    }
 };
 
-struct loc_eng_msg_ioctl{
-    unsigned int msgsz;
-    int msgid;
-    rpc_loc_client_handle_type    client_handle;
-    rpc_loc_ioctl_e_type          ioctl_type;
-    rpc_loc_ioctl_data_u_type     ioctl_data;
-    uint32                        timeout_msec;
-    rpc_loc_ioctl_callback_s_type *cb_data_ptr;
+struct loc_eng_msg_report_status : public loc_eng_msg {
+    const GpsStatusValue status;
+    inline loc_eng_msg_report_status(GpsStatusValue engineStatus) :
+        loc_eng_msg(LOC_ENG_MSG_REPORT_STATUS), status(engineStatus)
+    {
+        LOC_LOGV("status: %s", loc_get_gps_status_name(status));
+    }
 };
 
-struct loc_eng_msg_mute_session{
-    unsigned int msgsz;
-    int msgid;
+struct loc_eng_msg_report_nmea : public loc_eng_msg {
+    const GpsUtcTime timestamp;
+    char* const nmea;
+    const int length;
+    inline loc_eng_msg_report_nmea(GpsUtcTime ts,
+                                   const char* data,
+                                   int len) :
+        loc_eng_msg(LOC_ENG_MSG_REPORT_NMEA),
+        timestamp(ts), nmea(new char[len]), length(len)
+    {
+        memcpy((void*)nmea, (void*)data, len);
+        LOC_LOGV("timestamp: %lld\n  length: %d\n  nmea: %p",
+                 timestamp, length, nmea);
+    }
+    inline ~loc_eng_msg_report_nmea()
+    {
+        delete[] nmea;
+    }
 };
 
-struct loc_eng_msg_agps_open_status {
-    unsigned int msgsz;
-    int msgid;
-    AGpsBearerType bearerType;
-    char apn_name[101];
+struct loc_eng_msg_request_atl : public loc_eng_msg {
+    const int handle;
+    const AGpsType type;
+    inline loc_eng_msg_request_atl(int hndl,
+                                   AGpsType agps_type) :
+        loc_eng_msg(LOC_ENG_MSG_REQUEST_ATL),
+        handle(hndl), type(agps_type)
+    {
+        LOC_LOGV("handle: %d\n  agps type: %s",
+                 handle,
+                 loc_get_agps_type_name(type));
+    }
 };
 
-struct loc_eng_msg_agps_close_status {
-    unsigned int msgsz;
-    int msgid;
+struct loc_eng_msg_release_atl : public loc_eng_msg {
+    const int handle;
+    inline loc_eng_msg_release_atl(int hndl) :
+        loc_eng_msg(LOC_ENG_MSG_RELEASE_ATL), handle(hndl)
+    {
+        LOC_LOGV("handle: %d", handle);
+    }
 };
 
-struct loc_eng_msg_agps_failed {
-    unsigned int msgsz;
-    int msgid;
+struct loc_eng_msg_request_ni : public loc_eng_msg {
+    const GpsNiNotification notify;
+    const void *passThroughData;
+    inline loc_eng_msg_request_ni(GpsNiNotification notif, const void* data) :
+        loc_eng_msg(LOC_ENG_MSG_REQUEST_NI),
+        notify(notif), passThroughData(data)
+    {
+        LOC_LOGV("id: %d\n  type: %s\n  flags: %d\n  time out: %d\n  default response: %s\n  requestor id encoding: %s\n  text encoding: %s",
+                 notify.notification_id,
+                 loc_get_ni_type_name(notify.ni_type),
+                 notify.notify_flags,
+                 notify.timeout,
+                 loc_get_ni_response_name(notify.default_response),
+                 loc_get_ni_encoding_name(notify.requestor_id_encoding),
+                 loc_get_ni_encoding_name(notify.text_encoding));
+    }
 };
 
-/* purpose of this union is to know the maximum memory size needed for msg */
-union loc_eng_msg {
-    struct msgbuf msg;
+struct loc_eng_msg_inform_ni_response : public loc_eng_msg {
+    const GpsUserResponseType response;
+    const void *passThroughData;
+    inline loc_eng_msg_inform_ni_response(GpsUserResponseType resp,
+                                          const void* data) :
+        loc_eng_msg(LOC_ENG_MSG_INFORM_NI_RESPONSE),
+        response(resp), passThroughData(data)
+    {
+        LOC_LOGV("response: %s\n  passThroughData: %p",
+                 loc_get_ni_response_name(response),
+                 passThroughData);
+    }
+    inline ~loc_eng_msg_inform_ni_response()
+    {
+        // this is a bit weird since passThroughData is not
+        // allocated by this class.  But there is no better way.
+        // passThroughData actually won't be NULL here.
+        // But better safer than sorry.
+        if (NULL != passThroughData) {
+            free((void*)passThroughData);
+        }
+    }
+};
 
-    struct loc_eng_msg_quit msg_quit;
+struct loc_eng_msg_set_apn : public loc_eng_msg {
+    char* const apn;
+    inline loc_eng_msg_set_apn(const char* name, int len) :
+        loc_eng_msg(LOC_ENG_MSG_SET_APN),
+        apn(new char[len+1])
+    {
+        memcpy((void*)apn, (void*)name, len);
+        apn[len] = 0;
+        LOC_LOGV("apn: %s", apn);
+    }
+    inline ~loc_eng_msg_set_apn()
+    {
+        delete[] apn;
+    }
+};
 
-    struct loc_eng_msg_loc_event loc_event;
-    struct loc_eng_msg_modem_restart modem_restart;
+struct loc_eng_msg_set_server_ipv4 : public loc_eng_msg {
+    const unsigned int nl_addr;
+    const int port;
+    inline loc_eng_msg_set_server_ipv4(unsigned int ip,
+                                  int p) :
+        loc_eng_msg(LOC_ENG_MSG_SET_SERVER_IPV4),
+        nl_addr(ip), port(p)
+    {
+        LOC_LOGV("addr: %x\n  , port: %d", nl_addr, port);
+    }
+};
 
-    struct loc_eng_msg_start_fix start_fix;
-    struct loc_eng_msg_stop_fix stop_fix;
-    struct loc_eng_msg_delete_aiding_data delete_aiding_data;
-    struct loc_eng_msg_inject_xtra_data inject_xtra_data;
 
-    struct loc_eng_msg_update_network_availability update_network_availability;
+struct loc_eng_msg_set_server_url : public loc_eng_msg {
+    const int len;
+    char* const url;
+    inline loc_eng_msg_set_server_url(const char* urlString,
+                                      int url_len) :
+        loc_eng_msg(LOC_ENG_MSG_SET_SERVER_URL),
+        len(url_len), url(new char[len+1])
+    {
+        memcpy((void*)url, (void*)urlString, url_len);
+        url[len] = 0;
+        LOC_LOGV("url: %s", url);
+    }
+    inline ~loc_eng_msg_set_server_url()
+    {
+        delete[] url;
+    }
+};
 
-    struct loc_eng_msg_ioctl ioctl;
-    struct loc_eng_msg_mute_session mute_session;
+struct loc_eng_msg_inject_xtra_data : public loc_eng_msg {
+    char* const data;
+    const int length;
+    inline loc_eng_msg_inject_xtra_data(char* d, int l) :
+        loc_eng_msg(LOC_ENG_MSG_INJECT_XTRA_DATA),
+        data(new char[l]), length(l)
+    {
+        memcpy((void*)data, (void*)d, l);
+        LOC_LOGV("length: %d\n  data: %p", length, data);
+    }
+    inline ~loc_eng_msg_inject_xtra_data()
+    {
+        delete[] data;
+    }
+};
 
-    struct loc_eng_msg_agps_open_status agps_open_status;
-    struct loc_eng_msg_agps_close_status agps_close_status;
-    struct loc_eng_msg_agps_failed agps_failed;
+struct loc_eng_msg_atl_open_status : public loc_eng_msg {
+    const int length;
+    char* const apn;
+    const AGpsBearerType bearerType;
+    inline loc_eng_msg_atl_open_status(const char* name,
+                                        int len,
+                                        AGpsBearerType type) :
+        loc_eng_msg(LOC_ENG_MSG_ATL_OPEN_STATUS),
+        length(len), apn(new char[len+1]), bearerType(type)
+    {
+        memcpy((void*)apn, (void*)name, len);
+        apn[len] = 0;
+        LOC_LOGV("apn: %s\n  bearer type: %s",
+                 apn,
+                 loc_get_agps_bear_name(bearerType));
+    }
+    inline ~loc_eng_msg_atl_open_status()
+    {
+        delete[] apn;
+    }
+};
+
+struct loc_eng_msg_set_data_enable : public loc_eng_msg {
+    const int enable;
+    char* const apn;
+    const int length;
+    inline loc_eng_msg_set_data_enable(const char* name,
+                                       int len,
+                                       int yes) :
+        loc_eng_msg(LOC_ENG_MSG_ENABLE_DATA),
+        enable(yes), apn(new char[len+1]), length(len)
+    {
+        memcpy((void*)apn, (void*)name, len);
+        apn[len] = 0;
+        LOC_LOGV("apn: %s\n  enable: %d", apn, enable);
+    }
+    inline ~loc_eng_msg_set_data_enable()
+    {
+        delete[] apn;
+    }
 };
 
 int loc_eng_msgget(int * p_req_msgq);
 int loc_eng_msgremove(int req_msgq);
-int loc_eng_msgsnd(int msgqid, void * msgp, unsigned int msgsz);
-int loc_eng_msgrcv(int msgqid, void * msgp, unsigned int msgsz);
+int loc_eng_msgsnd(int msgqid, void * msgp);
+int loc_eng_msgrcv(int msgqid, void ** msgp);
+int loc_eng_msgsnd_raw(int msgqid, void * msgp, unsigned int msgsz);
+int loc_eng_msgrcv_raw(int msgqid, void *msgp, unsigned int msgsz);
 int loc_eng_msgflush(int msgqid);
 int loc_eng_msgunblock(int msgqid);
 

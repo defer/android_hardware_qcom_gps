@@ -41,20 +41,16 @@ typedef struct {
    pthread_mutex_t         loc_ni_lock;
    int                     response_time_left;       /* examine time for NI response */
    boolean                 user_response_received;   /* NI User reponse received or not from Java layer*/
-   boolean                 notif_in_progress;        /* NI notification/verification in progress */
-   rpc_loc_ni_event_s_type loc_ni_request;
+   void*                   loc_ni_request;
    int                     current_notif_id;         /* ID to check against response */
-   rpc_loc_ni_user_resp_e_type resp;
+   GpsUserResponseType     resp;
 } loc_eng_ni_data_s_type;
 
 // Functions for sLocEngNiInterface
 extern void loc_eng_ni_init(GpsNiCallbacks *callbacks);
 extern void loc_eng_ni_respond(int notif_id, GpsUserResponseType user_response);
-extern void loc_ni_reset_on_modem_restart();
+extern void loc_ni_request_handler(const GpsNiNotification &notif, const void* passThrough);
+extern void loc_ni_reset_on_engine_restart();
 
-extern int loc_eng_ni_callback (
-      rpc_loc_event_mask_type               loc_event,              /* event mask           */
-      const rpc_loc_event_payload_u_type*   loc_event_payload       /* payload              */
-);
 
 #endif /* LOC_ENG_NI_H */

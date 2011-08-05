@@ -1,4 +1,4 @@
-/* Copyright (c) 2011, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2011 Code Aurora Forum. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -26,60 +26,39 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#ifndef LOC_ENG_MSG_ID_H
-#define LOC_ENG_MSG_ID_H
+
+#ifndef LOC_API_LOG_H
+#define LOC_API_LOG_H
 
 #ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
+extern "C"
+{
+#endif
 
-struct msgbuf {
-    unsigned int msgsz;
-    void* msgid;
-};
+#include <ctype.h>
+#include "loc_api_rpcgen_common_rpc.h"
 
-enum loc_eng_msg_ids_t {
-    /* 0x 0 - 0xEF is reserved for daemon internal */
-    /* 0xF0 - 0x1FF is reserved for daemon & framework communication */
-    LOC_ENG_MSG_QUIT = 0x200,
+extern int loc_callback_log_header(
+      rpc_loc_client_handle_type            client_handle,          /* client handle        */
+      rpc_loc_event_mask_type               loc_event,              /* event mask           */
+      const rpc_loc_event_payload_u_type*   loc_event_payload       /* payload              */
+);
 
-    LOC_ENG_MSG_ENGINE_DOWN,
-    LOC_ENG_MSG_ENGINE_UP,
+extern int loc_callback_log(
+      rpc_loc_event_mask_type               loc_event,              /* event mask           */
+      const rpc_loc_event_payload_u_type*   loc_event_payload       /* payload              */
+);
 
-    LOC_ENG_MSG_START_FIX,
-    LOC_ENG_MSG_STOP_FIX,
-    LOC_ENG_MSG_SET_POSITION_MODE,
-    LOC_ENG_MSG_SET_TIME,
-    LOC_ENG_MSG_INJECT_XTRA_DATA,
-    LOC_ENG_MSG_INJECT_LOCATION,
-    LOC_ENG_MSG_DELETE_AIDING_DATA,
-    LOC_ENG_MSG_SET_APN,
-    LOC_ENG_MSG_SET_SERVER_URL,
-    LOC_ENG_MSG_SET_SERVER_IPV4,
-    LOC_ENG_MSG_ENABLE_DATA,
-
-    LOC_ENG_MSG_SUPL_VERSION,
-    LOC_ENG_MSG_MUTE_SESSION,
-
-    LOC_ENG_MSG_ATL_OPEN_STATUS,
-    LOC_ENG_MSG_ATL_CLOSE_STATUS,
-    LOC_ENG_MSG_ATL_OPEN_FAILED,
-
-    LOC_ENG_MSG_REPORT_POSITION,
-    LOC_ENG_MSG_REPORT_SV,
-    LOC_ENG_MSG_REPORT_STATUS,
-    LOC_ENG_MSG_REPORT_NMEA,
-    LOC_ENG_MSG_REQUEST_ATL,
-    LOC_ENG_MSG_RELEASE_ATL,
-    LOC_ENG_MSG_REQUEST_NI,
-    LOC_ENG_MSG_INFORM_NI_RESPONSE,
-    LOC_ENG_MSG_REQUEST_XTRA_DATA,
-    LOC_ENG_MSG_REQUEST_TIME,
-    LOC_ENG_MSG_REQUEST_POSITION
-};
+extern const char* loc_get_event_atl_open_name(rpc_loc_server_request_e_type loc_event_atl_open);
+extern const char* loc_get_event_name(rpc_loc_event_mask_type loc_event_mask);
+extern const char* loc_get_ioctl_type_name(rpc_loc_ioctl_e_type ioctl_type);
+extern const char* loc_get_ioctl_status_name(uint32 status);
+extern const char* loc_get_sess_status_name(rpc_loc_session_status_e_type status);
+extern const char* loc_get_engine_state_name(rpc_loc_engine_state_e_type state);
+extern const char* loc_get_fix_session_state_name(rpc_loc_fix_session_state_e_type state);
 
 #ifdef __cplusplus
 }
-#endif /* __cplusplus */
+#endif
 
-#endif /* LOC_ENG_MSG_ID_H */
+#endif /* LOC_API_LOG_H */

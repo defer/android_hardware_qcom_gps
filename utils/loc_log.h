@@ -30,29 +30,36 @@
 #ifndef LOC_LOG_H
 #define LOC_LOG_H
 
-#include "hardware/gps.h"
-#include "loc_api_rpcgen_common_rpc.h"
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
-extern int loc_callback_log_header(
-      rpc_loc_client_handle_type            client_handle,          /* client handle        */
-      rpc_loc_event_mask_type               loc_event,              /* event mask           */
-      const rpc_loc_event_payload_u_type*   loc_event_payload       /* payload              */
-);
+#include <ctype.h>
 
-extern int loc_callback_log(
-      rpc_loc_event_mask_type               loc_event,              /* event mask           */
-      const rpc_loc_event_payload_u_type*   loc_event_payload       /* payload              */
-);
+typedef struct
+{
+   char                 name[128];
+   long                 val;
+} loc_name_val_s_type;
 
-extern const char* loc_get_event_name(rpc_loc_event_mask_type loc_event_mask);
-extern const char* loc_get_ioctl_type_name(rpc_loc_ioctl_e_type ioctl_type);
-extern const char* loc_get_ioctl_status_name(uint32 status);
-extern const char* loc_get_sess_status_name(rpc_loc_session_status_e_type status);
-extern const char* loc_get_engine_state_name(rpc_loc_engine_state_e_type state);
-extern const char* loc_get_fix_session_state_name(rpc_loc_fix_session_state_e_type state);
+#define NAME_VAL(x) {"" #x "", x }
+
+#define UNKNOWN_STR "UNKNOWN"
+
+#define CHECK_MASK(type, value, mask_var, mask) \
+   ((mask_var & mask) ? (type) value : (type) (-1))
+
+/* Get names from value */
+const char* loc_get_name_from_mask(loc_name_val_s_type table[], int table_size, long mask);
+const char* loc_get_name_from_val(loc_name_val_s_type table[], int table_size, long value);
+
 extern const char* log_succ_fail_string(int is_succ);
-extern const char* loc_get_gps_status_name(GpsStatusValue gps_status);
 
 extern char *loc_get_time(char *time_string);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* LOC_LOG_H */

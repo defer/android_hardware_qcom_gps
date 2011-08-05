@@ -28,6 +28,7 @@
  */
 
 #define LOG_NDDEBUG 0
+#define LOG_TAG "libloc"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,11 +40,8 @@
 
 #include <hardware/gps.h>
 
-#include <rpc/rpc.h>
-#include <loc_api_rpc_glue.h>
 #include <loc_eng.h>
 
-#define LOG_TAG "libloc"
 #include <utils/Log.h>
 
 /*=============================================================================
@@ -100,7 +98,7 @@ static void loc_default_parameters()
    gps_conf.TIMESTAMP = 0;
 
   /* reset logging mechanism */
-  loc_logger_init(3, 0);
+  loc_logger_init(gps_conf.DEBUG_LEVEL, 0);
 }
 
 /*===========================================================================

@@ -35,9 +35,11 @@ extern "C"
 {
 #endif
 
+#include <hardware/gps.h>
+
 typedef int (ulp_report_position_cb)
 (
-      const rpc_loc_parsed_position_s_type* location_report_ptr,
+      const GpsLocation* location_report_ptr,
       unsigned int ext_data_length,
       unsigned char* ext_data
 );

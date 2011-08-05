@@ -52,7 +52,13 @@ int loc_eng_msgremove(int req_msgq)
     return 0;
 }
 
-int loc_eng_msgsnd(int msgqid, void * msgp, unsigned int msgsz)
+int loc_eng_msgsnd(int msgqid, void * msgp)
+{
+    int ret = loc_eng_dmn_conn_glue_pipewrite(msgqid, msgp, sizeof(void*));
+    return ret;
+}
+
+int loc_eng_msgsnd_raw(int msgqid, void * msgp, unsigned int msgsz)
 {
     int result;
 
@@ -73,7 +79,13 @@ int loc_eng_msgsnd(int msgqid, void * msgp, unsigned int msgsz)
     return result;
 }
 
-int loc_eng_msgrcv(int msgqid, void *msgp, unsigned int msgsz)
+int loc_eng_msgrcv(int msgqid, void ** msgp)
+{
+    int ret = loc_eng_dmn_conn_glue_piperead(msgqid, msgp, sizeof(void*));
+    return ret;
+}
+
+int loc_eng_msgrcv_raw(int msgqid, void *msgp, unsigned int msgsz)
 {
     int result;
     struct msgbuf * pmsg = (struct msgbuf *) msgp;
