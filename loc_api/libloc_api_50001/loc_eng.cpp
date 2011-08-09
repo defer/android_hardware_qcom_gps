@@ -956,6 +956,9 @@ static int loc_eng_atl_open(const char* apn, AGpsBearerType bearerType)
     }
 
     LOC_LOGD("loc_eng_atl_open APN name = [%s]", apn);
+#ifdef FEATURE_GNSS_BIT_API
+    loc_eng_dmn_conn_loc_api_server_data_conn(1);
+#endif
     int apn_len = smaller_of(strlen (apn), MAX_APN_LEN);
     loc_eng_msg_atl_open_status *msg(new loc_eng_msg_atl_open_status(apn, apn_len, bearerType));
     loc_eng_msgsnd( loc_eng_data.deferred_q, &msg);
@@ -986,6 +989,9 @@ static int loc_eng_atl_closed()
     ENTRY_LOG_CALLFLOW();
     INIT_CHECK("loc_eng_atl_closed");
 
+#ifdef FEATURE_GNSS_BIT_API
+    loc_eng_dmn_conn_loc_api_server_data_conn(0);
+#endif
     loc_eng_msg *msg(new loc_eng_msg(LOC_ENG_MSG_ATL_CLOSE_STATUS));
     loc_eng_msgsnd( loc_eng_data.deferred_q, &msg);
 
@@ -1015,6 +1021,9 @@ int loc_eng_atl_open_failed()
     ENTRY_LOG_CALLFLOW();
     INIT_CHECK("loc_eng_atl_open_failed");
 
+#ifdef FEATURE_GNSS_BIT_API
+    loc_eng_dmn_conn_loc_api_server_data_conn(-1);
+#endif
     loc_eng_msg *msg(new loc_eng_msg(LOC_ENG_MSG_ATL_OPEN_FAILED));
     loc_eng_msgsnd( loc_eng_data.deferred_q, &msg);
     EXIT_LOG(%d, 0);
@@ -1315,17 +1324,19 @@ SIDE EFFECTS
    N/A
 
 ===========================================================================*/
-static void loc_eng_report_agps_status(AGpsType type,
+static int loc_eng_report_agps_status(AGpsType type,
                                        AGpsStatusValue status,
                                        unsigned long ipv4_addr,
                                        unsigned char * ipv6_addr)
 {
     ENTRY_LOG();
+    int ret = 1;
 
    AGpsStatus agpsStatus;
    if (loc_eng_data.agps_status_cb == NULL)
    {
        LOC_LOGE("loc_eng_report_agps_status, callback not initialized.\n");
+       ret = 0;
    } else {
        LOC_LOGD("loc_eng_report_agps_status, type = %d, status = %d, ipv4_addr = %d\n",
                 (int) type, (int) status,  (int) ipv4_addr);
@@ -1353,7 +1364,8 @@ static void loc_eng_report_agps_status(AGpsType type,
        }
    }
 
-    EXIT_LOG(%s, VOID_RET);
+    EXIT_LOG(%s, ret);
+    return ret;
 }
 
 
@@ -1838,30 +1850,24 @@ void loc_eng_if_wakeup(int if_req, unsigned is_supl, unsigned long ipv4_addr, un
 {
     ENTRY_LOG();
 
-   AGpsType                            agps_type;
+    AGpsType agps_type = is_supl? AGPS_TYPE_SUPL : AGPS_TYPE_ANY;  // No C2k?
+    AGpsStatusValue status = if_req ? GPS_REQUEST_AGPS_DATA_CONN : GPS_RELEASE_AGPS_DATA_CONN;
+    int tries = 3;
 
-   agps_type = is_supl? AGPS_TYPE_SUPL : AGPS_TYPE_ANY;  // No C2k?
+    while (tries > 0 && (0 == loc_eng_report_agps_status(agps_type,
+                                                         status,
+                                                         ipv4_addr,
+                                                         ipv6_addr))) {
+        tries--;
+        LOC_LOGD("loc_eng_if_wakeup loc_eng not initialized, sleep for 1 second, %d more tries", tries);
+        sleep(1);
+    }
 
-   if (if_req == 0)
-   {
-      // Inform GpsLocationProvider (subject to cancellation if data call should not be bring down)
-      loc_eng_report_agps_status(
-            agps_type,
-            GPS_RELEASE_AGPS_DATA_CONN,
-            ipv4_addr,
-            ipv6_addr
-      );
-   }
-   else
-   {
-      // Use GpsLocationProvider to bring up the data call if not yet open
-      loc_eng_report_agps_status(
-            agps_type,
-            GPS_REQUEST_AGPS_DATA_CONN,
-            ipv4_addr,
-            ipv6_addr
-      );
-   }
+    if (0 == tries) {
+#ifdef FEATURE_GNSS_BIT_API
+        loc_eng_dmn_conn_loc_api_server_data_conn(-1);
+#endif
+    }
 
     EXIT_LOG(%s, VOID_RET);
 }
