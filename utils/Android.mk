@@ -11,10 +11,8 @@ LOCAL_SHARED_LIBRARIES := \
     libutils \
     libcutils
 
-ifneq ($(TARGET_NO_RPC),true)
 LOCAL_SRC_FILES += \
     loc_log.cpp
-endif #TARGET_NO_RPC
 
 
 LOCAL_CFLAGS += \
