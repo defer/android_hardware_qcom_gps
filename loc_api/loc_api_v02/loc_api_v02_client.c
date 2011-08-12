@@ -64,15 +64,20 @@
 // these functions need to defined per platform
 // in an external file
 
-
+/* Initialize the module which will implement the synchornous wait for
+   indication behavior.*/
 extern void loc_sync_req_init();
 
+/* this function is intended to send an indication from the location engine
+   to the module which manages the synchronous wait behavior.*/
 extern void loc_sync_process_ind(
       locClientHandleType     client_handle,     /* handle of the client */
       uint32_t                ind_id ,      /* respInd id */
       void                    *ind_payload_ptr /* payload              */
 );
 
+/* This function is intended to send a request to the location
+   engine and wait for the response indication to come back.*/
 extern locClientStatusEnumType loc_sync_send_req
 (
       locClientHandleType       client_handle,
@@ -82,7 +87,6 @@ extern locClientStatusEnumType loc_sync_send_req
       uint32_t                  ind_id,  //ind ID to block for, usually the same as req_id */
       void                      *ind_payload_ptr /* can be NULL*/
 );
-
 
 typedef struct
 {
@@ -315,7 +319,31 @@ static locClientRespIndTableStructT locClientRespIndTable[]= {
 
    //Get Protocol Config Parameters
    { QMI_LOC_GET_PROTOCOL_CONFIG_PARAMETERS_IND_V02,
-     sizeof(qmiLocGetProtocolConfigParametersIndMsgT_v02)}
+     sizeof(qmiLocGetProtocolConfigParametersIndMsgT_v02)},
+
+   //Set Sensor Control Config
+   { QMI_LOC_SET_SENSOR_CONTROL_CONFIG_IND_V02,
+     sizeof(qmiLocSetSensorControlConfigIndMsgT_v02)},
+
+   //Get Sensor Control Config
+   { QMI_LOC_GET_SENSOR_CONTROL_CONFIG_IND_V02,
+     sizeof(qmiLocGetSensorControlConfigIndMsgT_v02)},
+
+   //Set Sensor Properties
+   { QMI_LOC_SET_SENSOR_PROPERTIES_IND_V02,
+     sizeof(qmiLocSetSensorPropertiesIndMsgT_v02)},
+
+   //Get Sensor Properties
+   { QMI_LOC_GET_SENSOR_PROPERTIES_IND_V02,
+     sizeof(qmiLocGetSensorPropertiesIndMsgT_v02)},
+
+   //Set Sensor Performance Control Config
+   { QMI_LOC_SET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_IND_V02,
+     sizeof(qmiLocSetSensorPerformanceControlConfigIndMsgT_v02)},
+
+   //Get Sensor Performance Control Config
+   { QMI_LOC_GET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_IND_V02,
+     sizeof(qmiLocGetSensorPerformanceControlConfigIndMsgT_v02)}
 
 };
 
@@ -340,16 +368,56 @@ typedef struct
 // internal state of the Loc Client
 static locClientInternalState gLocClientState;
 
-#ifndef FEATURE_LOC_API_V02_QNX_MOD
-//qmi_cci stuff, need to remove later
-extern qmi_cci_xport_ops_type ops;
-extern qmi_cci_xport_ops_type ipc_router_ops;
-#endif //FEATURE_LOC_API_V02_QNX_MOD
+
 /*===========================================================================
  *
  *                          FUNCTION DECLARATION
  *
  *==========================================================================*/
+
+/** locClientDefEventIndCbFunc
+ *  @brief Default eventIndCb function to handle indicatons that
+ *         may occur even if the client is not initialized
+ *  @param [in]  handle, eventIndId, eventIndPayload
+ *  @return none
+*/
+
+static void locClientDefEventIndCbFunc(
+      locClientHandleType handle,
+      uint32_t eventIndId,
+      const locClientEventIndUnionType eventIndPayload )
+{
+  LOC_UTIL_LOGD ("%s:%d]: Got event ind =%u when client hasn't initialized\n",
+                 __func__, __LINE__, eventIndId);
+}
+
+/** locClientDefRespIndCbFunc
+ *  @brief Default eventIndCb function to handle indicatons that
+ *         may occur even if the client is not initialized
+ *  @param [in]  handle, respIndId, respIndPayload
+ *  @return none
+*/
+static void locClientDefRespIndCbFunc(
+      locClientHandleType handle,
+      uint32_t respIndId,
+      const locClientRespIndUnionType respIndPayload )
+{
+    LOC_UTIL_LOGD ("%s:%d]: Got resp ind =%u in default indication callback\n",
+                 __func__, __LINE__, respIndId);
+
+    // Get service revision may occur even before the client is
+    // initialized
+    if(QMI_LOC_GET_SERVICE_REVISION_IND_V02 == respIndId)
+    {
+
+      LOC_UTIL_LOGV("%s:%d]: got service rev ind\n", __func__, __LINE__);
+
+      loc_sync_process_ind(LOC_CLIENT_VALID_HANDLE,
+                             respIndId,
+                             (void *)respIndPayload.pGetServiceRevisionInd );
+    }
+}
+
 
 /** locClientGetSizeByRespIndId
  *  @brief this functions gets the size of the response
@@ -529,7 +597,7 @@ static bool locClientHandleSatReportInd
 )
 {
   // validate sat reports
-  int idx = 0;
+  unsigned int idx = 0;
   qmiLocEventGnssSvInfoIndMsgT_v02 *satReport =
     (qmiLocEventGnssSvInfoIndMsgT_v02 *)ind_buf;
 
@@ -542,7 +610,7 @@ static bool locClientHandleSatReportInd
   {
     LOC_UTIL_LOGV("%s:%d]: valid_mask = %x, prn = %u, system = %d, "
                   "status = %d \n", __func__, __LINE__,
-                  satReport->svList[idx].validMask, satReport->svList[idx].prn,
+                  satReport->svList[idx].validMask, satReport->svList[idx].gnssSvId,
                   satReport->svList[idx].system, satReport->svList[idx].svStatus);
   }
 
@@ -754,6 +822,41 @@ static bool locClientHandleIndication(
       status = true;
       break;
     }
+
+    case QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_IND_V02:
+    {
+      //locClientHandleSetProtocolConfigParametersInd(user_handle, msg_id, ind_buf, ind_buf_len);
+      status = true;
+      break;
+    }
+
+    case QMI_LOC_GET_SENSOR_CONTROL_CONFIG_IND_V02:
+    {
+      //locClientHandleGetSensorControlConfigInd(user_handle, msg_id, ind_buf, ind_buf_len);
+      status = true;
+      break;
+    }
+
+    case QMI_LOC_GET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_IND_V02:
+    {
+      //locClientHandleGetSensorPerformanceControlConfigInd(user_handle, msg_id, ind_buf, ind_buf_len);
+      status = true;
+      break;
+    }
+
+    case QMI_LOC_GET_SENSOR_PROPERTIES_IND_V02:
+    {
+      //locClientHandleGetSensorPropertiesInd(user_handle, msg_id, ind_buf, ind_buf_len);
+      status = true;
+      break;
+    }
+
+    case QMI_LOC_SET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_IND_V02:
+    {
+      //locClientHandleSetSensorPerformanceControlConfigInd(user_handle, msg_id, ind_buf, ind_buf_len);
+      status = true;
+      break;
+    }
     // for indications that only have a "status" field
     case QMI_LOC_NI_USER_RESPONSE_IND_V02:
     case QMI_LOC_INJECT_UTC_TIME_IND_V02:
@@ -773,7 +876,8 @@ static bool locClientHandleIndication(
     case QMI_LOC_SET_CRADLE_MOUNT_CONFIG_IND_V02:
     case QMI_LOC_SET_EXTERNAL_POWER_CONFIG_IND_V02:
     case QMI_LOC_INFORM_LOCATION_SERVER_CONN_STATUS_IND_V02:
-    case QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_IND_V02:
+    case QMI_LOC_SET_SENSOR_CONTROL_CONFIG_IND_V02:
+    case QMI_LOC_SET_SENSOR_PROPERTIES_IND_V02:
     {
       status = true;
       break;
@@ -801,9 +905,9 @@ static bool locClientHandleIndication(
 static void locClientIndCb
 (
  qmi_client_type                user_handle,
- unsigned long                  msg_id,
- unsigned char                  *ind_buf,
- int                            ind_buf_len,
+ unsigned int                   msg_id,
+ void                           *ind_buf,
+ unsigned int                   ind_buf_len,
  void                           *ind_cb_data
 )
 {
@@ -832,28 +936,6 @@ static void locClientIndCb
     LOC_UTIL_LOGE("%s:%d]: client not initialized ind ID %d\n",
                    __func__, __LINE__,(uint32_t)msg_id);
 
-    // Get service revision may occur even before the client is
-    // initialized
-    if(QMI_LOC_GET_SERVICE_REVISION_IND_V02 == msg_id)
-    {
-      LOC_UTIL_LOGV("%s:%d]: got service rev ind\n", __func__, __LINE__);
-
-      //response indication for get service revision during initialization
-      qmiLocGetServiceRevisionIndMsgT_v02 getServiceInd;
-      rc = qmi_client_message_decode(user_handle,QMI_IDL_INDICATION, msg_id,
-                                     ind_buf, ind_buf_len, &getServiceInd,
-                                     sizeof(getServiceInd));
-      if( rc == QMI_NO_ERR )
-      {
-        loc_sync_process_ind(LOC_CLIENT_VALID_HANDLE,
-                             msg_id, &getServiceInd);
-      }
-      else
-      {
-        LOC_UTIL_LOGE("%s:%d]: Error decoding service revision ind %d\n",
-                      __func__, __LINE__, rc);
-      }
-    }
     return;
   }
 
@@ -1242,6 +1324,24 @@ static bool validateRequest(
       break;
     }
 
+    case QMI_LOC_SET_SENSOR_CONTROL_CONFIG_REQ_V02:
+    {
+      *pOutLen = sizeof(qmiLocSetSensorControlConfigReqMsgT_v02);
+      break;
+    }
+
+    case QMI_LOC_SET_SENSOR_PROPERTIES_REQ_V02:
+    {
+      *pOutLen = sizeof(qmiLocSetSensorPropertiesReqMsgT_v02);
+      break;
+    }
+
+    case QMI_LOC_SET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_REQ_V02:
+    {
+      *pOutLen = sizeof(qmiLocSetSensorPerformanceControlConfigReqMsgT_v02);
+      break;
+    }
+
     // ALL requests with no payload
     case QMI_LOC_GET_SERVICE_REVISION_REQ_V02:
     case QMI_LOC_GET_FIX_CRITERIA_REQ_V02:
@@ -1257,6 +1357,9 @@ static bool validateRequest(
     case QMI_LOC_GET_OPERATION_MODE_REQ_V02:
     case QMI_LOC_GET_CRADLE_MOUNT_CONFIG_REQ_V02:
     case QMI_LOC_GET_EXTERNAL_POWER_CONFIG_REQ_V02:
+    case QMI_LOC_GET_SENSOR_CONTROL_CONFIG_REQ_V02:
+    case QMI_LOC_GET_SENSOR_PROPERTIES_REQ_V02:
+    case QMI_LOC_GET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_REQ_V02:
     {
       noPayloadFlag = true;
       break;
@@ -1331,8 +1434,8 @@ static bool locClientDeInit()
   gLocClientState.isInitialized = false;
   gLocClientState.clientHandle =  LOC_CLIENT_INVALID_HANDLE_VALUE;
   gLocClientState.userHandle =    NULL ;
-  gLocClientState.eventCallback = NULL;
-  gLocClientState.respCallback  = NULL;
+  gLocClientState.eventCallback = locClientDefEventIndCbFunc;;
+  gLocClientState.respCallback  = locClientDefRespIndCbFunc;
   gLocClientState.eventRegMask  = 0;
   return (rc == QMI_NO_ERR ? true:false);
 }
@@ -1368,10 +1471,6 @@ static locClientStatusEnumType locClientQmiCtrlPointInit(qmi_client_type *pQmiCl
 //TBD : qmi_cci stuff, need to remove
   LOC_UTIL_LOGV("%s:%d]: starting transport\n", __func__, __LINE__);
 
-#ifndef FEATURE_LOC_API_V02_QNX_MOD
-  qmi_cci_xport_start(&ipc_router_ops, NULL);
-#endif //FEATURE_LOC_API_V02_QNX_MOD
-
   // register for service notifications
   rc = qmi_client_notifier_init(locClientServiceObject, &os_params, &notifier);
   if(rc != QMI_NO_ERR)
@@ -1382,47 +1481,34 @@ static locClientStatusEnumType locClientQmiCtrlPointInit(qmi_client_type *pQmiCl
   }
 
   // Get location service information, if service is not up wait on a signal
-  //TBD: confirm if still need to call get_service_list or if
-  //QMI_CCI_OS_SIGNAL returns immediately if the service is already up.
+  // wait for the server to come up */
 
-  rc = qmi_client_get_service_list( locClientServiceObject, NULL, NULL,
-                                    &num_services);
-  LOC_UTIL_LOGV("%s:%d]: qmi_client_get_service_list() returned %d "
-                 "num_services = %d\n",  __func__, __LINE__,
-                 rc, num_services);
+  QMI_CCI_OS_SIGNAL_WAIT(&os_params, timeout);
 
-  if(rc != QMI_NO_ERR)
+  if(QMI_CCI_OS_SIGNAL_TIMED_OUT(&os_params))
   {
-    LOC_UTIL_LOGD("%s:%d]: service not up, waiting for service to come up\n",
-                  __func__, __LINE__);
-
-    // wait for the server to come up */
-    QMI_CCI_OS_SIGNAL_WAIT(&os_params, timeout);
-
-    if(QMI_CCI_OS_SIGNAL_TIMED_OUT(&os_params))
-    {
-      // timed out, return with error
-      LOC_UTIL_LOGE("%s:%d]: timed out waiting for service\n",
+    // timed out, return with error
+    LOC_UTIL_LOGE("%s:%d]: timed out waiting for service\n",
                     __func__, __LINE__);
 
-      return(eLOC_CLIENT_FAILURE_TIMEOUT);
-    }
-    else
-    {
-      // get the service addressing information
-      rc = qmi_client_get_service_list( locClientServiceObject, NULL, NULL,
+    return(eLOC_CLIENT_FAILURE_TIMEOUT);
+  }
+  else
+  {
+    // get the service addressing information
+    rc = qmi_client_get_service_list( locClientServiceObject, NULL, NULL,
                                       &num_services);
-      LOC_UTIL_LOGV("%s:%d]: qmi_client_get_service_list() returned %d "
-                    "num_services = %d\n", __func__, __LINE__, rc,
-                    num_services);
+    LOC_UTIL_LOGV("%s:%d]: qmi_client_get_service_list() returned %d "
+                  "num_services = %d\n", __func__, __LINE__, rc,
+                  num_services);
 
-      if(rc != QMI_NO_ERR)
-      {
-        LOC_UTIL_LOGE("%s:%d]: qmi_client_get_service_list failed even though"
-                      "service is up !!!\n", __func__, __LINE__);
-        return(eLOC_CLIENT_FAILURE_INTERNAL);
-      }
+    if(rc != QMI_NO_ERR)
+    {
+      LOC_UTIL_LOGE("%s:%d]: qmi_client_get_service_list failed even though"
+                    "service is up !!!\n", __func__, __LINE__);
+      return(eLOC_CLIENT_FAILURE_INTERNAL);
     }
+
   }
 
   //num_entries = ??? , num_services = ???
@@ -1646,4 +1732,3 @@ locClientStatusEnumType locClientSendReq(
   status = convertResponseToStatus(&resp);
   return(status);
 }
-/*=============================================================================*/

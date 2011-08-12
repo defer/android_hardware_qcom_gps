@@ -37,6 +37,7 @@
 #include <ctype.h>
 #include <unistd.h>
 #include <time.h>
+#include <loc_eng_cfg.h>
 
 #include <hardware/gps.h>
 
@@ -57,15 +58,22 @@ loc_gps_cfg_s_type gps_conf;
 
 loc_param_s_type loc_parameter_table[] =
 {
-  {"INTERMEDIATE_POS",            &gps_conf.INTERMEDIATE_POS,     'n'},
-  {"ACCURACY_THRES",              &gps_conf.ACCURACY_THRES,       'n'},
-  {"ENABLE_WIPER",                &gps_conf.ENABLE_WIPER,         'n'},
+  {"INTERMEDIATE_POS",               &gps_conf.INTERMEDIATE_POS,               'n'},
+  {"ACCURACY_THRES",                 &gps_conf.ACCURACY_THRES,                 'n'},
+  {"ENABLE_WIPER",                   &gps_conf.ENABLE_WIPER,                   'n'},
   /* DEBUG LEVELS: 0 - none, 1 - Error, 2 - Warning, 3 - Info
                    4 - Debug, 5 - Verbose  */
-  {"DEBUG_LEVEL",                 &gps_conf.DEBUG_LEVEL,          'n'},
-  {"SUPL_VER",                    &gps_conf.SUPL_VER,             'n'},
-  {"CAPABILITIES",                &gps_conf.CAPABILITIES,         'n'},
-  {"TIMESTAMP",                   &gps_conf.TIMESTAMP,            'n'},
+  {"DEBUG_LEVEL",                    &gps_conf.DEBUG_LEVEL,                    'n'},
+  {"SUPL_VER",                       &gps_conf.SUPL_VER,                       'n'},
+  {"CAPABILITIES",                   &gps_conf.CAPABILITIES,                   'n'},
+  {"TIMESTAMP",                      &gps_conf.TIMESTAMP,                      'n'},
+  {"GYRO_BIAS_RANDOM_WALK",          &gps_conf.GYRO_BIAS_RANDOM_WALK,          'f'},
+  {"SENSOR_ACCEL_BATCHES_PER_SEC",   &gps_conf.SENSOR_ACCEL_BATCHES_PER_SEC,   'n'},
+  {"SENSOR_ACCEL_SAMPLES_PER_BATCH", &gps_conf.SENSOR_ACCEL_SAMPLES_PER_BATCH, 'n'},
+  {"SENSOR_GYRO_BATCHES_PER_SEC",    &gps_conf.SENSOR_GYRO_BATCHES_PER_SEC,    'n'},
+  {"SENSOR_GYRO_SAMPLES_PER_BATCH",  &gps_conf.SENSOR_GYRO_SAMPLES_PER_BATCH,  'n'},
+  {"SENSOR_CONTROL_MODE",            &gps_conf.SENSOR_CONTROL_MODE,            'n'},
+  {"SENSOR_USAGE",                   &gps_conf.SENSOR_USAGE,                   'n'},
 };
 
 int loc_param_num = sizeof(loc_parameter_table) / sizeof(loc_param_s_type);
@@ -97,8 +105,21 @@ static void loc_default_parameters()
    gps_conf.CAPABILITIES = 0x7;
    gps_conf.TIMESTAMP = 0;
 
-  /* reset logging mechanism */
-  loc_logger_init(gps_conf.DEBUG_LEVEL, 0);
+   gps_conf.GYRO_BIAS_RANDOM_WALK = 0;
+
+   gps_conf.SENSOR_ACCEL_BATCHES_PER_SEC = 2;
+   gps_conf.SENSOR_ACCEL_SAMPLES_PER_BATCH = 5;
+   gps_conf.SENSOR_GYRO_BATCHES_PER_SEC = 2;
+   gps_conf.SENSOR_GYRO_SAMPLES_PER_BATCH = 5;
+   gps_conf.SENSOR_CONTROL_MODE = 0; /* AUTO */
+   gps_conf.SENSOR_USAGE = 0; /* Enabled */
+
+   /* Value MUST be set by OEMs in configuration for sensor-assisted
+      navigation to work. There is NO default value */
+   gps_conf.GYRO_BIAS_RANDOM_WALK_VALID = 0;
+
+   /* reset logging mechanism */
+   loc_logger_init(gps_conf.DEBUG_LEVEL, 0);
 }
 
 /*===========================================================================
@@ -166,18 +187,19 @@ void loc_read_gps_conf(void)
    char input_buf[LOC_MAX_PARAM_LINE];  /* declare a char array */
    char *lasts;
    char *param_name, *param_str_value;
-   int  param_value;
+   int     param_int_value;
+   double  param_double_value;
    int i;
 
    loc_default_parameters();
 
    if((gps_conf_fp = fopen(GPS_CONF_FILE, "r")) != NULL)
    {
-      LOC_LOGD("loc_read_gps_conf: using %s", GPS_CONF_FILE);
+      LOC_LOGD("%s: using %s", __FUNCTION__, GPS_CONF_FILE);
    }
    else
    {
-      LOC_LOGW("loc_read_gps_conf: no %s file, using defaults", GPS_CONF_FILE);
+      LOC_LOGW("%s: no %s file, using defaults", __FUNCTION__, GPS_CONF_FILE);
       return; /* no parameter file */
    }
 
@@ -199,11 +221,16 @@ void loc_read_gps_conf(void)
       if (param_str_value[0] == '0' && tolower(param_str_value[1]) == 'x')
       {
          /* hex */
-         param_value = (int) strtol(&param_str_value[2], (char**) NULL, 16);
+         param_int_value = (int) strtol(&param_str_value[2], (char**) NULL, 16);
       }
       else {
-         /* dec */
-         param_value = atoi(param_str_value); /* dec */
+         param_double_value = (double) atof(param_str_value); /* float */
+         param_int_value = atoi(param_str_value); /* dec */
+      }
+
+      if (strcmp("GYRO_BIAS_RANDOM_WALK", param_name) == 0)
+      {
+         gps_conf.GYRO_BIAS_RANDOM_WALK_VALID = 1;
       }
 
       for(i = 0; i < loc_param_num; i++)
@@ -224,15 +251,20 @@ void loc_read_gps_conf(void)
                         LOC_MAX_PARAM_STRING + 1);
                }
                /* Log INI values */
-               LOC_LOGD("loc_read_gps_conf: PARAM %s = %s\n", param_name, (char*)loc_parameter_table[i].param_ptr);
+               LOC_LOGD("%s: PARAM %s = %s\n", __FUNCTION__, param_name, (char*)loc_parameter_table[i].param_ptr);
                break;
             case 'n':
-               *((int *)loc_parameter_table[i].param_ptr) = param_value;
+               *((int *)loc_parameter_table[i].param_ptr) = param_int_value;
                /* Log INI values */
-               LOC_LOGD("loc_read_gps_conf: PARAM %s = %d\n", param_name, param_value);
+               LOC_LOGD("%s: PARAM %s = %d\n", __FUNCTION__, param_name, param_int_value);
+               break;
+            case 'f':
+               *((double *)loc_parameter_table[i].param_ptr) = param_double_value;
+               /* Log INI values */
+               LOC_LOGD("%s: PARAM %s = %f\n", __FUNCTION__, param_name, param_double_value);
                break;
             default:
-               LOC_LOGE("loc_read_gps_conf: PARAM %s parameter type must be n or s", param_name);
+               LOC_LOGE("%s: PARAM %s parameter type must be n or n", __FUNCTION__, param_name);
             }
          }
       }

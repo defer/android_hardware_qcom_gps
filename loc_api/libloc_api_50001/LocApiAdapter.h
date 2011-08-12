@@ -35,16 +35,17 @@
 #define MIN_POSSIBLE_FIX_INTERVAL 1000 /* msec */
 
 enum loc_api_adapter_err {
-    LOC_API_ADAPTER_ERR_SUCCESS           = 0,
-    LOC_API_ADAPTER_ERR_GENERAL_FAILURE   = 1,
-    LOC_API_ADAPTER_ERR_UNSUPPORTED       = 2,
-    LOC_API_ADAPTER_ERR_INVALID_HANDLE    = 4,
-    LOC_API_ADAPTER_ERR_INVALID_PARAMETER = 5,
-    LOC_API_ADAPTER_ERR_ENGINE_BUSY       = 6,
-    LOC_API_ADAPTER_ERR_PHONE_OFFLINE     = 7,
-    LOC_API_ADAPTER_ERR_TIMEOUT           = 8,
+    LOC_API_ADAPTER_ERR_SUCCESS             = 0,
+    LOC_API_ADAPTER_ERR_GENERAL_FAILURE     = 1,
+    LOC_API_ADAPTER_ERR_UNSUPPORTED         = 2,
+    LOC_API_ADAPTER_ERR_INVALID_HANDLE      = 4,
+    LOC_API_ADAPTER_ERR_INVALID_PARAMETER   = 5,
+    LOC_API_ADAPTER_ERR_ENGINE_BUSY         = 6,
+    LOC_API_ADAPTER_ERR_PHONE_OFFLINE       = 7,
+    LOC_API_ADAPTER_ERR_TIMEOUT             = 8,
+    LOC_API_ADAPTER_ERR_SERVICE_NOT_PRESENT = 9,
 
-    LOC_API_ADAPTER_ERR_ENGINE_DOWN       = 100,
+    LOC_API_ADAPTER_ERR_ENGINE_DOWN         = 100,
     LOC_API_ADAPTER_ERR_FAILURE,
     LOC_API_ADAPTER_ERR_UNKNOWN
 };
@@ -108,7 +109,7 @@ public:
     void reportPosition(GpsLocation &location, bool intermediate);
     void reportSv(GpsSvStatus &svStatus);
     void reportStatus(GpsStatusValue status);
-    void reportNmea(GpsUtcTime &timestamp, const char* nmea, int length);
+    void reportNmea(const char* nmea, int length);
     void reportAgpsStatus(AGpsStatus &agpsStatus);
     void requestXtraData();
     void requestTime();
@@ -155,6 +156,13 @@ public:
         informNiResponse(GpsUserResponseType userResponse, const void* passThroughData) {return LOC_API_ADAPTER_ERR_SUCCESS;};
     inline virtual enum loc_api_adapter_err
         setSUPLVersion(int version) {return LOC_API_ADAPTER_ERR_SUCCESS;};
+    inline virtual enum loc_api_adapter_err
+        setSensorControlConfig(int sensorUsage) {return LOC_API_ADAPTER_ERR_SUCCESS;};
+    inline virtual enum loc_api_adapter_err
+        setSensorProperties(float gyroBiasVarianceRandomWalk) {return LOC_API_ADAPTER_ERR_SUCCESS;};
+    inline virtual enum loc_api_adapter_err
+        setSensorPerfControlConfig(int controlMode, int accelSamplesPerBatch, int accelBatchesPerSec,
+                            int gyroSamplesPerBatch, int gyroBatchesPerSec) {return LOC_API_ADAPTER_ERR_SUCCESS;};
 };
 
 LocApiAdapter* getLocApiAdapter(LocEng &locEng);

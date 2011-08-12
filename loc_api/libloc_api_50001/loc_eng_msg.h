@@ -55,12 +55,59 @@ struct loc_eng_msg {
 struct loc_eng_msg_suple_version : public loc_eng_msg {
     const int supl_version;
     inline loc_eng_msg_suple_version(int version) :
-        loc_eng_msg(LOC_ENG_MSG_SUPL_VERSION),
-        supl_version(version)
+            loc_eng_msg(LOC_ENG_MSG_SUPL_VERSION),
+            supl_version(version)
         {
             LOC_LOGV("SUPL Version: %d", version);
         }
 };
+
+struct loc_eng_msg_sensor_control_config : public loc_eng_msg {
+    const int sensorsDisabled;
+    inline loc_eng_msg_sensor_control_config(int disabled) :
+            loc_eng_msg(LOC_ENG_MSG_SET_SENSOR_CONTROL_CONFIG),
+            sensorsDisabled(disabled)
+        {
+            LOC_LOGV("Sensors Disabled: %d", disabled);
+        }
+};
+
+struct loc_eng_msg_sensor_properties : public loc_eng_msg {
+    const int gyroBiasVarianceRandomWalk;
+    inline loc_eng_msg_sensor_properties(float gyroBiasRandomWalk) :
+            loc_eng_msg(LOC_ENG_MSG_SET_SENSOR_PROPERTIES),
+            gyroBiasVarianceRandomWalk(gyroBiasRandomWalk)
+        {
+            LOC_LOGV("Gyro Bias Random Walk: %f", gyroBiasRandomWalk);
+        }
+};
+
+struct loc_eng_msg_sensor_perf_control_config : public loc_eng_msg {
+    const int controlMode;
+    const int accelSamplesPerBatch;
+    const int accelBatchesPerSec;
+    const int gyroSamplesPerBatch;
+    const int gyroBatchesPerSec;
+    inline loc_eng_msg_sensor_perf_control_config(int controlMode, int accelSamplesPerBatch, int accelBatchesPerSec,
+                                                  int gyroSamplesPerBatch, int gyroBatchesPerSec) :
+            loc_eng_msg(LOC_ENG_MSG_SET_SENSOR_PERF_CONTROL_CONFIG),
+            controlMode(controlMode),
+            accelSamplesPerBatch(accelSamplesPerBatch),
+            accelBatchesPerSec(accelBatchesPerSec),
+            gyroSamplesPerBatch(gyroSamplesPerBatch),
+            gyroBatchesPerSec(gyroBatchesPerSec)
+        {
+            LOC_LOGV("Sensor Perf Control Config (performanceControlMode)(%u) "
+                "accel(#smp,#batches) (%u,%u) gyro(#smp,#batches) (%u,%u)\n",
+                controlMode,
+                accelSamplesPerBatch,
+                accelBatchesPerSec,
+                gyroSamplesPerBatch,
+                gyroBatchesPerSec
+                );
+        }
+};
+
 
 struct loc_eng_msg_position_mode : public loc_eng_msg {
     const GpsPositionMode pMode;
@@ -169,18 +216,16 @@ struct loc_eng_msg_report_status : public loc_eng_msg {
 };
 
 struct loc_eng_msg_report_nmea : public loc_eng_msg {
-    const GpsUtcTime timestamp;
     char* const nmea;
     const int length;
-    inline loc_eng_msg_report_nmea(GpsUtcTime ts,
-                                   const char* data,
+    inline loc_eng_msg_report_nmea(const char* data,
                                    int len) :
         loc_eng_msg(LOC_ENG_MSG_REPORT_NMEA),
-        timestamp(ts), nmea(new char[len]), length(len)
+        nmea(new char[len]), length(len)
     {
         memcpy((void*)nmea, (void*)data, len);
-        LOC_LOGV("timestamp: %lld\n  length: %d\n  nmea: %p",
-                 timestamp, length, nmea);
+        LOC_LOGV("length: %d\n  nmea: %p",
+                 length, nmea);
     }
     inline ~loc_eng_msg_report_nmea()
     {

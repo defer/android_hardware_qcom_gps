@@ -1,7 +1,5 @@
 ifneq ($(BUILD_TINY_ANDROID),true)
 #Compile this library only for builds with the latest modem image
-ifeq ($(BOARD_VENDOR_QCOM_GPS_LOC_API_AMSS_VERSION),50001)
-AMSS_VERSION:=6356
 
 BIT_ENABLED_PRODUCT_LIST := msm7630_fusion
 BIT_ENABLED_PRODUCT_LIST += msm8660_surf
@@ -41,7 +39,7 @@ include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
 
-LOCAL_MODULE := libloc_eng_v01.$(BOARD_VENDOR_QCOM_GPS_LOC_API_HARDWARE)
+LOCAL_MODULE := gps.$(BOARD_VENDOR_QCOM_GPS_LOC_API_HARDWARE)
 
 ## Libs
 
@@ -70,36 +68,31 @@ LOCAL_SRC_FILES += \
     loc_eng_dmn_conn_glue_msg.c \
     loc_eng_dmn_conn_glue_pipe.c
 
-## Check if GPS is unsupported
-ifeq ($(BOARD_VENDOR_QCOM_GPS_LOC_API_AMSS_VERSION),50001)
-    LOCAL_SHARED_LIBRARIES += libloc_api-rpc-qc \
-                              libloc_adapter
+# if QMI is supported then link to loc_api_v02
+ifneq (, $(filter $(QMI_PRODUCT_LIST), $(QCOM_TARGET_PRODUCT)))
+LOCAL_SHARED_LIBRARIES += libloc_api_v02
 else
-    LOCAL_STATIC_LIBRARIES:= libloc_api-rpc
-endif
+## Check if RPC is not unsupported
+ifneq ($(TARGET_NO_RPC),true)
+LOCAL_SHARED_LIBRARIES += libloc_api-rpc-qc
+endif #TARGET_NO_RPC
+
+endif #filter $(PRODUCT_LIST), $(QCOM_TARGET_PRODUCT)
+
+LOCAL_SHARED_LIBRARIES +=  libloc_adapter
 
 LOCAL_CFLAGS += \
-     -fno-short-enums \
-     -D_ANDROID_ \
-     -DAMSS_VERSION=$(BOARD_VENDOR_QCOM_GPS_LOC_API_AMSS_VERSION)
+    -fno-short-enums \
+    -D_ANDROID_ \
 
 ## Includes
 LOCAL_C_INCLUDES:= \
-  $(TARGET_OUT_HEADERS)/gps.utils
-
-ifeq ($(BOARD_VENDOR_QCOM_GPS_LOC_API_AMSS_VERSION),50001)
-LOCAL_C_INCLUDES += \
-        $(TARGET_OUT_HEADERS)/gps.utils \
-        hardware/qcom/gps/loc_api/ulp/inc
-else
-LOCAL_C_INCLUDES += \
-        $(TARGET_OUT_HEADERS)/libloc_api-rpc \
-        $(TARGET_OUT_HEADERS)/libloc_api-rpc/inc
-endif
+    $(TARGET_OUT_HEADERS)/gps.utils \
+    hardware/qcom/gps/loc_api/ulp/inc
 
 LOCAL_PRELINK_MODULE := false
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
+
 include $(BUILD_SHARED_LIBRARY)
-include $(LOCAL_PATH)/../symlink.in
-endif # BOARD_VENDOR_QCOM_GPS_LOC_API_AMSS_VERSION = 50001
+
 endif # not BUILD_TINY_ANDROID

@@ -101,9 +101,9 @@ void LocApiAdapter::reportStatus(GpsStatusValue status)
     locEngHandle.sendMsge(&msg);
 }
 
-void LocApiAdapter::reportNmea(GpsUtcTime &timestamp, const char* nmea, int length)
+void LocApiAdapter::reportNmea(const char* nmea, int length)
 {
-    loc_eng_msg_report_nmea *msg(new loc_eng_msg_report_nmea(timestamp, nmea, length));
+    loc_eng_msg_report_nmea *msg(new loc_eng_msg_report_nmea(nmea, length));
     locEngHandle.sendMsge(&msg);
 }
 

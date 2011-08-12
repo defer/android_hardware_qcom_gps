@@ -11,23 +11,26 @@ LOCAL_SHARED_LIBRARIES := \
     libcutils \
     libqmi_cci \
     libqmi_csi \
-    libqmi_common_so
+    libqmi_common_so\
+    libloc_adapter
 
 LOCAL_SRC_FILES += \
+    LocApiV02Adapter.cpp \
     loc_api_v02_client.c \
     loc_api_sync_req.c \
     qmi_loc_v02.c
 
 LOCAL_CFLAGS += \
-     -fno-short-enums \
-     -D_ANDROID_
+    -fno-short-enums \
+    -D_ANDROID_
 
 ## Includes
-LOCAL_C_INCLUDES := $(TARGET_OUT_HEADERS)/qmi-framework/inc
+LOCAL_C_INCLUDES := \
+    $(TARGET_OUT_HEADERS)/qmi-framework/inc \
+    $(TARGET_OUT_HEADERS)/libloc_adapter
 
 LOCAL_PRELINK_MODULE := false
+
 include $(BUILD_SHARED_LIBRARY)
 
 endif # not BUILD_TINY_ANDROID
-
-

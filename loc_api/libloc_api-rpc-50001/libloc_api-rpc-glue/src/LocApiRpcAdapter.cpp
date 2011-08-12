@@ -123,7 +123,6 @@ LocApiRpcAdapter::LocApiRpcAdapter(LocEng &locEng) :
     eMask(convertMask(locEng.eventMask))
 {
     loc_api_glue_init();
-    reinit();
 }
 
 LocApiRpcAdapter::~LocApiRpcAdapter()
@@ -764,16 +763,12 @@ void LocApiRpcAdapter::reportStatus(const rpc_loc_status_event_s_type *status_re
 
 void LocApiRpcAdapter::reportNmea(const rpc_loc_nmea_report_s_type *nmea_report_ptr)
 {
-    struct timeval tv;
-    gettimeofday(&tv, (struct timezone *) NULL);
-    long long now = tv.tv_sec * 1000LL + tv.tv_usec / 1000;
 
 #if (AMSS_VERSION==3200)
-    LocApiAdapter::reportNmea(now, nmea_report_ptr->nmea_sentences.nmea_sentences_val,
+    LocApiAdapter::reportNmea(nmea_report_ptr->nmea_sentences.nmea_sentences_val,
                               nmea_report_ptr->nmea_sentences.nmea_sentences_len);
 #else
-    LocApiAdapter::reportNmea(now,
-                              nmea_report_ptr->nmea_sentences,
+    LocApiAdapter::reportNmea(nmea_report_ptr->nmea_sentences,
                               nmea_report_ptr->length);
     LOC_LOGD("loc_eng_report_nmea: $%c%c%c\n",
              nmea_report_ptr->nmea_sentences[3], nmea_report_ptr->nmea_sentences[4],

@@ -12,8 +12,9 @@ LOCAL_SHARED_LIBRARIES := \
     libcutils
 
 LOCAL_SRC_FILES += \
-    loc_log.cpp
-
+    loc_log.cpp \
+    msg_q.c \
+    linked_list.c
 
 LOCAL_CFLAGS += \
      -fno-short-enums \
@@ -25,7 +26,9 @@ LOCAL_C_INCLUDES:=
 LOCAL_COPY_HEADERS_TO:= gps.utils/
 LOCAL_COPY_HEADERS:= \
    loc_log.h \
-   log_util.h
+   log_util.h \
+   linked_list.h \
+   msg_q.h
 
 LOCAL_MODULE := libgps.utils
 

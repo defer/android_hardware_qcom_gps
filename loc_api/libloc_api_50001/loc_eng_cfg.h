@@ -34,9 +34,7 @@
 #define LOC_MAX_PARAM_STRING               80
 #define LOC_MAX_PARAM_LINE                 80
 
-#ifndef GPS_CONF_FILE
-#define GPS_CONF_FILE            "/etc/gps.conf"            /* primary */
-#endif
+#define GPS_CONF_FILE            "/etc/gps.conf"   //??? platform independent
 
 /*=============================================================================
  *
@@ -60,6 +58,14 @@ typedef struct loc_gps_cfg_s
   unsigned long  SUPL_VER;
   unsigned long  CAPABILITIES;
   unsigned long  TIMESTAMP;
+  unsigned long  GYRO_BIAS_RANDOM_WALK_VALID;
+  double         GYRO_BIAS_RANDOM_WALK;
+  unsigned long  SENSOR_ACCEL_BATCHES_PER_SEC;
+  unsigned long  SENSOR_ACCEL_SAMPLES_PER_BATCH;
+  unsigned long  SENSOR_GYRO_BATCHES_PER_SEC;
+  unsigned long  SENSOR_GYRO_SAMPLES_PER_BATCH;
+  unsigned long  SENSOR_CONTROL_MODE;
+  unsigned long  SENSOR_USAGE;
   // char           string_val[LOC_MAX_PARAM_STRING + 1]; /* An example string value */
 } loc_gps_cfg_s_type;
 
@@ -69,6 +75,10 @@ typedef struct loc_gps_cfg_s
  *
  *============================================================================*/
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern loc_gps_cfg_s_type gps_conf;
 
 /*=============================================================================
@@ -77,5 +87,9 @@ extern loc_gps_cfg_s_type gps_conf;
  *
  *============================================================================*/
 extern void loc_read_gps_conf(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* LOC_ENG_CFG_H */

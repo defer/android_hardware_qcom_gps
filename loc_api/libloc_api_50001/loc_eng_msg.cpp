@@ -113,8 +113,8 @@ int loc_eng_msgrcv_raw(int msgqid, void *msgp, unsigned int msgsz)
         result = loc_eng_dmn_conn_glue_piperead(msgqid, msgp, pmsg->msgsz - sizeof(struct msgbuf));
 
         if (result != (int) (pmsg->msgsz - sizeof(struct msgbuf))) {
-            LOC_LOGE("%s:%d] pipe broken %d, msgid = %d, msgsz = %d\n", __func__, __LINE__, result,
-                     (int) pmsg->msgid, (int) pmsg->msgsz);
+            LOC_LOGE("%s:%d] pipe broken %d, msgid = %p, msgsz = %d\n", __func__, __LINE__, result,
+                    (pmsg->msgid), (int) pmsg->msgsz);
             return -1;
         }
     }

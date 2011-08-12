@@ -414,6 +414,42 @@ typedef union
         QMI_LOC_GET_PROTOCOL_CONFIG_PARAMETERS_REQ_V02.
         @newpage */
 
+      const qmiLocSetSensorControlConfigReqMsgT_v02*
+     pSetSensorControlConfigReq;
+   /**< Sets the sensor control configuration parameters in the engine.
+
+        If the request is accepted by the service, the client receives the
+        following indication containing a response:
+        QMI_LOC_SET_SENSOR_CONTROL_CONFIG_IND_V02.
+
+        To send this request, set the reqId field in locClientSendReq() to
+        QMI_LOC_SET_SENSOR_CONTROL_CONFIG_REQ_V02.
+        @newpage */
+
+   const qmiLocSetSensorPerformanceControlConfigReqMsgT_v02*
+      pSetSensorPerformanceControlConfigReq;
+   /**< Sets the sensor performance configuration parameters in the engine.
+
+        If the request is accepted by the service, the client receives the
+        following indication containing a response:
+        QMI_LOC_SET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_IND_V02.
+
+        To send this request, set the reqId field in locClientSendReq() to
+        QMI_LOC_SET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_REQ_V02.
+        @newpage */
+
+   const qmiLocSetSensorPropertiesReqMsgT_v02*
+      pSetSensorPropertiesReq;
+   /**< Sets the sensor properties in the engine.
+
+        If the request is accepted by the service, the client receives the
+        following indication containing a response:
+        QMI_LOC_SET_SENSOR_PROPERTIES_IND_V02.
+
+        To send this request, set the reqId field in locClientSendReq() to
+        QMI_LOC_SET_SENSOR_PROPERTIES_REQ_V02.
+        @newpage */
+
 }locClientReqUnionType;
 
 
@@ -778,6 +814,60 @@ typedef union
 
         The respIndId field in the response indication callback is set to
         QMI_LOC_GET_PROTOCOL_CONFIG_PARAMETERS_IND_V02.
+        @newpage */
+
+   const qmiLocSetSensorControlConfigIndMsgT_v02*
+     pSetSensorControlConfigInd;
+   /**< Response to the request,
+        QMI_LOC_SET_SENSOR_CONTROL_CONFIG_REQ_V02.
+
+        The respIndId field in the response indication callback is set to
+        QMI_LOC_SET_SENSOR_CONTROL_CONFIG_IND_V02.
+        @newpage */
+
+   const qmiLocGetSensorControlConfigIndMsgT_v02*
+     pGetSensorControlConfigInd;
+   /**< Response to the request,
+        QMI_LOC_GET_SENSOR_CONTROL_CONFIG_REQ_V02.
+
+        The respIndId field in the response indication callback is set to
+        QMI_LOC_GET_SENSOR_CONTROL_CONFIG_IND_V02.
+        @newpage */
+
+   const qmiLocSetSensorPropertiesIndMsgT_v02*
+     pSetSensorPropertiesInd;
+   /**< Response to the request,
+        QMI_LOC_SET_SENSOR_PROPERTIES_REQ_V02.
+
+        The respIndId field in the response indication callback is set to
+        QMI_LOC_SET_SENSOR_PROPERTIES_IND_V02.
+        @newpage */
+
+   const qmiLocGetSensorPropertiesIndMsgT_v02*
+     pGetSensorPropertiesInd;
+   /**< Response to the request,
+        QMI_LOC_GET_SENSOR_PROPERTIES_REQ_V02.
+
+        The respIndId field in the response indication callback is set to
+        QMI_LOC_GET_SENSOR_PROPERTIES_IND_V02.
+        @newpage */
+
+   const qmiLocSetSensorPerformanceControlConfigIndMsgT_v02*
+     pSetSensorPerformanceControlConfigInd;
+   /**< Response to the request,
+        QMI_LOC_SET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_REQ_V02.
+
+        The respIndId field in the response indication callback is set to
+        QMI_LOC_SET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_IND_V02.
+        @newpage */
+
+   const qmiLocGetSensorPerformanceControlConfigIndMsgT_v02*
+     pGetSensorPerformanceControlConfigInd;
+   /**< Response to the request,
+        QMI_LOC_GET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_REQ_V02.
+
+        The respIndId field in the response indication callback is set to
+        QMI_LOC_GET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_IND_V02.
         @newpage */
 
 }locClientRespIndUnionType;

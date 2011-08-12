@@ -39,6 +39,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>         /* struct sockaddr_in */
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <netdb.h>
 #include <time.h>
 #include <dlfcn.h>
@@ -48,6 +49,7 @@
 #include <cutils/properties.h>
 #include <cutils/sched_policy.h>
 #include <utils/SystemClock.h>
+#include <utils/Log.h>
 #include <string.h>
 
 #include <loc_eng.h>
@@ -319,6 +321,9 @@ static int loc_eng_init(GpsCallbacks* callbacks)
                            loc_eng_data.release_wakelock_cb, loc_eng_msg_sender);
        loc_eng_data.client_handle = getLocApiAdapter(locEngHandle);
 
+       // call reinit to send initialization messages
+       loc_eng_reinit();
+
        loc_eng_inited = 1;
        ret_val = 0;
    }
@@ -326,6 +331,7 @@ static int loc_eng_init(GpsCallbacks* callbacks)
    EXIT_LOG(%d, ret_val);
    return ret_val;
 }
+
 
 static int loc_eng_reinit()
 {
@@ -338,6 +344,24 @@ static int loc_eng_reinit()
 
     loc_eng_msg_suple_version *supl_msg(new loc_eng_msg_suple_version(gps_conf.SUPL_VER));
     loc_eng_msgsnd( loc_eng_data.deferred_q, &supl_msg);
+
+    loc_eng_msg_sensor_control_config *sensor_control_config_msg(new loc_eng_msg_sensor_control_config(gps_conf.SENSOR_USAGE));
+    loc_eng_msgsnd(loc_eng_data.deferred_q, &sensor_control_config_msg);
+
+    /* Make sure this is specified by the user in the gps.conf file */
+    if(gps_conf.GYRO_BIAS_RANDOM_WALK_VALID)
+    {
+        loc_eng_msg_sensor_properties *sensor_properties_msg(new loc_eng_msg_sensor_properties(gps_conf.GYRO_BIAS_RANDOM_WALK));
+        loc_eng_msgsnd(loc_eng_data.deferred_q, &sensor_properties_msg);
+    }
+
+    loc_eng_msg_sensor_perf_control_config *sensor_perf_control_conf_msg(new loc_eng_msg_sensor_perf_control_config(gps_conf.SENSOR_CONTROL_MODE,
+                                                                                                                    gps_conf.SENSOR_ACCEL_SAMPLES_PER_BATCH,
+                                                                                                                    gps_conf.SENSOR_ACCEL_BATCHES_PER_SEC,
+                                                                                                                    gps_conf.SENSOR_GYRO_SAMPLES_PER_BATCH,
+                                                                                                                    gps_conf.SENSOR_GYRO_BATCHES_PER_SEC
+                                                                                                                    ));
+    loc_eng_msgsnd(loc_eng_data.deferred_q, &sensor_perf_control_conf_msg);
 
     ret_val = 0;
 
@@ -1669,6 +1693,28 @@ static void loc_eng_deferred_action_thread(void* arg)
         }
             break;
 
+        case LOC_ENG_MSG_SET_SENSOR_CONTROL_CONFIG:
+        {
+            loc_eng_msg_sensor_control_config *sccMsg = (loc_eng_msg_sensor_control_config*)msg;
+            loc_eng_data.client_handle->setSensorControlConfig(sccMsg->sensorsDisabled);
+        }
+            break;
+
+        case LOC_ENG_MSG_SET_SENSOR_PROPERTIES:
+        {
+            loc_eng_msg_sensor_properties *spMsg = (loc_eng_msg_sensor_properties*)msg;
+            loc_eng_data.client_handle->setSensorProperties(spMsg->gyroBiasVarianceRandomWalk);
+        }
+            break;
+
+        case LOC_ENG_MSG_SET_SENSOR_PERF_CONTROL_CONFIG:
+        {
+            loc_eng_msg_sensor_perf_control_config *spccMsg = (loc_eng_msg_sensor_perf_control_config*)msg;
+            loc_eng_data.client_handle->setSensorPerfControlConfig(spccMsg->controlMode, spccMsg->accelSamplesPerBatch, spccMsg->accelBatchesPerSec,
+                                                                   spccMsg->gyroSamplesPerBatch, spccMsg->gyroBatchesPerSec);
+        }
+            break;
+
         case LOC_ENG_MSG_REPORT_POSITION:
             if (loc_eng_data.location_cb != NULL &&
                loc_eng_data.mute_session_state != LOC_MUTE_SESS_IN_SESSION)
@@ -1712,7 +1758,10 @@ static void loc_eng_deferred_action_thread(void* arg)
             if (NULL != loc_eng_data.nmea_cb) {
                 loc_eng_msg_report_nmea* nmMsg = (loc_eng_msg_report_nmea*)msg;
                 CALLBACK_LOG_CALLFLOW("nmea_cb");
-                loc_eng_data.nmea_cb(nmMsg->timestamp, nmMsg->nmea, nmMsg->length);
+             struct timeval tv;
+                gettimeofday(&tv, (struct timezone *) NULL);
+                int64_t now = tv.tv_sec * 1000LL + tv.tv_usec / 1000;
+                loc_eng_data.nmea_cb(now, nmMsg->nmea, nmMsg->length);
             }
             break;
 
