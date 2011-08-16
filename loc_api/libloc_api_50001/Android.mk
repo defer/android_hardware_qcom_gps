@@ -1,11 +1,11 @@
 ifneq ($(BUILD_TINY_ANDROID),true)
 #Compile this library only for builds with the latest modem image
 
-BIT_ENABLED_PRODUCT_LIST := msm7630_fusion
-BIT_ENABLED_PRODUCT_LIST += msm8660_surf
-ifneq (, $(filter $(BIT_ENABLED_PRODUCT_LIST), $(QCOM_TARGET_PRODUCT)))
+BIT_ENABLED_BOARD_PLATFORM_LIST := msm7630_fusion
+BIT_ENABLED_BOARD_PLATFORM_LIST += msm8660
+ifeq ($(call is-board-platform-in-list,$(BIT_ENABLED_BOARD_PLATFORM_LIST)),true)
 FEATURE_GNSS_BIT_API := true
-endif # QCOM_TARGET_PRODUCT
+endif # is-board-platform-in-list
 
 LOCAL_PATH := $(call my-dir)
 
@@ -67,7 +67,7 @@ LOCAL_SRC_FILES += \
     loc_eng_dmn_conn_glue_pipe.c
 
 # if QMI is supported then link to loc_api_v02
-ifneq (, $(filter $(QMI_PRODUCT_LIST), $(QCOM_TARGET_PRODUCT)))
+ifeq ($(call is-board-platform-in-list,$(QMI_BOARD_PLATFORM_LIST)),true)
 LOCAL_SHARED_LIBRARIES += libloc_api_v02
 else
 ## Check if RPC is not unsupported
@@ -75,7 +75,7 @@ ifneq ($(TARGET_NO_RPC),true)
 LOCAL_SHARED_LIBRARIES += libloc_api-rpc-qc
 endif #TARGET_NO_RPC
 
-endif #filter $(PRODUCT_LIST), $(QCOM_TARGET_PRODUCT)
+endif #is-board-platform-in-list
 
 LOCAL_SHARED_LIBRARIES +=  libloc_adapter
 
