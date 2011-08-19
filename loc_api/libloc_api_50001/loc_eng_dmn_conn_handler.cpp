@@ -33,6 +33,7 @@
 
 #include "log_util.h"
 
+#include "loc_eng_dmn_conn.h"
 #include "loc_eng_dmn_conn_handler.h"
 
 #ifndef DEBUG_DMN_LOC_API
@@ -47,6 +48,8 @@ int loc_eng_dmn_conn_loc_api_server_if_request_handler(struct ctrl_msgbuf *pmsg,
                        pmsg->cmsg.cmsg_if_request.is_supl,
                        pmsg->cmsg.cmsg_if_request.ipv4_addr,
                        pmsg->cmsg.cmsg_if_request.ipv6_addr);
+#else
+   loc_eng_dmn_conn_loc_api_server_data_conn(GPSONE_LOC_API_IF_REQUEST_SUCCESS);
 #endif
     return 0;
 }
@@ -59,6 +62,8 @@ int loc_eng_dmn_conn_loc_api_server_if_release_handler(struct ctrl_msgbuf *pmsg,
                        pmsg->cmsg.cmsg_if_request.is_supl,
                        pmsg->cmsg.cmsg_if_request.ipv4_addr,
                        pmsg->cmsg.cmsg_if_request.ipv6_addr);
+#else
+   loc_eng_dmn_conn_loc_api_server_data_conn(GPSONE_LOC_API_IF_RELEASE_SUCCESS);
 #endif
     return 0;
 }

@@ -41,18 +41,16 @@
 #include "loc_eng_dmn_conn.h"
 
 static int loc_api_server_msgqid;
-static int daemon_manager_msgqid;
+static int loc_api_resp_msgqid;
 
 static const char * global_loc_api_q_path = GPSONE_LOC_API_Q_PATH;
-static const char * global_ctrl_q_path = GPSONE_CTRL_Q_PATH;
+static const char * global_loc_api_resp_q_path = GPSONE_LOC_API_RESP_Q_PATH;
 
 static int loc_api_server_proc_init(void *context)
 {
     loc_api_server_msgqid = loc_eng_dmn_conn_glue_msgget(global_loc_api_q_path, O_RDWR);
+    loc_api_resp_msgqid = loc_eng_dmn_conn_glue_msgget(global_loc_api_resp_q_path, O_RDWR);
 
-    /* share the ctrl q.
-     * message has to be less than 4k. Non atomic may cause message mess up in the q */
-    daemon_manager_msgqid = loc_eng_dmn_conn_glue_msgget(global_ctrl_q_path, O_RDWR);
     LOC_LOGD("%s:%d] loc_api_server_msgqid = %d\n", __func__, __LINE__, loc_api_server_msgqid);
     return 0;
 }
@@ -68,6 +66,7 @@ static int loc_api_server_proc(void *context)
     int result = 0;
     static int cnt = 0;
     struct ctrl_msgbuf * p_cmsgbuf;
+    struct ctrl_msgbuf cmsg_resp;
 
     sz = sizeof(struct ctrl_msgbuf) + 256;
     p_cmsgbuf = (struct ctrl_msgbuf *) malloc(sz);
@@ -114,7 +113,7 @@ static int loc_api_server_proc_post(void *context)
 {
     LOC_LOGD("%s:%d]\n", __func__, __LINE__);
     loc_eng_dmn_conn_glue_msgremove( global_loc_api_q_path, loc_api_server_msgqid);
-    loc_eng_dmn_conn_glue_msgremove( global_ctrl_q_path, daemon_manager_msgqid);
+    loc_eng_dmn_conn_glue_msgremove( global_loc_api_resp_q_path, loc_api_resp_msgqid);
     return 0;
 }
 
@@ -130,12 +129,12 @@ static int loc_eng_dmn_conn_unblock_proc(void)
 static struct loc_eng_dmn_conn_thelper thelper;
 
 int loc_eng_dmn_conn_loc_api_server_launch(thelper_create_thread   create_thread_cb,
-    const char * loc_api_q_path, const char * ctrl_q_path)
+    const char * loc_api_q_path, const char * resp_q_path)
 {
     int result;
 
     if (loc_api_q_path) global_loc_api_q_path = loc_api_q_path;
-    if (ctrl_q_path)    global_ctrl_q_path    = ctrl_q_path;
+    if (resp_q_path)    global_loc_api_resp_q_path = resp_q_path;
 
     result = loc_eng_dmn_conn_launch_thelper( &thelper,
         loc_api_server_proc_init,
@@ -169,7 +168,7 @@ int loc_eng_dmn_conn_loc_api_server_data_conn(int status) {
   cmsgbuf.ctrl_type = GPSONE_LOC_API_RESPONSE;
   cmsgbuf.cmsg.cmsg_response.result = status;
   LOC_LOGD("%s:%d] status = %d",__func__, __LINE__, status);
-  if (loc_eng_dmn_conn_glue_msgsnd(daemon_manager_msgqid, & cmsgbuf, sizeof(struct ctrl_msgbuf)) < 0) {
+  if (loc_eng_dmn_conn_glue_msgsnd(loc_api_resp_msgqid, & cmsgbuf, sizeof(struct ctrl_msgbuf)) < 0) {
     LOC_LOGD("%s:%d] error! conn_glue_msgsnd failed\n", __func__, __LINE__);
     return -1;
   }

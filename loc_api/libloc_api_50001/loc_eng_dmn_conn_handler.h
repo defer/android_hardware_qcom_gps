@@ -40,6 +40,13 @@ enum {
     GPSONE_UNBLOCK,
 };
 
+enum {
+    GPSONE_LOC_API_IF_REQUEST_SUCCESS = 0xF0,
+    GPSONE_LOC_API_IF_RELEASE_SUCCESS,
+    GPSONE_LOC_API_IF_FAILURE,
+};
+
+
 struct ctrl_msg_response {
     int result;
 };
