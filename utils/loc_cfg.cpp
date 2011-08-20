@@ -37,13 +37,8 @@
 #include <ctype.h>
 #include <unistd.h>
 #include <time.h>
-#include <loc_eng_cfg.h>
-
-#include <hardware/gps.h>
-
-#include <loc_eng.h>
-
-#include <utils/Log.h>
+#include <loc_cfg.h>
+#include <log_util.h>
 
 /*=============================================================================
  *
@@ -251,17 +246,17 @@ void loc_read_gps_conf(void)
                         LOC_MAX_PARAM_STRING + 1);
                }
                /* Log INI values */
-               LOC_LOGD("%s: PARAM %s = %s\n", __FUNCTION__, param_name, (char*)loc_parameter_table[i].param_ptr);
+               LOC_LOGD("%s: PARAM %s = %s", __FUNCTION__, param_name, (char*)loc_parameter_table[i].param_ptr);
                break;
             case 'n':
                *((int *)loc_parameter_table[i].param_ptr) = param_int_value;
                /* Log INI values */
-               LOC_LOGD("%s: PARAM %s = %d\n", __FUNCTION__, param_name, param_int_value);
+               LOC_LOGD("%s: PARAM %s = %d", __FUNCTION__, param_name, param_int_value);
                break;
             case 'f':
                *((double *)loc_parameter_table[i].param_ptr) = param_double_value;
                /* Log INI values */
-               LOC_LOGD("%s: PARAM %s = %f\n", __FUNCTION__, param_name, param_double_value);
+               LOC_LOGD("%s: PARAM %s = %f", __FUNCTION__, param_name, param_double_value);
                break;
             default:
                LOC_LOGE("%s: PARAM %s parameter type must be n or n", __FUNCTION__, param_name);

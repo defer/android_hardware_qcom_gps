@@ -30,42 +30,6 @@
 #ifndef __LOG_UTIL_H__
 #define __LOG_UTIL_H__
 
-#ifdef LOG_UTIL_OFF_TARGET
-
-#include <stdio.h>
-
-//error logs
-#define UTIL_LOGE(...) printf(__VA_ARGS__)
-//warning logs
-#define UTIL_LOGW(...) printf(__VA_ARGS__)
-// debug logs
-#define UTIL_LOGD(...) printf(__VA_ARGS__)
-//info logs
-#define UTIL_LOGI(...) printf(__VA_ARGS__)
-//verbose logs
-#define UTIL_LOGV(...) printf(__VA_ARGS__)
-
-// Fake Log.h in host test environment will account for
-// strlcpy and strlcat not being found.
-#include <utils/Log.h>
-
-#elif defined(_ANDROID_)
-
-#include <utils/Log.h>
-
-//error logs
-#define UTIL_LOGE(...)   LOGE(__VA_ARGS__)
-//warning logs
-#define UTIL_LOGW(...)   LOGW(__VA_ARGS__)
-// debug logs
-#define UTIL_LOGD(...)   LOGD(__VA_ARGS__)
-// info logs
-#define UTIL_LOGI(...)   LOGI(__VA_ARGS__)
-// verbose logs
-#define UTIL_LOGV(...)   LOGV(__VA_ARGS__)
-
-#endif //LOG_UTIL_OFF_TARGET
-
 #ifdef __cplusplus
 extern "C"
 {
