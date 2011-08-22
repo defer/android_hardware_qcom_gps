@@ -728,7 +728,7 @@ void LocApiRpcAdapter::reportSv(const rpc_loc_gnss_info_s_type *gnss_report_ptr)
         }
     }
 
-    if (SvStatus.num_svs != 0)
+    if (SvStatus.num_svs >= 0)
     {
         LocApiAdapter::reportSv(SvStatus);
     }
