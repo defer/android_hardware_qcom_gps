@@ -46,7 +46,7 @@ typedef unsigned char boolean;
 
 #include <loc_eng_xtra.h>
 #include <loc_eng_ni.h>
-#include <loc_eng_cfg.h>
+#include <loc_cfg.h>
 #include <loc_log.h>
 #include <log_util.h>
 #include <loc_eng_msg.h>

@@ -59,7 +59,7 @@ linked_list_err_type linked_list_init(void** list_data)
 {
    if( list_data == NULL )
    {
-      UTIL_LOGE("%s: Invalid list parameter!\n", __FUNCTION__);
+      LOC_LOGE("%s: Invalid list parameter!\n", __FUNCTION__);
       return eLINKED_LIST_INVALID_PARAMETER;
    }
 
@@ -67,7 +67,7 @@ linked_list_err_type linked_list_init(void** list_data)
    tmp_list = (list_state*)calloc(1, sizeof(list_state));
    if( tmp_list == NULL )
    {
-      UTIL_LOGE("%s: Unable to allocate space for listt!\n", __FUNCTION__);
+      LOC_LOGE("%s: Unable to allocate space for list!\n", __FUNCTION__);
       return eLINKED_LIST_FAILURE_GENERAL;
    }
 
@@ -88,7 +88,7 @@ linked_list_err_type linked_list_destroy(void** list_data)
 {
    if( list_data == NULL )
    {
-      UTIL_LOGE("%s: Invalid list parameter!\n", __FUNCTION__);
+      LOC_LOGE("%s: Invalid list parameter!\n", __FUNCTION__);
       return eLINKED_LIST_INVALID_HANDLE;
    }
 
@@ -109,16 +109,16 @@ linked_list_err_type linked_list_destroy(void** list_data)
   ===========================================================================*/
 linked_list_err_type linked_list_add(void* list_data, void *data_obj, void (*dealloc)(void*))
 {
-   UTIL_LOGD("%s: Adding to list data_obj = 0x%08X\n", __FUNCTION__, data_obj);
+   LOC_LOGD("%s: Adding to list data_obj = 0x%08X\n", __FUNCTION__, data_obj);
    if( list_data == NULL )
    {
-      UTIL_LOGE("%s: Invalid list parameter!\n", __FUNCTION__);
+      LOC_LOGE("%s: Invalid list parameter!\n", __FUNCTION__);
       return eLINKED_LIST_INVALID_HANDLE;
    }
 
    if( data_obj == NULL )
    {
-      UTIL_LOGE("%s: Invalid input parameter!\n", __FUNCTION__);
+      LOC_LOGE("%s: Invalid input parameter!\n", __FUNCTION__);
       return eLINKED_LIST_INVALID_PARAMETER;
    }
 
@@ -126,7 +126,7 @@ linked_list_err_type linked_list_add(void* list_data, void *data_obj, void (*dea
    list_element* elem = (list_element*)malloc(sizeof(list_element));
    if( elem == NULL )
    {
-      UTIL_LOGE("%s: Memory allocation failed\n", __FUNCTION__);
+      LOC_LOGE("%s: Memory allocation failed\n", __FUNCTION__);
       return eLINKED_LIST_FAILURE_GENERAL;
    }
 
@@ -161,16 +161,16 @@ linked_list_err_type linked_list_add(void* list_data, void *data_obj, void (*dea
   ===========================================================================*/
 linked_list_err_type linked_list_remove(void* list_data, void **data_obj)
 {
-   UTIL_LOGD("%s: Removing from list\n", __FUNCTION__);
+   LOC_LOGD("%s: Removing from list\n", __FUNCTION__);
    if( list_data == NULL )
    {
-      UTIL_LOGE("%s: Invalid list parameter!\n", __FUNCTION__);
+      LOC_LOGE("%s: Invalid list parameter!\n", __FUNCTION__);
       return eLINKED_LIST_INVALID_HANDLE;
    }
 
    if( data_obj == NULL )
    {
-      UTIL_LOGE("%s: Invalid input parameter!\n", __FUNCTION__);
+      LOC_LOGE("%s: Invalid input parameter!\n", __FUNCTION__);
       return eLINKED_LIST_INVALID_PARAMETER;
    }
 
@@ -212,7 +212,7 @@ int linked_list_empty(void* list_data)
 {
    if( list_data == NULL )
    {
-      UTIL_LOGE("%s: Invalid list parameter!\n", __FUNCTION__);
+      LOC_LOGE("%s: Invalid list parameter!\n", __FUNCTION__);
       return (int)eLINKED_LIST_INVALID_HANDLE;
    }
    else
@@ -231,7 +231,7 @@ linked_list_err_type linked_list_flush(void* list_data)
 {
    if( list_data == NULL )
    {
-      UTIL_LOGE("%s: Invalid list parameter!\n", __FUNCTION__);
+      LOC_LOGE("%s: Invalid list parameter!\n", __FUNCTION__);
       return eLINKED_LIST_INVALID_HANDLE;
    }
 

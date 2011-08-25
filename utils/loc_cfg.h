@@ -27,8 +27,8 @@
  *
  */
 
-#ifndef LOC_ENG_CFG_H
-#define LOC_ENG_CFG_H
+#ifndef LOC_CFG_H
+#define LOC_CFG_H
 
 #define LOC_MAX_PARAM_NAME                 36
 #define LOC_MAX_PARAM_STRING               80
@@ -92,4 +92,4 @@ extern void loc_read_gps_conf(void);
 }
 #endif
 
-#endif /* LOC_ENG_CFG_H */
+#endif /* LOC_CFG_H */

@@ -53,7 +53,6 @@ LOCAL_SRC_FILES += \
     loc_eng.cpp \
     loc_eng_xtra.cpp \
     loc_eng_ni.cpp \
-    loc_eng_cfg.cpp \
     loc_eng_msg.cpp \
     gps.c
 
