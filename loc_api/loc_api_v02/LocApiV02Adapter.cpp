@@ -1181,7 +1181,7 @@ locClientEventMaskType LocApiV02Adapter :: convertMask(
     eventMask |= QMI_LOC_EVENT_MASK_NMEA_V02;
 
   if(mask & LOC_API_ADAPTER_BIT_NI_NOTIFY_VERIFY_REQUEST)
-    eventMask |= QMI_LOC_EVENT_NI_NOTIFY_VERIFY_REQ_IND_V02;
+    eventMask |= QMI_LOC_EVENT_MASK_NI_NOTIFY_VERIFY_REQ_V02;
 
   if(mask & LOC_API_ADAPTER_BIT_ASSISTANCE_DATA_REQUEST)
   {
@@ -1193,14 +1193,14 @@ locClientEventMaskType LocApiV02Adapter :: convertMask(
 
   if(mask & LOC_API_ADAPTER_BIT_STATUS_REPORT)
   {
-    eventMask |= (QMI_LOC_EVENT_ENGINE_STATE_IND_V02 |
+    eventMask |= (QMI_LOC_EVENT_MASK_ENGINE_STATE_V02 |
                   QMI_LOC_EVENT_MASK_FIX_SESSION_STATE_V02);
   }
 
   if(mask & LOC_API_ADAPTER_BIT_LOCATION_SERVER_REQUEST)
     eventMask |= QMI_LOC_EVENT_MASK_LOCATION_SERVER_CONNECTION_REQ_V02;
 
-  return mask;
+  return eventMask;
 }
 
 /* Convert error from loc_api_v02 to loc eng format*/
