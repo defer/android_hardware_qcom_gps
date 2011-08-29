@@ -54,6 +54,7 @@
 
 #include <loc_eng.h>
 #include <loc_eng_dmn_conn.h>
+#include <loc_eng_dmn_conn_handler.h>
 #include <loc_eng_msg.h>
 #include <loc_eng_msg_id.h>
 
@@ -981,7 +982,7 @@ static int loc_eng_atl_open(const char* apn, AGpsBearerType bearerType)
 
     LOC_LOGD("loc_eng_atl_open APN name = [%s]", apn);
 #ifdef FEATURE_GNSS_BIT_API
-    loc_eng_dmn_conn_loc_api_server_data_conn(1);
+    loc_eng_dmn_conn_loc_api_server_data_conn(GPSONE_LOC_API_IF_REQUEST_SUCCESS);
 #endif
     int apn_len = smaller_of(strlen (apn), MAX_APN_LEN);
     loc_eng_msg_atl_open_status *msg(new loc_eng_msg_atl_open_status(apn, apn_len, bearerType));
@@ -1014,7 +1015,7 @@ static int loc_eng_atl_closed()
     INIT_CHECK("loc_eng_atl_closed");
 
 #ifdef FEATURE_GNSS_BIT_API
-    loc_eng_dmn_conn_loc_api_server_data_conn(0);
+    loc_eng_dmn_conn_loc_api_server_data_conn(GPSONE_LOC_API_IF_RELEASE_SUCCESS);
 #endif
     loc_eng_msg *msg(new loc_eng_msg(LOC_ENG_MSG_ATL_CLOSE_STATUS));
     loc_eng_msgsnd( loc_eng_data.deferred_q, &msg);
@@ -1046,7 +1047,7 @@ int loc_eng_atl_open_failed()
     INIT_CHECK("loc_eng_atl_open_failed");
 
 #ifdef FEATURE_GNSS_BIT_API
-    loc_eng_dmn_conn_loc_api_server_data_conn(-1);
+    loc_eng_dmn_conn_loc_api_server_data_conn(GPSONE_LOC_API_IF_FAILURE);
 #endif
     loc_eng_msg *msg(new loc_eng_msg(LOC_ENG_MSG_ATL_OPEN_FAILED));
     loc_eng_msgsnd( loc_eng_data.deferred_q, &msg);
@@ -1914,7 +1915,7 @@ void loc_eng_if_wakeup(int if_req, unsigned is_supl, unsigned long ipv4_addr, un
 
     if (0 == tries) {
 #ifdef FEATURE_GNSS_BIT_API
-        loc_eng_dmn_conn_loc_api_server_data_conn(-1);
+        loc_eng_dmn_conn_loc_api_server_data_conn(GPSONE_LOC_API_IF_FAILURE);
 #endif
     }
 
