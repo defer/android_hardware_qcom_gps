@@ -837,7 +837,7 @@ static void loc_eng_agps_reinit()
     // Data connection for AGPS
     loc_eng_data.data_connection_bearer = AGPS_APN_BEARER_INVALID;
     int i=0;
-    for(i=0;i <= MAX_NUM_ATL_CONNECTIONS; i++ )
+    for(i=0;i < MAX_NUM_ATL_CONNECTIONS; i++ )
     {
         loc_eng_data.atl_conn_info[i].active = FALSE;
         loc_eng_data.atl_conn_info[i].conn_state = LOC_CONN_IDLE;
