@@ -2128,6 +2128,12 @@ static int loc_eng_ulp_init()
     const char *error;
     get_ulp_interface* get_ulp_inf;
 
+    if (!(gps_conf.CAPABILITIES & ULP_CAPABILITY)) {
+       LOGD ("ULP is not supported\n", __func__);
+       ret_val = -1;
+       goto exit;
+    }
+
     handle = dlopen ("libulp.so", RTLD_NOW);
     if (!handle)
     {
