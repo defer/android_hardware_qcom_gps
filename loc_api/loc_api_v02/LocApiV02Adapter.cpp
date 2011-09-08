@@ -39,6 +39,9 @@
 #include "loc_api_v02_client.h"
 #include "loc_api_sync_req.h"
 #include "LocApiAdapter.h"
+
+#define LOG_NDEBUG 0
+#define LOG_TAG "LocApiV02Adapter"
 #include "loc_util_log.h"
 
 
@@ -1537,6 +1540,12 @@ void LocApiV02Adapter :: reportNiRequest(
   notif.notify_flags       = 0;
 
   notif.default_response   = GPS_NI_RESPONSE_NORESP;
+
+ //randomize the notification id
+  notif.notification_id = abs(rand());
+
+  LOC_UTIL_LOGV("%s:%d]: Setting the notification id to %d\n", __func__,
+                __LINE__, notif.notification_id);
 
   /*Handle Vx request */
   if(ni_req_ptr->NiVxInd_valid == 1)
