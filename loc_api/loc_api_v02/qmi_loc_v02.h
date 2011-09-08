@@ -25,40 +25,8 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
 #ifndef QMILOC_SERVICE_H
 #define QMILOC_SERVICE_H
-/**
-  @file qmi_loc_v02.h
-
-  @brief This is the public header file which defines the qmiLoc service Data structures.
-
-  This header file defines the types and structures that were defined in
-  qmiLoc. It contains the constant values defined, enums, structures,
-  messages, and service message IDs (in that order) Structures that were
-  defined in the IDL as messages contain mandatory elements, optional
-  elements, a combination of mandatory and optional elements (mandatory
-  always come before optionals in the structure), or nothing (null message)
-
-  An optional element in a message is preceded by a uint8_t value that must be
-  set to true if the element is going to be included. When decoding a received
-  message, the uint8_t values will be set to true or false by the decode
-  routine, and should be checked before accessing the values that they
-  correspond to.
-
-  Variable sized arrays are defined as static sized arrays with an unsigned
-  integer (32 bit) preceding it that must be set to the number of elements
-  in the array that are valid. For Example:
-
-  uint32_t test_opaque_len;
-  uint8_t test_opaque[16];
-
-  If only 4 elements are added to test_opaque[] then test_opaque_len must be
-  set to 4 before sending the message.  When decoding, the _len value is set
-  by the decode routine and should be checked so that the correct number of
-  elements in the array will be accessed.
-
-*/
 
 /** @defgroup qmiLoc_qmi_consts Constant values defined in the IDL */
 /** @defgroup qmiLoc_qmi_msg_ids Constant values for QMI message IDs */
@@ -87,7 +55,7 @@ extern "C" {
 /** Major Version Number of the qmi_idl_compiler used to generate this file */
 #define QMILOC_V02_IDL_TOOL_VERS 0x02
 /** Maximum Defined Message ID */
-#define QMILOC_V02_MAX_MESSAGE_ID 0x003C;
+#define QMILOC_V02_MAX_MESSAGE_ID 0x005B;
 /**
     @}
   */
@@ -383,7 +351,7 @@ typedef uint32_t qmiLocPosTechMaskT_v02;
 typedef enum {
   QMILOCSESSIONSTATUSENUMT_MIN_ENUM_VAL_V02 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
   eQMI_LOC_SESS_STATUS_SUCCESS_V02 = 0, /**<  Session was successful.       */
-  eQMI_LOC_SESS_STATUS_IN_PROGESS_V02 = 1, /**<  Session still in progress. Further position reports will be
+  eQMI_LOC_SESS_STATUS_IN_PROGRESS_V02 = 1, /**<  Session still in progress. Further position reports will be
        generated until either the fix criteria specified by the client
        are met or the client response timeout occurs.    */
   eQMI_LOC_SESS_STATUS_GENERAL_FAILURE_V02 = 2, /**<  Session failed.   */
@@ -490,10 +458,15 @@ typedef enum {
   eQMI_LOC_TIME_SRC_TOW_CONFIRMED_V02 = 5, /**<  Time is set after decoding over-the-air GPS navigation data
        from multiple satellites.  */
   eQMI_LOC_TIME_SRC_TOW_AND_WEEK_CONFIRMED_V02 = 6, /**<  Both time of the week and the GPS week number are known.  */
-  eQMI_LOC_TIME_SRC_NAV_SOLUTION_V02 = 7, /**<  Time is set by the position engine after the fix is obtained.
- Time is set by the position engine after performing SFT.
+  eQMI_LOC_TIME_SRC_NAV_SOLUTION_V02 = 7, /**<  Time is set by the position engine after the fix is obtained.  */
+  eQMI_LOC_TIME_SRC_SOLVE_FOR_TIME_V02 = 8, /**<  Time is set by the position engine after performing SFT.
        This is done when the clock time uncertainty is large.  */
-  eQMI_LOC_TIME_SRC_SOLVE_FOR_TIME_V02 = 8,
+  eQMI_LOC_TIME_SRC_GLO_TOW_DECODE_V02 = 9, /**<  Time is set after decoding GLO satellites  */
+  eQMI_LOC_TIME_SRC_TIME_TRANSFORM_V02 = 10, /**<  Time is set after transforming the GPS to GLO time  */
+  eQMI_LOC_TIME_SRC_WCDMA_SLEEP_TIME_TAGGING_V02 = 11, /**<  Time is set by the sleep timetag provided by WCDMA network  */
+  eQMI_LOC_TIME_SRC_GSM_SLEEP_TIME_TAGGING_V02 = 12, /**<  Time is set by the sleep timetag provided by GSM network
+ Source of Time is Unknown  */
+  eQMI_LOC_TIME_SRC_UNKNOWN_V02 = 13,
   QMILOCTIMESOURCEENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
 }qmiLocTimeSourceEnumT_v02;
 /**
@@ -530,7 +503,7 @@ typedef struct {
 
         Valid values: \n
           - 0x00000000 -- SESS_STATUS_SUCCESS \n
-          - 0x00000001 -- SESS_STATUS_IN_PROGESS \n
+          - 0x00000001 -- SESS_STATUS_IN_PROGRESS \n
           - 0x00000002 -- SESS_STATUS_GENERAL_FAILURE \n
           - 0x00000003 -- SESS_STATUS_TIMEOUT \n
           - 0x00000004 -- SESS_STATUS_USER_END \n
@@ -1052,10 +1025,11 @@ typedef struct {
            - 0x00000009 -- NI_VX_GSM
      */
 
-  char requestorId[QMI_LOC_NI_MAX_REQUESTOR_ID_LENGTH_V02 + 1];
+  uint32_t requestorId_len;  /**< Must be set to # of elements in requestorId */
+  uint8_t requestorId[QMI_LOC_NI_MAX_REQUESTOR_ID_LENGTH_V02];
   /**<   Requestor ID. \n
-       - Type: NULL-terminated string \n
-       - Maximum string length (including NULL terminator) : 201
+       - Type:  Array of bytes \n
+       - Maximum array length : 200
    */
 
   uint16_t userRespTimerInSeconds;
@@ -1159,10 +1133,11 @@ typedef struct {
           - 0x7FFFFFFF -- FORMAT_OSS_UNKNOWN
     */
 
-  char formattedString[QMI_LOC_NI_MAX_CLIENT_NAME_LENGTH_V02 + 1];
+  uint32_t formattedString_len;  /**< Must be set to # of elements in formattedString */
+  uint8_t formattedString[QMI_LOC_NI_MAX_CLIENT_NAME_LENGTH_V02];
   /**<   Formatted string. \n
-        - Type: NULL-terminated string \n
-        - Maximum string length (including NULL terminator): 65
+        - Type: Byte array \n
+        - Maximum string length : 64
          */
 }qmiLocNiSuplFormattedStringStructT_v02;  /* Type */
 /**
@@ -1434,10 +1409,11 @@ typedef struct {
 
    */
 
-  char codedString[QMI_LOC_NI_CODEWORD_MAX_LENGTH_V02 + 1];
+  uint32_t codedString_len;  /**< Must be set to # of elements in codedString */
+  uint8_t codedString[QMI_LOC_NI_CODEWORD_MAX_LENGTH_V02];
   /**<   Coded string. \n
-       - Type: NULL-terminated string \n
-       - Maximum string length (including NULL terminator): 21  */
+       - Type: array of bytes \n
+       - Maximum string length : 20  */
 }qmiLocNiUmtsCpCodedStringStructT_v02;  /* Type */
 /**
     @}
@@ -1503,16 +1479,18 @@ typedef struct {
          - 0x0000001E -- NI_SUPL_GSM_DEFAULT
   */
 
-  char notificationText[QMI_LOC_NI_MAX_CLIENT_NAME_LENGTH_V02 + 1];
+  uint32_t notificationText_len;  /**< Must be set to # of elements in notificationText */
+  uint8_t notificationText[QMI_LOC_NI_MAX_CLIENT_NAME_LENGTH_V02];
   /**<   Notification text; the encoding method is specified in
        dataCodingScheme. \n
-       - Type: NULL-terminated string \n
-       - Maximum string length (including NULL terminator): 65  */
+       - Type: Array of bytes \n
+       - Maximum array length: 64  */
 
-  char clientAddress[QMI_LOC_NI_MAX_EXT_CLIENT_ADDRESS_V02 + 1];
+  uint32_t clientAddress_len;  /**< Must be set to # of elements in clientAddress */
+  uint8_t clientAddress[QMI_LOC_NI_MAX_EXT_CLIENT_ADDRESS_V02];
   /**<   Client address; the encoding method is specified in
        dataCodingScheme. \n
-       - Maximum string length (including NULL terminator): 21  */
+       - Maximum array length : 20  */
 
   qmiLocNiLocationTypeEnumT_v02 locationType;
   /**<   Location type.
@@ -2616,7 +2594,7 @@ typedef struct {
        - Range: -90.0 to 90.0 \n
        - Positive values indicate northern latitude \n
        - Negative values indicate southern latitude.\n
-   Latitude must be specified if longitude was specified.  */
+     */
 
   /* Optional */
   uint8_t longitude_valid;  /**< Must be set to true if longitude is being passed */
@@ -2627,8 +2605,7 @@ typedef struct {
        - Range: -180.0 to 180.0 \n
        - Positive values indicate eastern longitude \n
        - Negative values indicate western longitude.\n
-
-   Longitude must be specified if latitude was specified.  */
+    */
 
   /* Optional */
   uint8_t horUncCircular_valid;  /**< Must be set to true if horUncCircular is being passed */
@@ -3952,25 +3929,6 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_aggregates
-    @{
-  */
-typedef struct {
-
-  uint8_t stationary;
-  /**<   Whether the device is stationary:\n
-       - 0x00 (FALSE) -- Device is not stationary \n
-       - 0x01 (TRUE) -- Device is stationary  */
-
-  uint8_t confidence;
-  /**<   Confidence expressed as a percentage.\n
-       - Type: Unsigned integer \n
-       - Range: 0 to 100  */
-}qmiLocSpiStatusStructT_v02;  /* Type */
-/**
-    @}
-  */
-
 /** @addtogroup qmiLoc_qmi_messages
     @{
   */
@@ -3979,10 +3937,19 @@ typedef struct {
                     device is stationary. */
 typedef struct {
 
+  /* Mandatory */
+  uint8_t stationary;
+  /**<   Whether the device is stationary:\n
+       - 0x00 (FALSE) -- Device is not stationary \n
+       - 0x01 (TRUE)  -- Device is stationary  */
+
   /* Optional */
-  uint8_t status_valid;  /**< Must be set to true if status is being passed */
-  qmiLocSpiStatusStructT_v02 status;
-  /**<   Specifies the status of SPI.  */
+  uint8_t confidenceStationary_valid;  /**< Must be set to true if confidenceStationary is being passed */
+  uint8_t confidenceStationary;
+  /**<   Confidence of stationary state expressed as a percentage.\n
+       - Type: Unsigned integer \n
+       - Range: 0 to 100
+ Specifies the status of SPI.  */
 }qmiLocSetSpiStatusReqMsgT_v02;  /* Message */
 /**
     @}
@@ -4230,29 +4197,6 @@ typedef enum {
  * }qmiLocGetCradleMountConfigReqMsgT_v02;
  */
 
-/** @addtogroup qmiLoc_qmi_aggregates
-    @{
-  */
-typedef struct {
-
-  qmiLocCradleMountStateEnumT_v02 cradleMountState;
-  /**<   Cradle mount state set by the control point. \n
-
-       Valid values: \n
-         - 0x00000000 -- CRADLE_STATE_NOT_MOUNTED \n
-         - 0x00000001 -- CRADLE_STATE_MOUNTED \n
-         - 0x00000002 -- CRADLE_STATE_UNKNOWN
-          */
-
-  uint8_t confidence;
-  /**<   Confidence of state expressed in percent.\n
-       - Type: Unsigned integer \n
-       - Range: 0 to 100  */
-}qmiLocCradleMountInfoStructT_v02;  /* Type */
-/**
-    @}
-  */
-
 /** @addtogroup qmiLoc_qmi_messages
     @{
   */
@@ -4275,9 +4219,22 @@ typedef struct {
    */
 
   /* Optional */
-  uint8_t cradleState_valid;  /**< Must be set to true if cradleState is being passed */
-  qmiLocCradleMountInfoStructT_v02 cradleState;
-  /**<   Echo back the cradle state that was last specified by the control point.  */
+  uint8_t cradleMountState_valid;  /**< Must be set to true if cradleMountState is being passed */
+  qmiLocCradleMountStateEnumT_v02 cradleMountState;
+  /**<   Cradle mount state set by the control point. \n
+
+       Valid values: \n
+         - 0x00000000 -- CRADLE_STATE_NOT_MOUNTED \n
+         - 0x00000001 -- CRADLE_STATE_MOUNTED \n
+         - 0x00000002 -- CRADLE_STATE_UNKNOWN
+          */
+
+  /* Optional */
+  uint8_t confidenceCradleMountState_valid;  /**< Must be set to true if confidenceCradleMountState is being passed */
+  uint8_t confidenceCradleMountState;
+  /**<   Confidence of Cradle Mount state expressed in percent.\n
+       - Type: Unsigned integer \n
+       - Range: 0 to 100  */
 }qmiLocGetCradleMountConfigIndMsgT_v02;  /* Message */
 /**
     @}
@@ -4290,10 +4247,21 @@ typedef struct {
                     cradle mount configuration. */
 typedef struct {
 
+  /* Mandatory */
+  qmiLocCradleMountStateEnumT_v02 cradleMountState;
+  /**<   Cradle mount state set by the control point. \n
+
+       Valid values: \n
+         - 0x00000000 -- CRADLE_STATE_NOT_MOUNTED \n
+         - 0x00000001 -- CRADLE_STATE_MOUNTED \n
+         - 0x00000002 -- CRADLE_STATE_UNKNOWN          */
+
   /* Optional */
-  uint8_t cradleState_valid;  /**< Must be set to true if cradleState is being passed */
-  qmiLocCradleMountInfoStructT_v02 cradleState;
-  /**<   Echo back the cradle state that was last specified by the control point.  */
+  uint8_t confidenceCradleMountState_valid;  /**< Must be set to true if confidenceCradleMountState is being passed */
+  uint8_t confidenceCradleMountState;
+  /**<   Confidence of Cradle Mount state expressed in percent.\n
+       - Type: Unsigned integer \n
+       - Range: 0 to 100  */
 }qmiLocSetCradleMountConfigReqMsgT_v02;  /* Message */
 /**
     @}
@@ -4809,9 +4777,9 @@ typedef struct {
   */
 
 /*
- * qmiLocGetSensorControlConfigRegMsgT is empty
+ * qmiLocGetSensorControlConfigReqMsgT is empty
  * typedef struct {
- * }qmiLocGetSensorControlConfigRegMsgT_v02;
+ * }qmiLocGetSensorControlConfigReqMsgT_v02;
  */
 
 /** @addtogroup qmiLoc_qmi_messages
@@ -5134,154 +5102,154 @@ typedef struct {
 /** @addtogroup qmiLoc_qmi_msg_ids
     @{
   */
-#define QMI_LOC_INFORM_CLIENT_REVISION_REQ_V02 0x0001
-#define QMI_LOC_INFORM_CLIENT_REVISION_RESP_V02 0x0001
-#define QMI_LOC_REG_EVENTS_REQ_V02 0x0002
-#define QMI_LOC_REG_EVENTS_RESP_V02 0x0002
-#define QMI_LOC_START_REQ_V02 0x0003
-#define QMI_LOC_START_RESP_V02 0x0003
-#define QMI_LOC_STOP_REQ_V02 0x0004
-#define QMI_LOC_STOP_RESP_V02 0x0004
-#define QMI_LOC_EVENT_POSITION_REPORT_IND_V02 0x0005
-#define QMI_LOC_EVENT_GNSS_SV_INFO_IND_V02 0x0006
-#define QMI_LOC_EVENT_NMEA_IND_V02 0x0007
-#define QMI_LOC_EVENT_NI_NOTIFY_VERIFY_REQ_IND_V02 0x0008
-#define QMI_LOC_EVENT_INJECT_TIME_REQ_IND_V02 0x0009
-#define QMI_LOC_EVENT_INJECT_PREDICTED_ORBITS_REQ_IND_V02 0x000A
-#define QMI_LOC_EVENT_INJECT_POSITION_REQ_IND_V02 0x000B
-#define QMI_LOC_EVENT_ENGINE_STATE_IND_V02 0x000C
-#define QMI_LOC_EVENT_FIX_SESSION_STATE_IND_V02 0x000D
-#define QMI_LOC_EVENT_WIFI_REQ_IND_V02 0x000E
-#define QMI_LOC_EVENT_SENSOR_STREAMING_READY_STATUS_IND_V02 0x000F
-#define QMI_LOC_EVENT_TIME_SYNC_REQ_IND_V02 0x0010
-#define QMI_LOC_EVENT_SET_SPI_STREAMING_REPORT_IND_V02 0x0011
-#define QMI_LOC_EVENT_LOCATION_SERVER_CONNECTION_REQ_IND_V02 0x0012
-#define QMI_LOC_GET_SERVICE_REVISION_REQ_V02 0x0013
-#define QMI_LOC_GET_SERVICE_REVISION_RESP_V02 0x0013
-#define QMI_LOC_GET_SERVICE_REVISION_IND_V02 0x0013
-#define QMI_LOC_GET_FIX_CRITERIA_REQ_V02 0x0014
-#define QMI_LOC_GET_FIX_CRITERIA_RESP_V02 0x0014
-#define QMI_LOC_GET_FIX_CRITERIA_IND_V02 0x0014
-#define QMI_LOC_NI_USER_RESPONSE_REQ_V02 0x0015
-#define QMI_LOC_NI_USER_RESPONSE_RESP_V02 0x0015
-#define QMI_LOC_NI_USER_RESPONSE_IND_V02 0x0015
-#define QMI_LOC_INJECT_PREDICTED_ORBITS_DATA_REQ_V02 0x0016
-#define QMI_LOC_INJECT_PREDICTED_ORBITS_DATA_RESP_V02 0x0016
-#define QMI_LOC_INJECT_PREDICTED_ORBITS_DATA_IND_V02 0x0016
-#define QMI_LOC_GET_PREDICTED_ORBITS_DATA_SOURCE_REQ_V02 0x0017
-#define QMI_LOC_GET_PREDICTED_ORBITS_DATA_SOURCE_RESP_V02 0x0017
-#define QMI_LOC_GET_PREDICTED_ORBITS_DATA_SOURCE_IND_V02 0x0017
-#define QMI_LOC_GET_PREDICTED_ORBITS_DATA_VALIDITY_REQ_V02 0x0018
-#define QMI_LOC_GET_PREDICTED_ORBITS_DATA_VALIDITY_RESP_V02 0x0018
-#define QMI_LOC_GET_PREDICTED_ORBITS_DATA_VALIDITY_IND_V02 0x0018
-#define QMI_LOC_INJECT_UTC_TIME_REQ_V02 0x0019
-#define QMI_LOC_INJECT_UTC_TIME_RESP_V02 0x0019
-#define QMI_LOC_INJECT_UTC_TIME_IND_V02 0x0019
-#define QMI_LOC_INJECT_POSITION_REQ_V02 0x001A
-#define QMI_LOC_INJECT_POSITION_RESP_V02 0x001A
-#define QMI_LOC_INJECT_POSITION_IND_V02 0x001A
-#define QMI_LOC_SET_ENGINE_LOCK_REQ_V02 0x001B
-#define QMI_LOC_SET_ENGINE_LOCK_RESP_V02 0x001B
-#define QMI_LOC_SET_ENGINE_LOCK_IND_V02 0x001B
-#define QMI_LOC_GET_ENGINE_LOCK_REQ_V02 0x001C
-#define QMI_LOC_GET_ENGINE_LOCK_RESP_V02 0x001C
-#define QMI_LOC_GET_ENGINE_LOCK_IND_V02 0x001C
-#define QMI_LOC_SET_SBAS_CONFIG_REQ_V02 0x001D
-#define QMI_LOC_SET_SBAS_CONFIG_RESP_V02 0x001D
-#define QMI_LOC_SET_SBAS_CONFIG_IND_V02 0x001D
-#define QMI_LOC_GET_SBAS_CONFIG_REQ_V02 0x001E
-#define QMI_LOC_GET_SBAS_CONFIG_RESP_V02 0x001E
-#define QMI_LOC_GET_SBAS_CONFIG_IND_V02 0x001E
-#define QMI_LOC_SET_NMEA_TYPES_REQ_V02 0x001F
-#define QMI_LOC_SET_NMEA_TYPES_RESP_V02 0x001F
-#define QMI_LOC_SET_NMEA_TYPES_IND_V02 0x001F
-#define QMI_LOC_GET_NMEA_TYPES_REQ_V02 0x0020
-#define QMI_LOC_GET_NMEA_TYPES_RESP_V02 0x0020
-#define QMI_LOC_GET_NMEA_TYPES_IND_V02 0x0020
-#define QMI_LOC_SET_LOW_POWER_MODE_REQ_V02 0x0021
-#define QMI_LOC_SET_LOW_POWER_MODE_RESP_V02 0x0021
-#define QMI_LOC_SET_LOW_POWER_MODE_IND_V02 0x0021
-#define QMI_LOC_GET_LOW_POWER_MODE_REQ_V02 0x0022
-#define QMI_LOC_GET_LOW_POWER_MODE_RESP_V02 0x0022
-#define QMI_LOC_GET_LOW_POWER_MODE_IND_V02 0x0022
-#define QMI_LOC_SET_SERVER_REQ_V02 0x0023
-#define QMI_LOC_SET_SERVER_RESP_V02 0x0023
-#define QMI_LOC_SET_SERVER_IND_V02 0x0023
-#define QMI_LOC_GET_SERVER_REQ_V02 0x0024
-#define QMI_LOC_GET_SERVER_RESP_V02 0x0024
-#define QMI_LOC_GET_SERVER_IND_V02 0x0024
-#define QMI_LOC_DELETE_ASSIST_DATA_REQ_V02 0x0025
-#define QMI_LOC_DELETE_ASSIST_DATA_RESP_V02 0x0025
-#define QMI_LOC_DELETE_ASSIST_DATA_IND_V02 0x0025
-#define QMI_LOC_SET_XTRA_T_SESSION_CONTROL_REQ_V02 0x0026
-#define QMI_LOC_SET_XTRA_T_SESSION_CONTROL_RESP_V02 0x0026
-#define QMI_LOC_SET_XTRA_T_SESSION_CONTROL_IND_V02 0x0026
-#define QMI_LOC_GET_XTRA_T_SESSION_CONTROL_REQ_V02 0x0027
-#define QMI_LOC_GET_XTRA_T_SESSION_CONTROL_RESP_V02 0x0027
-#define QMI_LOC_GET_XTRA_T_SESSION_CONTROL_IND_V02 0x0027
-#define QMI_LOC_INJECT_WIFI_POSITION_REQ_V02 0x0028
-#define QMI_LOC_INJECT_WIFI_POSITION_RESP_V02 0x0028
-#define QMI_LOC_INJECT_WIFI_POSITION_IND_V02 0x0028
-#define QMI_LOC_NOTIFY_WIFI_STATUS_REQ_V02 0x0029
-#define QMI_LOC_NOTIFY_WIFI_STATUS_RESP_V02 0x0029
-#define QMI_LOC_NOTIFY_WIFI_STATUS_IND_V02 0x0029
-#define QMI_LOC_GET_REGISTERED_EVENTS_REQ_V02 0x002A
-#define QMI_LOC_GET_REGISTERED_EVENTS_RESP_V02 0x002A
-#define QMI_LOC_GET_REGISTERED_EVENTS_IND_V02 0x002A
-#define QMI_LOC_SET_OPERATION_MODE_REQ_V02 0x002B
-#define QMI_LOC_SET_OPERATION_MODE_RESP_V02 0x002B
-#define QMI_LOC_SET_OPERATION_MODE_IND_V02 0x002B
-#define QMI_LOC_GET_OPERATION_MODE_REQ_V02 0x002C
-#define QMI_LOC_GET_OPERATION_MODE_RESP_V02 0x002C
-#define QMI_LOC_GET_OPERATION_MODE_IND_V02 0x002C
-#define QMI_LOC_SET_SPI_STATUS_REQ_V02 0x002D
-#define QMI_LOC_SET_SPI_STATUS_RESP_V02 0x002D
-#define QMI_LOC_SET_SPI_STATUS_IND_V02 0x002D
-#define QMI_LOC_INJECT_SENSOR_DATA_REQ_V02 0x002E
-#define QMI_LOC_INJECT_SENSOR_DATA_RESP_V02 0x002E
-#define QMI_LOC_INJECT_SENSOR_DATA_IND_V02 0x002E
-#define QMI_LOC_INJECT_TIME_SYNC_DATA_REQ_V02 0x002F
-#define QMI_LOC_INJECT_TIME_SYNC_DATA_RESP_V02 0x002F
-#define QMI_LOC_INJECT_TIME_SYNC_DATA_IND_V02 0x002F
-#define QMI_LOC_SET_CRADLE_MOUNT_CONFIG_REQ_V02 0x0030
-#define QMI_LOC_SET_CRADLE_MOUNT_CONFIG_RESP_V02 0x0030
-#define QMI_LOC_SET_CRADLE_MOUNT_CONFIG_IND_V02 0x0030
-#define QMI_LOC_GET_CRADLE_MOUNT_CONFIG_REQ_V02 0x0031
-#define QMI_LOC_GET_CRADLE_MOUNT_CONFIG_RESP_V02 0x0031
-#define QMI_LOC_GET_CRADLE_MOUNT_CONFIG_IND_V02 0x0031
-#define QMI_LOC_SET_EXTERNAL_POWER_CONFIG_REQ_V02 0x0032
-#define QMI_LOC_SET_EXTERNAL_POWER_CONFIG_RESP_V02 0x0032
-#define QMI_LOC_SET_EXTERNAL_POWER_CONFIG_IND_V02 0x0032
-#define QMI_LOC_GET_EXTERNAL_POWER_CONFIG_REQ_V02 0x0033
-#define QMI_LOC_GET_EXTERNAL_POWER_CONFIG_RESP_V02 0x0033
-#define QMI_LOC_GET_EXTERNAL_POWER_CONFIG_IND_V02 0x0033
-#define QMI_LOC_INFORM_LOCATION_SERVER_CONN_STATUS_REQ_V02 0x0034
-#define QMI_LOC_INFORM_LOCATION_SERVER_CONN_STATUS_RESP_V02 0x0034
-#define QMI_LOC_INFORM_LOCATION_SERVER_CONN_STATUS_IND_V02 0x0034
-#define QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_REQ_V02 0x0035
-#define QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_RESP_V02 0x0035
-#define QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_IND_V02 0x0035
-#define QMI_LOC_GET_PROTOCOL_CONFIG_PARAMETERS_REQ_V02 0x0036
-#define QMI_LOC_GET_PROTOCOL_CONFIG_PARAMETERS_RESP_V02 0x0036
-#define QMI_LOC_GET_PROTOCOL_CONFIG_PARAMETERS_IND_V02 0x0036
-#define QMI_LOC_SET_SENSOR_CONTROL_CONFIG_REQ_V02 0x0037
-#define QMI_LOC_SET_SENSOR_CONTROL_CONFIG_RESP_V02 0x0037
-#define QMI_LOC_SET_SENSOR_CONTROL_CONFIG_IND_V02 0x0037
-#define QMI_LOC_GET_SENSOR_CONTROL_CONFIG_REQ_V02 0x0038
-#define QMI_LOC_GET_SENSOR_CONTROL_CONFIG_RESP_V02 0x0038
-#define QMI_LOC_GET_SENSOR_CONTROL_CONFIG_IND_V02 0x0038
-#define QMI_LOC_SET_SENSOR_PROPERTIES_REQ_V02 0x0039
-#define QMI_LOC_SET_SENSOR_PROPERTIES_RESP_V02 0x0039
-#define QMI_LOC_SET_SENSOR_PROPERTIES_IND_V02 0x0039
-#define QMI_LOC_GET_SENSOR_PROPERTIES_REQ_V02 0x003A
-#define QMI_LOC_GET_SENSOR_PROPERTIES_RESP_V02 0x003A
-#define QMI_LOC_GET_SENSOR_PROPERTIES_IND_V02 0x003A
-#define QMI_LOC_SET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_REQ_V02 0x003B
-#define QMI_LOC_SET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_RESP_V02 0x003B
-#define QMI_LOC_SET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_IND_V02 0x003B
-#define QMI_LOC_GET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_REQ_V02 0x003C
-#define QMI_LOC_GET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_RESP_V02 0x003C
-#define QMI_LOC_GET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_IND_V02 0x003C
+#define QMI_LOC_INFORM_CLIENT_REVISION_REQ_V02 0x0020
+#define QMI_LOC_INFORM_CLIENT_REVISION_RESP_V02 0x0020
+#define QMI_LOC_REG_EVENTS_REQ_V02 0x0021
+#define QMI_LOC_REG_EVENTS_RESP_V02 0x0021
+#define QMI_LOC_START_REQ_V02 0x0022
+#define QMI_LOC_START_RESP_V02 0x0022
+#define QMI_LOC_STOP_REQ_V02 0x0023
+#define QMI_LOC_STOP_RESP_V02 0x0023
+#define QMI_LOC_EVENT_POSITION_REPORT_IND_V02 0x0024
+#define QMI_LOC_EVENT_GNSS_SV_INFO_IND_V02 0x0025
+#define QMI_LOC_EVENT_NMEA_IND_V02 0x0026
+#define QMI_LOC_EVENT_NI_NOTIFY_VERIFY_REQ_IND_V02 0x0027
+#define QMI_LOC_EVENT_INJECT_TIME_REQ_IND_V02 0x0028
+#define QMI_LOC_EVENT_INJECT_PREDICTED_ORBITS_REQ_IND_V02 0x0029
+#define QMI_LOC_EVENT_INJECT_POSITION_REQ_IND_V02 0x002A
+#define QMI_LOC_EVENT_ENGINE_STATE_IND_V02 0x002B
+#define QMI_LOC_EVENT_FIX_SESSION_STATE_IND_V02 0x002C
+#define QMI_LOC_EVENT_WIFI_REQ_IND_V02 0x002D
+#define QMI_LOC_EVENT_SENSOR_STREAMING_READY_STATUS_IND_V02 0x002E
+#define QMI_LOC_EVENT_TIME_SYNC_REQ_IND_V02 0x002F
+#define QMI_LOC_EVENT_SET_SPI_STREAMING_REPORT_IND_V02 0x0030
+#define QMI_LOC_EVENT_LOCATION_SERVER_CONNECTION_REQ_IND_V02 0x0031
+#define QMI_LOC_GET_SERVICE_REVISION_REQ_V02 0x0032
+#define QMI_LOC_GET_SERVICE_REVISION_RESP_V02 0x0032
+#define QMI_LOC_GET_SERVICE_REVISION_IND_V02 0x0032
+#define QMI_LOC_GET_FIX_CRITERIA_REQ_V02 0x0033
+#define QMI_LOC_GET_FIX_CRITERIA_RESP_V02 0x0033
+#define QMI_LOC_GET_FIX_CRITERIA_IND_V02 0x0033
+#define QMI_LOC_NI_USER_RESPONSE_REQ_V02 0x0034
+#define QMI_LOC_NI_USER_RESPONSE_RESP_V02 0x0034
+#define QMI_LOC_NI_USER_RESPONSE_IND_V02 0x0034
+#define QMI_LOC_INJECT_PREDICTED_ORBITS_DATA_REQ_V02 0x0035
+#define QMI_LOC_INJECT_PREDICTED_ORBITS_DATA_RESP_V02 0x0035
+#define QMI_LOC_INJECT_PREDICTED_ORBITS_DATA_IND_V02 0x0035
+#define QMI_LOC_GET_PREDICTED_ORBITS_DATA_SOURCE_REQ_V02 0x0036
+#define QMI_LOC_GET_PREDICTED_ORBITS_DATA_SOURCE_RESP_V02 0x0036
+#define QMI_LOC_GET_PREDICTED_ORBITS_DATA_SOURCE_IND_V02 0x0036
+#define QMI_LOC_GET_PREDICTED_ORBITS_DATA_VALIDITY_REQ_V02 0x0037
+#define QMI_LOC_GET_PREDICTED_ORBITS_DATA_VALIDITY_RESP_V02 0x0037
+#define QMI_LOC_GET_PREDICTED_ORBITS_DATA_VALIDITY_IND_V02 0x0037
+#define QMI_LOC_INJECT_UTC_TIME_REQ_V02 0x0038
+#define QMI_LOC_INJECT_UTC_TIME_RESP_V02 0x0038
+#define QMI_LOC_INJECT_UTC_TIME_IND_V02 0x0038
+#define QMI_LOC_INJECT_POSITION_REQ_V02 0x0039
+#define QMI_LOC_INJECT_POSITION_RESP_V02 0x0039
+#define QMI_LOC_INJECT_POSITION_IND_V02 0x0039
+#define QMI_LOC_SET_ENGINE_LOCK_REQ_V02 0x003A
+#define QMI_LOC_SET_ENGINE_LOCK_RESP_V02 0x003A
+#define QMI_LOC_SET_ENGINE_LOCK_IND_V02 0x003A
+#define QMI_LOC_GET_ENGINE_LOCK_REQ_V02 0x003B
+#define QMI_LOC_GET_ENGINE_LOCK_RESP_V02 0x003B
+#define QMI_LOC_GET_ENGINE_LOCK_IND_V02 0x003B
+#define QMI_LOC_SET_SBAS_CONFIG_REQ_V02 0x003C
+#define QMI_LOC_SET_SBAS_CONFIG_RESP_V02 0x003C
+#define QMI_LOC_SET_SBAS_CONFIG_IND_V02 0x003C
+#define QMI_LOC_GET_SBAS_CONFIG_REQ_V02 0x003D
+#define QMI_LOC_GET_SBAS_CONFIG_RESP_V02 0x003D
+#define QMI_LOC_GET_SBAS_CONFIG_IND_V02 0x003D
+#define QMI_LOC_SET_NMEA_TYPES_REQ_V02 0x003E
+#define QMI_LOC_SET_NMEA_TYPES_RESP_V02 0x003E
+#define QMI_LOC_SET_NMEA_TYPES_IND_V02 0x003E
+#define QMI_LOC_GET_NMEA_TYPES_REQ_V02 0x003F
+#define QMI_LOC_GET_NMEA_TYPES_RESP_V02 0x003F
+#define QMI_LOC_GET_NMEA_TYPES_IND_V02 0x003F
+#define QMI_LOC_SET_LOW_POWER_MODE_REQ_V02 0x0040
+#define QMI_LOC_SET_LOW_POWER_MODE_RESP_V02 0x0040
+#define QMI_LOC_SET_LOW_POWER_MODE_IND_V02 0x0040
+#define QMI_LOC_GET_LOW_POWER_MODE_REQ_V02 0x0041
+#define QMI_LOC_GET_LOW_POWER_MODE_RESP_V02 0x0041
+#define QMI_LOC_GET_LOW_POWER_MODE_IND_V02 0x0041
+#define QMI_LOC_SET_SERVER_REQ_V02 0x0042
+#define QMI_LOC_SET_SERVER_RESP_V02 0x0042
+#define QMI_LOC_SET_SERVER_IND_V02 0x0042
+#define QMI_LOC_GET_SERVER_REQ_V02 0x0043
+#define QMI_LOC_GET_SERVER_RESP_V02 0x0043
+#define QMI_LOC_GET_SERVER_IND_V02 0x0043
+#define QMI_LOC_DELETE_ASSIST_DATA_REQ_V02 0x0044
+#define QMI_LOC_DELETE_ASSIST_DATA_RESP_V02 0x0044
+#define QMI_LOC_DELETE_ASSIST_DATA_IND_V02 0x0044
+#define QMI_LOC_SET_XTRA_T_SESSION_CONTROL_REQ_V02 0x0045
+#define QMI_LOC_SET_XTRA_T_SESSION_CONTROL_RESP_V02 0x0045
+#define QMI_LOC_SET_XTRA_T_SESSION_CONTROL_IND_V02 0x0045
+#define QMI_LOC_GET_XTRA_T_SESSION_CONTROL_REQ_V02 0x0046
+#define QMI_LOC_GET_XTRA_T_SESSION_CONTROL_RESP_V02 0x0046
+#define QMI_LOC_GET_XTRA_T_SESSION_CONTROL_IND_V02 0x0046
+#define QMI_LOC_INJECT_WIFI_POSITION_REQ_V02 0x0047
+#define QMI_LOC_INJECT_WIFI_POSITION_RESP_V02 0x0047
+#define QMI_LOC_INJECT_WIFI_POSITION_IND_V02 0x0047
+#define QMI_LOC_NOTIFY_WIFI_STATUS_REQ_V02 0x0048
+#define QMI_LOC_NOTIFY_WIFI_STATUS_RESP_V02 0x0048
+#define QMI_LOC_NOTIFY_WIFI_STATUS_IND_V02 0x0048
+#define QMI_LOC_GET_REGISTERED_EVENTS_REQ_V02 0x0049
+#define QMI_LOC_GET_REGISTERED_EVENTS_RESP_V02 0x0049
+#define QMI_LOC_GET_REGISTERED_EVENTS_IND_V02 0x0049
+#define QMI_LOC_SET_OPERATION_MODE_REQ_V02 0x004A
+#define QMI_LOC_SET_OPERATION_MODE_RESP_V02 0x004A
+#define QMI_LOC_SET_OPERATION_MODE_IND_V02 0x004A
+#define QMI_LOC_GET_OPERATION_MODE_REQ_V02 0x004B
+#define QMI_LOC_GET_OPERATION_MODE_RESP_V02 0x004B
+#define QMI_LOC_GET_OPERATION_MODE_IND_V02 0x004B
+#define QMI_LOC_SET_SPI_STATUS_REQ_V02 0x004C
+#define QMI_LOC_SET_SPI_STATUS_RESP_V02 0x004C
+#define QMI_LOC_SET_SPI_STATUS_IND_V02 0x004C
+#define QMI_LOC_INJECT_SENSOR_DATA_REQ_V02 0x004D
+#define QMI_LOC_INJECT_SENSOR_DATA_RESP_V02 0x004D
+#define QMI_LOC_INJECT_SENSOR_DATA_IND_V02 0x004D
+#define QMI_LOC_INJECT_TIME_SYNC_DATA_REQ_V02 0x004E
+#define QMI_LOC_INJECT_TIME_SYNC_DATA_RESP_V02 0x004E
+#define QMI_LOC_INJECT_TIME_SYNC_DATA_IND_V02 0x004E
+#define QMI_LOC_SET_CRADLE_MOUNT_CONFIG_REQ_V02 0x004F
+#define QMI_LOC_SET_CRADLE_MOUNT_CONFIG_RESP_V02 0x004F
+#define QMI_LOC_SET_CRADLE_MOUNT_CONFIG_IND_V02 0x004F
+#define QMI_LOC_GET_CRADLE_MOUNT_CONFIG_REQ_V02 0x0050
+#define QMI_LOC_GET_CRADLE_MOUNT_CONFIG_RESP_V02 0x0050
+#define QMI_LOC_GET_CRADLE_MOUNT_CONFIG_IND_V02 0x0050
+#define QMI_LOC_SET_EXTERNAL_POWER_CONFIG_REQ_V02 0x0051
+#define QMI_LOC_SET_EXTERNAL_POWER_CONFIG_RESP_V02 0x0051
+#define QMI_LOC_SET_EXTERNAL_POWER_CONFIG_IND_V02 0x0051
+#define QMI_LOC_GET_EXTERNAL_POWER_CONFIG_REQ_V02 0x0052
+#define QMI_LOC_GET_EXTERNAL_POWER_CONFIG_RESP_V02 0x0052
+#define QMI_LOC_GET_EXTERNAL_POWER_CONFIG_IND_V02 0x0052
+#define QMI_LOC_INFORM_LOCATION_SERVER_CONN_STATUS_REQ_V02 0x0053
+#define QMI_LOC_INFORM_LOCATION_SERVER_CONN_STATUS_RESP_V02 0x0053
+#define QMI_LOC_INFORM_LOCATION_SERVER_CONN_STATUS_IND_V02 0x0053
+#define QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_REQ_V02 0x0054
+#define QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_RESP_V02 0x0054
+#define QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_IND_V02 0x0054
+#define QMI_LOC_GET_PROTOCOL_CONFIG_PARAMETERS_REQ_V02 0x0055
+#define QMI_LOC_GET_PROTOCOL_CONFIG_PARAMETERS_RESP_V02 0x0055
+#define QMI_LOC_GET_PROTOCOL_CONFIG_PARAMETERS_IND_V02 0x0055
+#define QMI_LOC_SET_SENSOR_CONTROL_CONFIG_REQ_V02 0x0056
+#define QMI_LOC_SET_SENSOR_CONTROL_CONFIG_RESP_V02 0x0056
+#define QMI_LOC_SET_SENSOR_CONTROL_CONFIG_IND_V02 0x0056
+#define QMI_LOC_GET_SENSOR_CONTROL_CONFIG_REQ_V02 0x0057
+#define QMI_LOC_GET_SENSOR_CONTROL_CONFIG_RESP_V02 0x0057
+#define QMI_LOC_GET_SENSOR_CONTROL_CONFIG_IND_V02 0x0057
+#define QMI_LOC_SET_SENSOR_PROPERTIES_REQ_V02 0x0058
+#define QMI_LOC_SET_SENSOR_PROPERTIES_RESP_V02 0x0058
+#define QMI_LOC_SET_SENSOR_PROPERTIES_IND_V02 0x0058
+#define QMI_LOC_GET_SENSOR_PROPERTIES_REQ_V02 0x0059
+#define QMI_LOC_GET_SENSOR_PROPERTIES_RESP_V02 0x0059
+#define QMI_LOC_GET_SENSOR_PROPERTIES_IND_V02 0x0059
+#define QMI_LOC_SET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_REQ_V02 0x005A
+#define QMI_LOC_SET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_RESP_V02 0x005A
+#define QMI_LOC_SET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_IND_V02 0x005A
+#define QMI_LOC_GET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_REQ_V02 0x005B
+#define QMI_LOC_GET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_RESP_V02 0x005B
+#define QMI_LOC_GET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_IND_V02 0x005B
 /**
     @}
   */

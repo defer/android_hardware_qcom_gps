@@ -1257,7 +1257,7 @@ void LocApiV02Adapter :: reportPosition (
   // Process the position from final and intermediate reports
 
   if( (location_report_ptr->sessionStatus == eQMI_LOC_SESS_STATUS_SUCCESS_V02) ||
-      (location_report_ptr->sessionStatus == eQMI_LOC_SESS_STATUS_IN_PROGESS_V02)
+      (location_report_ptr->sessionStatus == eQMI_LOC_SESS_STATUS_IN_PROGRESS_V02)
     )
   {
     // Time stamp (UTC)
@@ -1309,7 +1309,7 @@ void LocApiV02Adapter :: reportPosition (
     }
     LocApiAdapter::reportPosition( location,
                                    (location_report_ptr->sessionStatus
-                                    == eQMI_LOC_SESS_STATUS_IN_PROGESS_V02));
+                                    == eQMI_LOC_SESS_STATUS_IN_PROGRESS_V02));
   }
   else
   {
@@ -1556,7 +1556,7 @@ void LocApiV02Adapter :: reportNiRequest(
 
      // Requestor ID, the requestor id recieved is NULL terminated
      hexcode(notif.requestor_id, sizeof notif.requestor_id,
-             vx_req->requestorId, strlen(vx_req->requestorId));
+             (char *)vx_req->requestorId, vx_req->requestorId_len );
   }
 
   /* Handle UMTS CP request*/
@@ -1568,13 +1568,14 @@ void LocApiV02Adapter :: reportNiRequest(
     notif.ni_type     = GPS_NI_TYPE_UMTS_CTRL_PLANE;
 
     /* notificationText should always be a NULL terminated string */
-    hexcode(notif.text, sizeof notif.text, umts_cp_req->notificationText,
-            strlen(umts_cp_req->notificationText));
+    hexcode(notif.text, sizeof notif.text,
+            (char *)umts_cp_req->notificationText,
+            umts_cp_req->notificationText_len);
 
     /* Store requestor ID */
     hexcode(notif.requestor_id, sizeof(notif.requestor_id),
-            umts_cp_req->requestorId.codedString,
-            strlen(umts_cp_req->requestorId.codedString));
+            (char *)umts_cp_req->requestorId.codedString,
+            umts_cp_req->requestorId.codedString_len);
 
    /* convert encodings */
     notif.text_encoding = convertNiEncoding(umts_cp_req->dataCodingScheme);
@@ -1583,7 +1584,7 @@ void LocApiV02Adapter :: reportNiRequest(
       convertNiEncoding(umts_cp_req->requestorId.dataCodingScheme);
 
     /* LCS address (using extras field) */
-    if ( strlen(umts_cp_req->clientAddress) != 0)
+    if ( umts_cp_req->clientAddress_len != 0)
     {
       char lcs_addr[32]; // Decoded LCS address for UMTS CP NI
 
@@ -1592,10 +1593,10 @@ void LocApiV02Adapter :: reportNiRequest(
       strlcat(notif.extras, " = ", sizeof notif.extras);
       int addr_len = 0;
       const char *address_source = NULL;
-      address_source = umts_cp_req->clientAddress;
+      address_source = (char *)umts_cp_req->clientAddress;
       // client Address is always NULL terminated
       addr_len = decodeAddress(lcs_addr, sizeof(lcs_addr), address_source,
-                               strlen(umts_cp_req->clientAddress));
+                               umts_cp_req->clientAddress_len);
 
       // The address is ASCII string
       if (addr_len)
@@ -1616,8 +1617,8 @@ void LocApiV02Adapter :: reportNiRequest(
     if (supl_req->valid_flags & QMI_LOC_SUPL_CLIENT_NAME_MASK_V02)
     {
       hexcode(notif.text, sizeof(notif.text),
-              supl_req->clientName.formattedString,
-              strlen(supl_req->clientName.formattedString));
+              (char *)supl_req->clientName.formattedString,
+              supl_req->clientName.formattedString_len);
       LOC_UTIL_LOGV("SUPL NI: client_name: %s \n", notif.text);
     }
     else
@@ -1629,8 +1630,8 @@ void LocApiV02Adapter :: reportNiRequest(
     if (supl_req->valid_flags & QMI_LOC_SUPL_REQUESTOR_ID_MASK_V02)
     {
       hexcode(notif.requestor_id, sizeof notif.requestor_id,
-              supl_req->requestorId.formattedString,
-              strlen(supl_req->requestorId.formattedString) );
+              (char*)supl_req->requestorId.formattedString,
+              supl_req->requestorId.formattedString_len );
 
       LOC_UTIL_LOGV("SUPL NI: requestor_id: %s \n", notif.requestor_id);
     }
