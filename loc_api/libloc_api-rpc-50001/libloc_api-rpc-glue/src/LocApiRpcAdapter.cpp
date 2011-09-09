@@ -30,6 +30,7 @@
 #define LOG_TAG "LocApiRpcAdapter"
 
 #include <unistd.h>
+#include <stdlib.h>
 #include <math.h>
 #include <utils/SystemClock.h>
 #include "LocApiRpcAdapter.h"
@@ -979,6 +980,9 @@ void LocApiRpcAdapter::ATLEvent(const rpc_loc_server_request_s_type *server_requ
 void LocApiRpcAdapter::NIEvent(const rpc_loc_ni_event_s_type *ni_req)
 {
     GpsNiNotification notif = {0};
+
+    //randomize the notification id
+    notif.notification_id = abs(rand());
 
     switch (ni_req->event)
     {

@@ -144,7 +144,6 @@ RETURN VALUE
 ===========================================================================*/
 void loc_ni_request_handler(const GpsNiNotification &notif, const void* passThrough)
 {
-   char lcs_addr[32]; // Decoded LCS address for UMTS CP NI
 
    /* If busy, use default or deny */
    if (NULL != loc_eng_ni_data.loc_ni_request)
@@ -162,11 +161,7 @@ void loc_ni_request_handler(const GpsNiNotification &notif, const void* passThro
       /* Save request */
       loc_eng_ni_data.loc_ni_request = (void*)passThrough;
 
-      /* Set up NI response waiting */
-      loc_eng_ni_data.current_notif_id = abs(rand());
-
-      /* Fill in notification */
-      ((GpsNiNotification)notif).notification_id = loc_eng_ni_data.current_notif_id;
+      loc_eng_ni_data.current_notif_id = notif.notification_id;
 
       if (notif.notify_flags == GPS_NI_PRIVACY_OVERRIDE)
       {
@@ -177,6 +172,7 @@ void loc_ni_request_handler(const GpsNiNotification &notif, const void* passThro
       LOC_LOGI("Notification: notif_type: %d, timeout: %d, default_resp: %d", notif.ni_type, notif.timeout, notif.default_response);
       LOC_LOGI("              requestor_id: %s (encoding: %d)", notif.requestor_id, notif.requestor_id_encoding);
       LOC_LOGI("              text: %s text (encoding: %d)", notif.text, notif.text_encoding);
+      LOC_LOGI("              notification id %d, notify flags %u", notif.notification_id, notif.notify_flags);
       if (notif.extras[0])
       {
          LOC_LOGI("              extras: %s", notif.extras);
@@ -371,7 +367,7 @@ void loc_eng_ni_respond(int notif_id, GpsUserResponseType user_response)
       loc_ni_process_user_response(user_response);
    }
    else {
-      LOC_LOGE("loc_eng_ni_respond: notif_id %d mismatch or notification not in progress, response: %d",
-            notif_id, user_response);
+      LOC_LOGE("loc_eng_ni_respond: notif_id %d, loc_eng_ni_data.current_notif_id %d, loc_ni_request %p, mismatch or notification not in progress, response: %d",
+                notif_id, loc_eng_ni_data.current_notif_id, loc_eng_ni_data.loc_ni_request, user_response);
    }
 }
