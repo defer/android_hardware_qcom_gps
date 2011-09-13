@@ -830,6 +830,20 @@ static bool locClientHandleIndication(
       break;
     }
 
+    case QMI_LOC_GET_EXTERNAL_POWER_CONFIG_IND_V02:
+    {
+      //locClientHandleGetExtPowerConfigInd(user_handle, msg_id, ind_buf, ind_buf_len);
+      status = true;
+      break;
+    }
+
+    case QMI_LOC_GET_CRADLE_MOUNT_CONFIG_IND_V02:
+    {
+      //locClientHandleGetCradleMountConfigInd(user_handle, msg_id, ind_buf, ind_buf_len);
+      status = true;
+      break;
+    }
+
     case QMI_LOC_GET_SENSOR_CONTROL_CONFIG_IND_V02:
     {
       //locClientHandleGetSensorControlConfigInd(user_handle, msg_id, ind_buf, ind_buf_len);
