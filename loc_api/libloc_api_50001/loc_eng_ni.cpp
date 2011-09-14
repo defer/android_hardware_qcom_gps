@@ -127,7 +127,7 @@ static void loc_ni_respond
 {
     LOC_LOGD("Sending NI response: %s\n", respond_from_enum(resp));
     loc_eng_msg_inform_ni_response *msg(new loc_eng_msg_inform_ni_response(resp, request_pass_back));
-    loc_eng_msgsnd( loc_eng_data.deferred_q, &msg);
+    loc_eng_msg_sender(msg);
 }
 
 /*===========================================================================
