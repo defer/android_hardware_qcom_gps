@@ -119,7 +119,7 @@ typedef struct
 
    // Data variables used by deferred action thread
    pthread_t                      deferred_action_thread;
-   int                            deferred_q;
+   void*                          deferred_q;
 
    // flags for pending events for deferred action thread
    unsigned int                   deferred_action_flags;
@@ -132,5 +132,6 @@ typedef struct
 extern loc_eng_data_s_type loc_eng_data;
 
 extern void loc_eng_mute_one_session();
+extern void loc_eng_msg_sender(void* msg);
 
 #endif // LOC_ENG_H

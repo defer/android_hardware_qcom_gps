@@ -57,6 +57,7 @@
 #include <loc_eng_dmn_conn_handler.h>
 #include <loc_eng_msg.h>
 #include <loc_eng_msg_id.h>
+#include <msg_q.h>
 
 #include "ulp.h"
 
@@ -122,7 +123,6 @@ static void loc_eng_agps_ril_update_network_state(int connected, int type, int r
 static void loc_eng_agps_ril_update_network_availability(int avaiable, const char* apn);
 static bool loc_eng_inject_raw_command(char* command, int length);
 static int loc_eng_update_criteria(UlpLocationCriteria criteria);
-static void loc_eng_msg_sender(void* msg);
 
 // Defines the GpsInterface in gps.h
 static const GpsInterface sLocEngInterface =
@@ -241,9 +241,14 @@ const GpsInterface* gps_get_hardware_interface ()
     return ret_val;
 }
 
-static void loc_eng_msg_sender(void* msg)
+static void loc_eng_free_msg(void* msg)
 {
-    loc_eng_msgsnd(loc_eng_data.deferred_q, msg);
+    delete (loc_eng_msg*)msg;
+}
+
+void loc_eng_msg_sender(void* msg)
+{
+    msg_q_snd(loc_eng_data.deferred_q, msg, loc_eng_free_msg);
 }
 
 /*===========================================================================
@@ -292,7 +297,11 @@ static int loc_eng_init(GpsCallbacks* callbacks)
        loc_eng_data.aiding_data_for_deletion = 0;
 
        // Create threads (if not yet created)
-       loc_eng_msgget( &loc_eng_data.deferred_q);
+       if (eMSG_Q_SUCCESS != msg_q_init(&loc_eng_data.deferred_q)) {
+           LOC_LOGE("loc_eng_create_msg_q Q init failed.");
+           loc_eng_data.deferred_q = NULL;
+       }
+
        loc_eng_data.deferred_action_thread = callbacks->create_thread_cb("loc_api",loc_eng_deferred_action_thread, NULL);
        loc_eng_ulp_init();
 #ifdef FEATURE_GNSS_BIT_API
@@ -344,16 +353,16 @@ static int loc_eng_reinit()
     LOC_LOGD("loc_eng_init created client, id = %p\n", loc_eng_data.client_handle);
 
     loc_eng_msg_suple_version *supl_msg(new loc_eng_msg_suple_version(gps_conf.SUPL_VER));
-    loc_eng_msgsnd( loc_eng_data.deferred_q, &supl_msg);
+    msg_q_snd( loc_eng_data.deferred_q, supl_msg, loc_eng_free_msg);
 
     loc_eng_msg_sensor_control_config *sensor_control_config_msg(new loc_eng_msg_sensor_control_config(gps_conf.SENSOR_USAGE));
-    loc_eng_msgsnd(loc_eng_data.deferred_q, &sensor_control_config_msg);
+    msg_q_snd(loc_eng_data.deferred_q, sensor_control_config_msg, loc_eng_free_msg);
 
     /* Make sure this is specified by the user in the gps.conf file */
     if(gps_conf.GYRO_BIAS_RANDOM_WALK_VALID)
     {
         loc_eng_msg_sensor_properties *sensor_properties_msg(new loc_eng_msg_sensor_properties(gps_conf.GYRO_BIAS_RANDOM_WALK));
-        loc_eng_msgsnd(loc_eng_data.deferred_q, &sensor_properties_msg);
+        msg_q_snd(loc_eng_data.deferred_q, sensor_properties_msg, loc_eng_free_msg);
     }
 
     loc_eng_msg_sensor_perf_control_config *sensor_perf_control_conf_msg(new loc_eng_msg_sensor_perf_control_config(gps_conf.SENSOR_CONTROL_MODE,
@@ -362,7 +371,7 @@ static int loc_eng_reinit()
                                                                                                                     gps_conf.SENSOR_GYRO_SAMPLES_PER_BATCH,
                                                                                                                     gps_conf.SENSOR_GYRO_BATCHES_PER_SEC
                                                                                                                     ));
-    loc_eng_msgsnd(loc_eng_data.deferred_q, &sensor_perf_control_conf_msg);
+    msg_q_snd(loc_eng_data.deferred_q, sensor_perf_control_conf_msg, loc_eng_free_msg);
 
     ret_val = 0;
 
@@ -402,11 +411,11 @@ static int loc_eng_deinit()
     if (loc_eng_data.deferred_action_thread)
     {
         loc_eng_msg *msg(new loc_eng_msg(LOC_ENG_MSG_QUIT));
-        loc_eng_msgsnd( loc_eng_data.deferred_q, &msg);
+        msg_q_snd( loc_eng_data.deferred_q, msg, loc_eng_free_msg);
 
         void* ignoredValue;
         pthread_join(loc_eng_data.deferred_action_thread, &ignoredValue);
-        loc_eng_msgremove( loc_eng_data.deferred_q);
+        msg_q_destroy( &loc_eng_data.deferred_q);
         loc_eng_data.deferred_action_thread = NULL;
     }
 
@@ -502,7 +511,7 @@ static int loc_eng_start()
    INIT_CHECK("loc_eng_start");
 
    loc_eng_msg *msg(new loc_eng_msg(LOC_ENG_MSG_START_FIX));
-   loc_eng_msgsnd( loc_eng_data.deferred_q, &msg);
+   msg_q_snd( loc_eng_data.deferred_q, msg, loc_eng_free_msg);
    int ret_val = 0;
 
    EXIT_LOG(%d, ret_val);
@@ -551,7 +560,7 @@ static int loc_eng_stop()
     INIT_CHECK("loc_eng_stop");
 
     loc_eng_msg *msg(new loc_eng_msg(LOC_ENG_MSG_STOP_FIX));
-    loc_eng_msgsnd(loc_eng_data.deferred_q, &msg);
+    msg_q_snd(loc_eng_data.deferred_q, msg, loc_eng_free_msg);
 
     EXIT_LOG(%d, 0);
     return 0;
@@ -628,7 +637,7 @@ static int  loc_eng_set_position_mode(GpsPositionMode mode,
     ENTRY_LOG_CALLFLOW();
     loc_eng_msg_position_mode *msg(new loc_eng_msg_position_mode(mode, recurrence, min_interval,
                                                                  preferred_accuracy, preferred_time));
-    loc_eng_msgsnd( loc_eng_data.deferred_q, &msg);
+    msg_q_snd( loc_eng_data.deferred_q, msg, loc_eng_free_msg);
     EXIT_LOG(%d, 0);
     return 0;
 }
@@ -653,7 +662,7 @@ static int loc_eng_inject_time(GpsUtcTime time, int64_t timeReference, int uncer
 {
     ENTRY_LOG_CALLFLOW();
     loc_eng_msg_set_time *msg(new loc_eng_msg_set_time(time, timeReference, uncertainty));
-    loc_eng_msgsnd( loc_eng_data.deferred_q, &msg);
+    msg_q_snd( loc_eng_data.deferred_q, msg, loc_eng_free_msg);
     EXIT_LOG(%d, 0);
     return 0;
 }
@@ -679,7 +688,7 @@ static int loc_eng_inject_location(double latitude, double longitude, float accu
 {
     ENTRY_LOG_CALLFLOW();
     loc_eng_msg_inject_location *msg(new loc_eng_msg_inject_location(latitude, longitude, accuracy));
-    loc_eng_msgsnd( loc_eng_data.deferred_q, &msg);
+    msg_q_snd( loc_eng_data.deferred_q, msg, loc_eng_free_msg);
     EXIT_LOG(%d, 0);
     return 0;
 }
@@ -711,7 +720,7 @@ static void loc_eng_delete_aiding_data(GpsAidingData f)
     INIT_CHECK_VOID("loc_eng_delete_aiding_data");
 
     loc_eng_msg_delete_aiding_data *msg(new loc_eng_msg_delete_aiding_data(f));
-    loc_eng_msgsnd( loc_eng_data.deferred_q, &msg);
+    msg_q_snd( loc_eng_data.deferred_q, msg, loc_eng_free_msg);
 
     EXIT_LOG(%s, VOID_RET);
 }
@@ -986,7 +995,7 @@ static int loc_eng_atl_open(const char* apn, AGpsBearerType bearerType)
 #endif
     int apn_len = smaller_of(strlen (apn), MAX_APN_LEN);
     loc_eng_msg_atl_open_status *msg(new loc_eng_msg_atl_open_status(apn, apn_len, bearerType));
-    loc_eng_msgsnd( loc_eng_data.deferred_q, &msg);
+    msg_q_snd( loc_eng_data.deferred_q, msg, loc_eng_free_msg);
 
     EXIT_LOG(%d, 0);
     return 0;
@@ -1018,7 +1027,7 @@ static int loc_eng_atl_closed()
     loc_eng_dmn_conn_loc_api_server_data_conn(GPSONE_LOC_API_IF_RELEASE_SUCCESS);
 #endif
     loc_eng_msg *msg(new loc_eng_msg(LOC_ENG_MSG_ATL_CLOSE_STATUS));
-    loc_eng_msgsnd( loc_eng_data.deferred_q, &msg);
+    msg_q_snd( loc_eng_data.deferred_q, msg, loc_eng_free_msg);
 
     EXIT_LOG(%d, 0);
     return 0;
@@ -1050,7 +1059,7 @@ int loc_eng_atl_open_failed()
     loc_eng_dmn_conn_loc_api_server_data_conn(GPSONE_LOC_API_IF_FAILURE);
 #endif
     loc_eng_msg *msg(new loc_eng_msg(LOC_ENG_MSG_ATL_OPEN_FAILED));
-    loc_eng_msgsnd( loc_eng_data.deferred_q, &msg);
+    msg_q_snd( loc_eng_data.deferred_q, msg, loc_eng_free_msg);
     EXIT_LOG(%d, 0);
     return 0;
 }
@@ -1129,7 +1138,7 @@ static int loc_eng_set_server(AGpsType type, const char* hostname, int port)
         } else {
             unsigned int ip = htonl(addr.s_addr);
             loc_eng_msg_set_server_ipv4 *msg(new loc_eng_msg_set_server_ipv4(ip, port));
-            loc_eng_msgsnd( loc_eng_data.deferred_q, &msg);
+            msg_q_snd( loc_eng_data.deferred_q, msg, loc_eng_free_msg);
         }
     } else if (AGPS_TYPE_SUPL == type) {
         char url[MAX_URL_LEN];
@@ -1137,7 +1146,7 @@ static int loc_eng_set_server(AGpsType type, const char* hostname, int port)
 
         if (sizeof(url) > len) {
             loc_eng_msg_set_server_url *msg(new loc_eng_msg_set_server_url(url, len));
-            loc_eng_msgsnd( loc_eng_data.deferred_q, &msg);
+            msg_q_snd( loc_eng_data.deferred_q, msg, loc_eng_free_msg);
         }
     }
     EXIT_LOG(%d, ret);
@@ -1227,7 +1236,7 @@ static void loc_eng_agps_ril_update_network_availability(int available, const ch
         LOC_LOGD("loc_eng_agps_ril_update_network_availability: APN Name = [%s]\n", apn);
         int apn_len = smaller_of(strlen (apn), MAX_APN_LEN);
         loc_eng_msg_set_data_enable *msg(new loc_eng_msg_set_data_enable(apn, apn_len, available));
-        loc_eng_msgsnd( loc_eng_data.deferred_q, &msg);
+        msg_q_snd( loc_eng_data.deferred_q, msg, loc_eng_free_msg);
     }
     EXIT_LOG(%s, VOID_RET);
 }
@@ -1604,10 +1613,10 @@ static void loc_eng_deferred_action_thread(void* arg)
 
         loc_eng_data.release_wakelock_cb();
         // we are only sending / receiving msg pointers
-        int length = loc_eng_msgrcv(loc_eng_data.deferred_q, (void **) &msg);
+        msq_q_err_type result = msg_q_rcv(loc_eng_data.deferred_q, (void **) &msg);
         loc_eng_data.acquire_wakelock_cb();
-        if (length <= 0) {
-            LOC_LOGE("%s:%d] fail receiving msg\n", __func__, __LINE__);
+        if (eMSG_Q_SUCCESS != result) {
+            LOC_LOGE("%s:%d] fail receiving msg: \n", __func__, __LINE__);
             return;
         }
 

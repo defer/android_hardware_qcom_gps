@@ -86,37 +86,37 @@ int LocApiAdapter::decodeAddress(char *addr_string, int string_size,
 void LocApiAdapter::reportPosition(GpsLocation &location, bool intermediate)
 {
     loc_eng_msg_report_position *msg(new loc_eng_msg_report_position(location, intermediate));
-    locEngHandle.sendMsge(&msg);
+    locEngHandle.sendMsge(msg);
 }
 
 void LocApiAdapter::reportSv(GpsSvStatus &svStatus)
 {
     loc_eng_msg_report_sv *msg(new loc_eng_msg_report_sv(svStatus));
-    locEngHandle.sendMsge(&msg);
+    locEngHandle.sendMsge(msg);
 }
 
 void LocApiAdapter::reportStatus(GpsStatusValue status)
 {
     loc_eng_msg_report_status *msg(new loc_eng_msg_report_status(status));
-    locEngHandle.sendMsge(&msg);
+    locEngHandle.sendMsge(msg);
 }
 
 void LocApiAdapter::reportNmea(const char* nmea, int length)
 {
     loc_eng_msg_report_nmea *msg(new loc_eng_msg_report_nmea(nmea, length));
-    locEngHandle.sendMsge(&msg);
+    locEngHandle.sendMsge(msg);
 }
 
 void LocApiAdapter::requestATL(int connHandle, AGpsType agps_type)
 {
     loc_eng_msg_request_atl *msg(new loc_eng_msg_request_atl(connHandle, agps_type));
-    locEngHandle.sendMsge(&msg);
+    locEngHandle.sendMsge(msg);
 }
 
 void LocApiAdapter::releaseATL(int connHandle)
 {
     loc_eng_msg_release_atl *msg(new loc_eng_msg_release_atl(connHandle));
-    locEngHandle.sendMsge(&msg);
+    locEngHandle.sendMsge(msg);
 }
 
 void LocApiAdapter::requestXtraData()
@@ -124,7 +124,7 @@ void LocApiAdapter::requestXtraData()
     LOC_LOGD("XTRA download request");
 
     loc_eng_msg *msg(new loc_eng_msg(LOC_ENG_MSG_REQUEST_XTRA_DATA));
-    locEngHandle.sendMsge(&msg);
+    locEngHandle.sendMsge(msg);
 }
 
 void LocApiAdapter::requestTime()
@@ -147,17 +147,17 @@ void LocApiAdapter::requestNiNotify(GpsNiNotification &notif, const void* data)
     notif.timeout     = LOC_NI_NO_RESPONSE_TIME;
 
     loc_eng_msg_request_ni *msg(new loc_eng_msg_request_ni(notif, data));
-    locEngHandle.sendMsge(&msg);
+    locEngHandle.sendMsge(msg);
 }
 
 void LocApiAdapter::handleEngineDownEvent()
 {
     loc_eng_msg *msg(new loc_eng_msg(LOC_ENG_MSG_ENGINE_DOWN));
-    locEngHandle.sendMsge(&msg);
+    locEngHandle.sendMsge(msg);
 }
 
 void LocApiAdapter::handleEngineUpEvent()
 {
     loc_eng_msg *msg(new loc_eng_msg(LOC_ENG_MSG_ENGINE_UP));
-    locEngHandle.sendMsge(&msg);
+    locEngHandle.sendMsge(msg);
 }

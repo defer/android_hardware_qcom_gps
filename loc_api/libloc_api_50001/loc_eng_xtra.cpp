@@ -104,7 +104,7 @@ SIDE EFFECTS
 static int qct_loc_eng_inject_xtra_data_proxy(char* data, int length)
 {
     loc_eng_msg_inject_xtra_data *msg(new loc_eng_msg_inject_xtra_data(data, length));
-    loc_eng_msgsnd( loc_eng_data.deferred_q, &msg);
+    loc_eng_msg_sender(msg);
 
     return 0;
 }
