@@ -73,7 +73,7 @@ struct loc_eng_msg_sensor_control_config : public loc_eng_msg {
 };
 
 struct loc_eng_msg_sensor_properties : public loc_eng_msg {
-    const int gyroBiasVarianceRandomWalk;
+    const float gyroBiasVarianceRandomWalk;
     inline loc_eng_msg_sensor_properties(float gyroBiasRandomWalk) :
             loc_eng_msg(LOC_ENG_MSG_SET_SENSOR_PROPERTIES),
             gyroBiasVarianceRandomWalk(gyroBiasRandomWalk)
