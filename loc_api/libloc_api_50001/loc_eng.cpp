@@ -940,8 +940,9 @@ static void loc_eng_atl_close_status(int is_succ)
 
     for (int i=0;i< MAX_NUM_ATL_CONNECTIONS;i++)
     {
-        LOC_LOGD("loc_eng_atl_close_status, is_active = %d, handle = %d, state = %d, bearer: %d\n",
-                 loc_eng_data.atl_conn_info[i].active, (int) loc_eng_data.atl_conn_info[i].conn_handle,
+        LOC_LOGD("loc_eng_atl_close_status, active = %d, handle = %d, state = %d, bearer: %d\n",
+                 loc_eng_data.atl_conn_info[i].active,
+                 (int) loc_eng_data.atl_conn_info[i].conn_handle,
                  loc_eng_data.atl_conn_info[i].conn_state,
                  loc_eng_data.data_connection_bearer);
 
@@ -949,12 +950,16 @@ static void loc_eng_atl_close_status(int is_succ)
              ((loc_eng_data.atl_conn_info[i].conn_state == LOC_CONN_CLOSE_REQ )||
               (loc_eng_data.atl_conn_info[i].conn_state == LOC_CONN_IDLE)))
         {
+            int conn_handle = loc_eng_data.atl_conn_info[i].conn_handle;
 
             //update the session states
             loc_eng_data.atl_conn_info[i].conn_state = LOC_CONN_IDLE;
             loc_eng_data.atl_conn_info[i].active = FALSE;
             loc_eng_data.atl_conn_info[i].conn_handle = INVALID_ATL_CONNECTION_HANDLE;
             loc_eng_data.atl_conn_info[i].agps_type = AGPS_TYPE_INVALID;
+
+            loc_eng_data.client_handle->atlCloseStatus(conn_handle,
+                                                       is_succ);
         }
     }
 
@@ -1439,10 +1444,12 @@ static void loc_eng_process_atl_action(int conn_handle,
                  session_index);
     } else {
         LOC_LOGD("loc_eng_process_atl_action.session_index = %x, active_session_state = %x ,"
-                 "active_session_handle = %x session_active %d\n", session_index,
+                 "active_session_handle = %x session_active = %d agps_type = %d\n",
+                 session_index,
                  loc_eng_data.atl_conn_info[session_index].conn_state,
                  (int) loc_eng_data.atl_conn_info[session_index].conn_handle,
-                 loc_eng_data.atl_conn_info[session_index].active);
+                 loc_eng_data.atl_conn_info[session_index].active,
+                 loc_eng_data.atl_conn_info[session_index].agps_type);
         //ATL data connection open request from modem
         if(status == GPS_REQUEST_AGPS_DATA_CONN )
         {
@@ -1495,7 +1502,8 @@ static void loc_eng_process_atl_action(int conn_handle,
                 loc_eng_data.atl_conn_info[session_index].conn_state = LOC_CONN_CLOSE_REQ;
                 if(check_if_all_connection(LOC_CONN_IDLE,session_index))
                 {
-                    loc_eng_report_agps_status(agps_type,status,INADDR_NONE,NULL);
+                    loc_eng_report_agps_status(loc_eng_data.atl_conn_info[session_index].agps_type,
+                                               status,INADDR_NONE,NULL);
                 }else
                 {
                     //Simply acknowledge to the modem that the connection is closed even through we dont pass
