@@ -56,7 +56,7 @@ const char* loc_get_name_from_val(loc_name_val_s_type table[], int table_size, l
 
 extern const char* log_succ_fail_string(int is_succ);
 
-extern char *loc_get_time(char *time_string);
+extern char *loc_get_time(char *time_string, unsigned long buf_size);
 
 #ifdef __cplusplus
 }

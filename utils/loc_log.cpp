@@ -87,7 +87,7 @@ RETURN VALUE
    The time string
 
 ===========================================================================*/
-char *loc_get_time(char *time_string)
+char *loc_get_time(char *time_string, unsigned long buf_size)
 {
    struct timeval now;     /* sec and usec     */
    struct tm now_tm;       /* broken-down time */
@@ -97,7 +97,7 @@ char *loc_get_time(char *time_string)
    localtime_r(&now.tv_sec, &now_tm);
 
    strftime(hms_string, sizeof hms_string, "%H:%M:%S", &now_tm);
-   sprintf(time_string, "%s.%03d", hms_string, (int) (now.tv_usec / 1000));
+   snprintf(time_string, buf_size, "%s.%03d", hms_string, (int) (now.tv_usec / 1000));
 
    return time_string;
 }
@@ -140,7 +140,7 @@ RETURN VALUE
 SIDE EFFECTS
    N/A
 ===========================================================================*/
-char * get_timestamp(char *str)
+char * get_timestamp(char *str, unsigned long buf_size)
 {
   struct timeval tv;
   struct timezone tz;
@@ -149,7 +149,7 @@ char * get_timestamp(char *str)
   hh = tv.tv_sec/3600%24;
   mm = (tv.tv_sec%3600)/60;
   ss = tv.tv_sec%60;
-  sprintf(str, "%02d:%02d:%02d.%06ld", hh, mm, ss, tv.tv_usec);
+  snprintf(str, buf_size, "%02d:%02d:%02d.%06ld", hh, mm, ss, tv.tv_usec);
   return str;
 }
 
