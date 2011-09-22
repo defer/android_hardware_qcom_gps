@@ -1398,7 +1398,7 @@ static int loc_eng_report_agps_status(AGpsType type,
        }
    }
 
-    EXIT_LOG(%s, ret);
+    EXIT_LOG(%d, ret);
     return ret;
 }
 
