@@ -83,6 +83,7 @@ typedef struct
    int                              conn_handle;
    AGpsType                         agps_type;
    boolean                          active;
+   char                             apn[MAX_APN_LEN+1];
 }loc_eng_atl_info_s_type;
 
 // Module data
