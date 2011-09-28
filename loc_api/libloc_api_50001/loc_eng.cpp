@@ -332,10 +332,15 @@ static int loc_eng_init(GpsCallbacks* callbacks)
        loc_eng_data.client_handle = getLocApiAdapter(locEngHandle);
 
        // call reinit to send initialization messages
-       loc_eng_reinit();
+       int tries = 30;
+       while (tries > 0 &&
+              LOC_API_ADAPTER_ERR_SUCCESS != (ret_val = loc_eng_reinit())) {
+           tries--;
+           LOC_LOGD("loc_eng_init client open failed, %d more tries", tries);
+           sleep(1);
+       }
 
        loc_eng_inited = 1;
-       ret_val = 0;
    }
 
    EXIT_LOG(%d, ret_val);
@@ -346,34 +351,32 @@ static int loc_eng_init(GpsCallbacks* callbacks)
 static int loc_eng_reinit()
 {
     ENTRY_LOG();
-    int ret_val;
+    int ret_val = loc_eng_data.client_handle->reinit();
 
-    loc_eng_data.client_handle->reinit();
+    if (LOC_API_ADAPTER_ERR_SUCCESS == ret_val) {
+        LOC_LOGD("loc_eng_init created client, id = %p\n", loc_eng_data.client_handle);
 
-    LOC_LOGD("loc_eng_init created client, id = %p\n", loc_eng_data.client_handle);
+        loc_eng_msg_suple_version *supl_msg(new loc_eng_msg_suple_version(gps_conf.SUPL_VER));
+        msg_q_snd( loc_eng_data.deferred_q, supl_msg, loc_eng_free_msg);
 
-    loc_eng_msg_suple_version *supl_msg(new loc_eng_msg_suple_version(gps_conf.SUPL_VER));
-    msg_q_snd( loc_eng_data.deferred_q, supl_msg, loc_eng_free_msg);
+        loc_eng_msg_sensor_control_config *sensor_control_config_msg(new loc_eng_msg_sensor_control_config(gps_conf.SENSOR_USAGE));
+        msg_q_snd(loc_eng_data.deferred_q, sensor_control_config_msg, loc_eng_free_msg);
 
-    loc_eng_msg_sensor_control_config *sensor_control_config_msg(new loc_eng_msg_sensor_control_config(gps_conf.SENSOR_USAGE));
-    msg_q_snd(loc_eng_data.deferred_q, sensor_control_config_msg, loc_eng_free_msg);
+        /* Make sure this is specified by the user in the gps.conf file */
+        if(gps_conf.GYRO_BIAS_RANDOM_WALK_VALID)
+        {
+            loc_eng_msg_sensor_properties *sensor_properties_msg(new loc_eng_msg_sensor_properties(gps_conf.GYRO_BIAS_RANDOM_WALK));
+            msg_q_snd(loc_eng_data.deferred_q, sensor_properties_msg, loc_eng_free_msg);
+        }
 
-    /* Make sure this is specified by the user in the gps.conf file */
-    if(gps_conf.GYRO_BIAS_RANDOM_WALK_VALID)
-    {
-        loc_eng_msg_sensor_properties *sensor_properties_msg(new loc_eng_msg_sensor_properties(gps_conf.GYRO_BIAS_RANDOM_WALK));
-        msg_q_snd(loc_eng_data.deferred_q, sensor_properties_msg, loc_eng_free_msg);
+        loc_eng_msg_sensor_perf_control_config *sensor_perf_control_conf_msg(
+            new loc_eng_msg_sensor_perf_control_config(gps_conf.SENSOR_CONTROL_MODE,
+                                                       gps_conf.SENSOR_ACCEL_SAMPLES_PER_BATCH,
+                                                       gps_conf.SENSOR_ACCEL_BATCHES_PER_SEC,
+                                                       gps_conf.SENSOR_GYRO_SAMPLES_PER_BATCH,
+                                                       gps_conf.SENSOR_GYRO_BATCHES_PER_SEC));
+        msg_q_snd(loc_eng_data.deferred_q, sensor_perf_control_conf_msg, loc_eng_free_msg);
     }
-
-    loc_eng_msg_sensor_perf_control_config *sensor_perf_control_conf_msg(new loc_eng_msg_sensor_perf_control_config(gps_conf.SENSOR_CONTROL_MODE,
-                                                                                                                    gps_conf.SENSOR_ACCEL_SAMPLES_PER_BATCH,
-                                                                                                                    gps_conf.SENSOR_ACCEL_BATCHES_PER_SEC,
-                                                                                                                    gps_conf.SENSOR_GYRO_SAMPLES_PER_BATCH,
-                                                                                                                    gps_conf.SENSOR_GYRO_BATCHES_PER_SEC
-                                                                                                                    ));
-    msg_q_snd(loc_eng_data.deferred_q, sensor_perf_control_conf_msg, loc_eng_free_msg);
-
-    ret_val = 0;
 
     EXIT_LOG(%d, ret_val);
     return ret_val;
