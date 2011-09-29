@@ -33,8 +33,12 @@
 #include <stdlib.h>
 #include <sys/time.h>
 #include "loc_log.h"
+#include "msg_q.h"
 
 #include "log_util.h"
+
+// Logging Improvements
+const char *loc_logger_boolStr[]={"False","True"};
 
 /* Logging Mechanism */
 loc_logger_s_type loc_logger;
@@ -65,6 +69,23 @@ const char* loc_get_name_from_val(loc_name_val_s_type table[], int table_size, l
       }
    }
    return UNKNOWN_STR;
+}
+
+static loc_name_val_s_type loc_msg_q_status[] =
+{
+    NAME_VAL( eMSG_Q_SUCCESS ),
+    NAME_VAL( eMSG_Q_FAILURE_GENERAL ),
+    NAME_VAL( eMSG_Q_INVALID_PARAMETER ),
+    NAME_VAL( eMSG_Q_INVALID_HANDLE ),
+    NAME_VAL( eMSG_Q_UNAVAILABLE_RESOURCE ),
+    NAME_VAL( eMSG_Q_INSUFFICIENT_BUFFER )
+};
+static int loc_msg_q_status_num = sizeof(loc_msg_q_status) / sizeof(loc_name_val_s_type);
+
+/* Find msg_q status name */
+const char* loc_get_msg_q_status(int status)
+{
+   return loc_get_name_from_val(loc_msg_q_status, loc_msg_q_status_num, (long) status);
 }
 
 const char* log_succ_fail_string(int is_succ)

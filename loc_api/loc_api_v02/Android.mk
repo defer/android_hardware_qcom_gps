@@ -11,8 +11,9 @@ LOCAL_SHARED_LIBRARIES := \
     libcutils \
     libqmi_cci \
     libqmi_csi \
-    libqmi_common_so\
-    libloc_adapter
+    libqmi_common_so \
+    libloc_adapter \
+    libgps.utils
 
 LOCAL_SRC_FILES += \
     LocApiV02Adapter.cpp \
@@ -27,7 +28,8 @@ LOCAL_CFLAGS += \
 ## Includes
 LOCAL_C_INCLUDES := \
     $(TARGET_OUT_HEADERS)/qmi-framework/inc \
-    $(TARGET_OUT_HEADERS)/libloc_adapter
+    $(TARGET_OUT_HEADERS)/libloc_eng \
+    $(TARGET_OUT_HEADERS)/gps.utils
 
 LOCAL_PRELINK_MODULE := false
 

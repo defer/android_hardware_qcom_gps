@@ -28,7 +28,7 @@
  */
 
 #define LOG_NDDEBUG 0
-#define LOG_TAG "libloc_rpc"
+#define LOG_TAG "libloc_api_rpc_glue"
 
 #include "loc_api_log.h"
 #include "loc_log.h"

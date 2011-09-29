@@ -53,6 +53,9 @@ typedef struct loc_logger_s
  *============================================================================*/
 extern loc_logger_s_type loc_logger;
 
+// Logging Improvements
+extern const char *loc_logger_boolStr[];
+
 /*=============================================================================
  *
  *                        MODULE EXPORTED FUNCTIONS

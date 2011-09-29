@@ -31,7 +31,6 @@
 #define LOC_ENG_H
 
 // Uncomment to keep all LOG messages (LOGD, LOGI, LOGV, etc.)
-#define LOG_NDEBUG 0
 #define MAX_NUM_ATL_CONNECTIONS  2
 // Define boolean type to be used by libgps on loc api module
 typedef unsigned char boolean;
@@ -44,6 +43,7 @@ typedef unsigned char boolean;
 #define FALSE 0
 #endif
 
+#include <loc.h>
 #include <loc_eng_xtra.h>
 #include <loc_eng_ni.h>
 #include <loc_cfg.h>
@@ -66,16 +66,18 @@ typedef unsigned char boolean;
 #define smaller_of(a, b) (((a) > (b)) ? (b) : (a))
 
 enum loc_mute_session_e_type {
-   LOC_MUTE_SESS_NONE,
+   LOC_MUTE_SESS_NONE = 0,
    LOC_MUTE_SESS_WAIT,
    LOC_MUTE_SESS_IN_SESSION
 };
+
 enum loc_eng_atl_session_state_e_type{
-   LOC_CONN_IDLE,
+   LOC_CONN_IDLE = 0,
    LOC_CONN_OPEN_REQ,
    LOC_CONN_OPEN,
    LOC_CONN_CLOSE_REQ
 };
+
 typedef struct
 {
    // ATL variables
@@ -89,50 +91,120 @@ typedef struct
 // Module data
 typedef struct
 {
-   LocApiAdapter                 *client_handle;
-   gps_location_callback          location_cb;
-   gps_status_callback            status_cb;
-   gps_sv_status_callback         sv_status_cb;
-   agps_status_callback           agps_status_cb;
-   gps_nmea_callback              nmea_cb;
-   gps_ni_notify_callback         ni_notify_cb;
-   gps_acquire_wakelock           acquire_wakelock_cb;
-   gps_release_wakelock           release_wakelock_cb;
-   AGpsStatusValue                agps_status;
-   // used to defer stopping the GPS engine until AGPS data calls are done
-   boolean                         agps_request_pending;
-   boolean                         stop_request_pending;
-   loc_eng_xtra_data_s_type       xtra_module_data;
+    LocApiAdapter                 *client_handle;
+    loc_location_cb_ext            location_cb;
+    gps_status_callback            status_cb;
+    loc_sv_status_cb_ext           sv_status_cb;
+    agps_status_callback           agps_status_cb;
+    gps_nmea_callback              nmea_cb;
+    gps_ni_notify_callback         ni_notify_cb;
+    gps_acquire_wakelock           acquire_wakelock_cb;
+    gps_release_wakelock           release_wakelock_cb;
+    boolean                        intermediateFix;
+    AGpsStatusValue                agps_status;
+    // used to defer stopping the GPS engine until AGPS data calls are done
+    boolean                        agps_request_pending;
+    boolean                        stop_request_pending;
+    loc_eng_xtra_data_s_type       xtra_module_data;
+    loc_eng_ni_data_s_type         loc_eng_ni_data;
 
-   boolean                        navigating;
-   AGpsBearerType                 data_connection_bearer;
+    boolean                        navigating;
+    AGpsBearerType                 data_connection_bearer;
 
-   // ATL variables
-   // Adequate instances of ATL variables for cases where we have simultaneous
-   // connections to MPC & PDE
-   loc_eng_atl_info_s_type       atl_conn_info[MAX_NUM_ATL_CONNECTIONS];
-   // GPS engine status
-   GpsStatusValue                 engine_status;
-   GpsStatusValue                 fix_session_status;
+    // ATL variables
+    // Adequate instances of ATL variables for cases where we have simultaneous
+    // connections to MPC & PDE
+    loc_eng_atl_info_s_type        atl_conn_info[MAX_NUM_ATL_CONNECTIONS];
+    // GPS engine status
+    GpsStatusValue                 engine_status;
+    GpsStatusValue                 fix_session_status;
 
-   // Aiding data information to be deleted, aiding data can only be deleted when GPS engine is off
-   GpsAidingData                  aiding_data_for_deletion;
+    // Aiding data information to be deleted, aiding data can only be deleted when GPS engine is off
+    GpsAidingData                  aiding_data_for_deletion;
 
-   // Data variables used by deferred action thread
-   pthread_t                      deferred_action_thread;
-   void*                          deferred_q;
+    void*                          context;
 
-   // flags for pending events for deferred action thread
-   unsigned int                   deferred_action_flags;
-   // For muting session broadcast
-   loc_mute_session_e_type        mute_session_state;
-    // [0] - supl version
-    // [1] - position_mode
+    loc_eng_msg_position_mode      position_mode;
+
+    // For muting session broadcast
+    loc_mute_session_e_type        mute_session_state;
+
+    // Address buffers, for addressing setting before init
+    int    supl_host_set;
+    char   supl_host_buf[101];
+    int    supl_port_buf;
+    int    c2k_host_set;
+    char   c2k_host_buf[101];
+    int    c2k_port_buf;
+    int    mpc_host_set;
+    char   mpc_host_buf[101];
+    int    mpc_port_buf;
 } loc_eng_data_s_type;
 
-extern loc_eng_data_s_type loc_eng_data;
 
-extern void loc_eng_mute_one_session();
-extern void loc_eng_msg_sender(void* msg);
+int  loc_eng_init(loc_eng_data_s_type &loc_eng_data,
+                  LocCallbacks* callbacks,
+                  LOC_API_ADAPTER_EVENT_MASK_T event);
+int  loc_eng_start(loc_eng_data_s_type &loc_eng_data);
+int  loc_eng_stop(loc_eng_data_s_type &loc_eng_data);
+void loc_eng_cleanup(loc_eng_data_s_type &loc_eng_data);
+int  loc_eng_inject_time(loc_eng_data_s_type &loc_eng_data,
+                         GpsUtcTime time, int64_t timeReference,
+                         int uncertainty);
+int  loc_eng_inject_location(loc_eng_data_s_type &loc_eng_data,
+                             double latitude, double longitude,
+                             float accuracy);
+void loc_eng_delete_aiding_data(loc_eng_data_s_type &loc_eng_data,
+                                GpsAidingData f);
+int  loc_eng_set_position_mode(loc_eng_data_s_type &loc_eng_data,
+                               LocPositionMode mode, GpsPositionRecurrence recurrence,
+                               uint32_t min_interval, uint32_t preferred_accuracy,
+                               uint32_t preferred_time);
+const void* loc_eng_get_extension(loc_eng_data_s_type &loc_eng_data,
+                                  const char* name);
+int  loc_eng_update_criteria(loc_eng_data_s_type &loc_eng_data,
+                             UlpLocationCriteria criteria);
+
+
+void loc_eng_agps_init(loc_eng_data_s_type &loc_eng_data,
+                       AGpsCallbacks* callbacks);
+int  loc_eng_atl_open(loc_eng_data_s_type &loc_eng_data,
+                      const char* apn, AGpsBearerType bearerType);
+int  loc_eng_atl_closed(loc_eng_data_s_type &loc_eng_data);
+int  loc_eng_atl_open_failed(loc_eng_data_s_type &loc_eng_data);
+int  loc_eng_set_server_proxy(loc_eng_data_s_type &loc_eng_data,
+                              LocServerType type, const char *hostname, int port);
+
+
+void loc_eng_agps_ril_update_network_availability(loc_eng_data_s_type &loc_eng_data,
+                                                  int avaiable, const char* apn);
+
+
+bool loc_eng_inject_raw_command(loc_eng_data_s_type &loc_eng_data,
+                                char* command, int length);
+
+
+void loc_eng_mute_one_session(loc_eng_data_s_type &loc_eng_data);
+
+void loc_eng_if_wakeup(loc_eng_data_s_type &loc_eng_data,
+                       int if_req, unsigned is_supl,
+                       unsigned long ipv4_addr, unsigned char * ipv6_addr);
+
+void loc_eng_msg_sender(void* loc_eng_data_p, void* msg);
+
+int loc_eng_xtra_init (loc_eng_data_s_type &loc_eng_data,
+                       GpsXtraCallbacks* callbacks);
+
+int loc_eng_xtra_inject_data(loc_eng_data_s_type &loc_eng_data,
+                             char* data, int length);
+
+extern void loc_eng_ni_init(loc_eng_data_s_type &loc_eng_data,
+                            GpsNiCallbacks *callbacks);
+extern void loc_eng_ni_respond(loc_eng_data_s_type &loc_eng_data,
+                               int notif_id, GpsUserResponseType user_response);
+extern void loc_eng_ni_request_handler(loc_eng_data_s_type &loc_eng_data,
+                                   const GpsNiNotification *notif,
+                                   const void* passThrough);
+extern void loc_eng_ni_reset_on_engine_restart(loc_eng_data_s_type &loc_eng_data);
 
 #endif // LOC_ENG_H

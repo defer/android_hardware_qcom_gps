@@ -28,38 +28,15 @@
  */
 
 #define LOG_NDDEBUG 0
-#define LOG_TAG "libloc"
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <ctype.h>
-#include <errno.h>
-#include <math.h>
-#include <pthread.h>
+#define LOG_TAG "libloc_eng"
 
 #include <loc_eng.h>
 #include <loc_eng_msg.h>
-#include <loc_eng_msg_id.h>
-
 #include "log_util.h"
 
-// comment this out to enable logging
-// #undef LOGD
-// #define LOGD(...) {}
-
-static int qct_loc_eng_xtra_init (GpsXtraCallbacks* callbacks);
-static int qct_loc_eng_inject_xtra_data_proxy(char* data, int length);
-
-const GpsXtraInterface sLocEngXTRAInterface =
-{
-    sizeof(GpsXtraInterface),
-    qct_loc_eng_xtra_init,
-    qct_loc_eng_inject_xtra_data_proxy
-};
 
 /*===========================================================================
-FUNCTION    qct_loc_eng_xtra_init
+FUNCTION    loc_eng_xtra_init
 
 DESCRIPTION
    Initialize XTRA module.
@@ -74,7 +51,8 @@ SIDE EFFECTS
    N/A
 
 ===========================================================================*/
-static int qct_loc_eng_xtra_init (GpsXtraCallbacks* callbacks)
+int loc_eng_xtra_init (loc_eng_data_s_type &loc_eng_data,
+                       GpsXtraCallbacks* callbacks)
 {
    loc_eng_xtra_data_s_type *xtra_module_data_ptr;
 
@@ -85,7 +63,7 @@ static int qct_loc_eng_xtra_init (GpsXtraCallbacks* callbacks)
 }
 
 /*===========================================================================
-FUNCTION    qct_loc_eng_inject_xtra_data_proxy
+FUNCTION    loc_eng_xtra_inject_data
 
 DESCRIPTION
    Injects XTRA file into the engine but buffers the data if engine is busy.
@@ -101,10 +79,12 @@ SIDE EFFECTS
    N/A
 
 ===========================================================================*/
-static int qct_loc_eng_inject_xtra_data_proxy(char* data, int length)
+int loc_eng_xtra_inject_data(loc_eng_data_s_type &loc_eng_data,
+                             char* data, int length)
 {
-    loc_eng_msg_inject_xtra_data *msg(new loc_eng_msg_inject_xtra_data(data, length));
-    loc_eng_msg_sender(msg);
+    loc_eng_msg_inject_xtra_data *msg(new loc_eng_msg_inject_xtra_data(&loc_eng_data,
+                                                                       data, length));
+    loc_eng_msg_sender(&loc_eng_data, msg);
 
     return 0;
 }

@@ -55,7 +55,7 @@
 #include "rpc_inc/loc_apicb_appinit.h"
 
 /* Logging */
-#define LOG_TAG "loc_api_rpc_glue"
+#define LOG_TAG "libloc_api_rpc_glue"
 #define LOG_NDDEBUG 0
 #include <utils/Log.h>
 
@@ -112,19 +112,19 @@ bool_t rpc_loc_event_cb_f_type_svc(
     /* Callback not registered, or unexpected ID (shouldn't happen) */
     if (index >= LOC_API_CB_MAX_CLIENTS || loc_glue_callback_table[index].cb_func == NULL)
     {
-        LOGE("Warning: No callback handler %d.\n", index);
+        LOC_LOGE("Warning: No callback handler %d.\n", index);
         ret->loc_event_cb_f_type_result = 0;
         return 1; /* simply return */
     }
 
-    LOGV("proc: %x  prog: %x  vers: %x\n",
+    LOC_LOGV("proc: %x  prog: %x  vers: %x\n",
          (int) req->rq_proc,
          (int) req->rq_prog,
          (int) req->rq_vers);
 
-    LOGV("Callback received: %x (cb_id=0x%X handle=%d ret_ptr=%d)\n",
+    LOC_LOGV("Callback received: %x (cb_id=%p handle=%d ret_ptr=%d)\n",
          (int) argp->loc_event,
-         (int) argp->cb_id,
+               argp->cb_id,
          (int) argp->loc_handle,
          (int) ret);
 
@@ -140,7 +140,7 @@ bool_t rpc_loc_event_cb_f_type_svc(
     int32 rc = (loc_glue_callback_table[index].cb_func)(loc_glue_callback_table[index].user,
                                                         loc_handle, loc_event, loc_event_payload);
 
-    LOGV("cb_func=0x%x", (unsigned) loc_glue_callback_table[index].cb_func);
+    LOC_LOGV("cb_func=%p", loc_glue_callback_table[index].cb_func);
 
     ret->loc_event_cb_f_type_result = rc;
 
@@ -154,7 +154,7 @@ int loc_apicbprog_freeresult (SVCXPRT *transp, xdrproc_t xdr_result, caddr_t res
    /*
     * Insert additional freeing code here, if needed
     */
-   // LOGD("***** loc_apicbprog_freeresult\n");
+   // LOC_LOGD("***** loc_apicbprog_freeresult\n");
 
    return 1;
 }
@@ -272,13 +272,13 @@ int loc_api_glue_init(void)
       }
 
       /* Print msg */
-      LOGV("Trying to create RPC client...\n");
+      LOC_LOGV("Trying to create RPC client...\n");
       loc_api_clnt = clnt_create(NULL, LOC_APIPROG, LOC_APIVERS, NULL);
-      LOGV("Created loc_api_clnt ---- %x\n", (unsigned int)loc_api_clnt);
+      LOC_LOGV("Created loc_api_clnt ---- %x\n", (unsigned int)loc_api_clnt);
 
       if (loc_api_clnt == NULL)
       {
-         LOGE("Error: cannot create RPC client.\n");
+         LOC_LOGE("Error: cannot create RPC client.\n");
          return 0;
       }
 
@@ -288,11 +288,11 @@ int loc_api_glue_init(void)
       int rc = loc_apicb_app_init();
       if (rc >= 0)
       {
-         LOGD("Loc API RPC client initialized.\n");
+         LOC_LOGD("Loc API RPC client initialized.\n");
          clnt_register_reset_notification_cb(loc_api_clnt, loc_api_glue_rpc_cb);
       }
       else {
-         LOGE("Loc API callback initialization failed.\n");
+         LOC_LOGE("Loc API callback initialization failed.\n");
          return 0;
       }
    }
@@ -321,8 +321,8 @@ rpc_loc_client_handle_type loc_open (
         if (loc_glue_callback_table[i].cb_func == event_callback ||
             loc_glue_callback_table[i].user == userData)
         {
-            LOGW("Client already opened service (callback=0x%X)...\n",
-                 (unsigned int) event_callback);
+            LOC_LOGW("Client already opened service (callback=%p)...\n",
+                  event_callback);
             break;
         }
     }
@@ -343,13 +343,13 @@ rpc_loc_client_handle_type loc_open (
 
     if (i == LOC_API_CB_MAX_CLIENTS)
     {
-        LOGE("Too many clients opened at once...\n");
+        LOC_LOGE("Too many clients opened at once...\n");
         ret_val = RPC_LOC_CLIENT_HANDLE_INVALID;
         goto exit;
     }
 
     args.event_callback = loc_glue_callback_table[i].cb_id;
-    LOGV("cb_id=%d, func=0x%x", i, (unsigned int) event_callback);
+    LOC_LOGV("cb_id=%d, func=0x%x", i, (unsigned int) event_callback);
 
     rpc_loc_open_rets rets;
     enum clnt_stat stat = RPC_SUCCESS;
@@ -363,7 +363,7 @@ rpc_loc_client_handle_type loc_open (
     ret_val = (rpc_loc_client_handle_type) rets.loc_open_result;
 
 exit:
-    EXIT_LOG_CALLFLOW(%p, ret_val);
+    EXIT_LOG_CALLFLOW(%d, ret_val);
     return ret_val;
 
 }
@@ -412,7 +412,7 @@ void loc_clear(rpc_loc_client_handle_type handle) {
 
     if (i == LOC_API_CB_MAX_CLIENTS)
     {
-        LOGW("Handle not found (handle=%d)...\n", (int) handle);
+        LOC_LOGW("Handle not found (handle=%d)...\n", (int) handle);
     }
 }
 

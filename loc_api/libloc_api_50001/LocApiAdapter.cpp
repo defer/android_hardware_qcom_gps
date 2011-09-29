@@ -27,15 +27,43 @@
  *
  */
 #define LOG_NDDEBUG 0
-#define LOG_TAG "LocApiAdapter"
+#define LOG_TAG "libloc_adapter"
 
 #include <LocApiAdapter.h>
 #include "loc_eng_msg.h"
 #include "loc_log.h"
+#include "loc_eng_ni.h"
+
+static void* noProc(void* data)
+{
+    return NULL;
+}
+
+LocEng::LocEng(void* caller,
+               LOC_API_ADAPTER_EVENT_MASK_T emask,
+               gps_acquire_wakelock acqwl,
+               gps_release_wakelock relwl,
+               loc_msg_sender msgSender,
+               loc_ext_parser posParser,
+               loc_ext_parser svParser) :
+        owner(caller),
+        eventMask(emask), acquireWakelock(acqwl),
+        releaseWakeLock(relwl), sendMsge(msgSender),
+        extPosInfo(NULL == posParser ? noProc : posParser),
+        extSvInfo(NULL == svParser ? noProc : svParser)
+{
+    LOC_LOGV("LocEng constructor %p, %p", posParser, svParser);
+}
 
 LocApiAdapter::LocApiAdapter(LocEng &locEng) :
     locEngHandle(locEng)
 {
+    LOC_LOGD("LocApiAdapter created");
+}
+
+LocApiAdapter::~LocApiAdapter()
+{
+    LOC_LOGV("LocApiAdapter deleted");
 }
 
 int LocApiAdapter::hexcode(char *hexstring, int string_size,
@@ -83,62 +111,67 @@ int LocApiAdapter::decodeAddress(char *addr_string, int string_size,
     return idxOutput;
 }
 
-void LocApiAdapter::reportPosition(GpsLocation &location, bool intermediate)
+void LocApiAdapter::reportPosition(GpsLocation &location,
+                                   void* locationExt,
+                                   enum loc_sess_status status)
 {
-    loc_eng_msg_report_position *msg(new loc_eng_msg_report_position(location, intermediate));
-    locEngHandle.sendMsge(msg);
+    loc_eng_msg_report_position *msg(new loc_eng_msg_report_position(locEngHandle.owner,
+                                                                     location,
+                                                                     locationExt,
+                                                                     status));
+    locEngHandle.sendMsge(locEngHandle.owner, msg);
 }
 
-void LocApiAdapter::reportSv(GpsSvStatus &svStatus)
+void LocApiAdapter::reportSv(GpsSvStatus &svStatus, void* svExt)
 {
-    loc_eng_msg_report_sv *msg(new loc_eng_msg_report_sv(svStatus));
-    locEngHandle.sendMsge(msg);
+    loc_eng_msg_report_sv *msg(new loc_eng_msg_report_sv(locEngHandle.owner, svStatus, svExt));
+    locEngHandle.sendMsge(locEngHandle.owner, msg);
 }
 
 void LocApiAdapter::reportStatus(GpsStatusValue status)
 {
-    loc_eng_msg_report_status *msg(new loc_eng_msg_report_status(status));
-    locEngHandle.sendMsge(msg);
+    loc_eng_msg_report_status *msg(new loc_eng_msg_report_status(locEngHandle.owner, status));
+    locEngHandle.sendMsge(locEngHandle.owner, msg);
 }
 
 void LocApiAdapter::reportNmea(const char* nmea, int length)
 {
-    loc_eng_msg_report_nmea *msg(new loc_eng_msg_report_nmea(nmea, length));
-    locEngHandle.sendMsge(msg);
+    loc_eng_msg_report_nmea *msg(new loc_eng_msg_report_nmea(locEngHandle.owner, nmea, length));
+    locEngHandle.sendMsge(locEngHandle.owner, msg);
 }
 
 void LocApiAdapter::requestATL(int connHandle, AGpsType agps_type)
 {
-    loc_eng_msg_request_atl *msg(new loc_eng_msg_request_atl(connHandle, agps_type));
-    locEngHandle.sendMsge(msg);
+    loc_eng_msg_request_atl *msg(new loc_eng_msg_request_atl(locEngHandle.owner, connHandle, agps_type));
+    locEngHandle.sendMsge(locEngHandle.owner, msg);
 }
 
 void LocApiAdapter::releaseATL(int connHandle)
 {
-    loc_eng_msg_release_atl *msg(new loc_eng_msg_release_atl(connHandle));
-    locEngHandle.sendMsge(msg);
+    loc_eng_msg_release_atl *msg(new loc_eng_msg_release_atl(locEngHandle.owner, connHandle));
+    locEngHandle.sendMsge(locEngHandle.owner, msg);
 }
 
 void LocApiAdapter::requestXtraData()
 {
     LOC_LOGD("XTRA download request");
 
-    loc_eng_msg *msg(new loc_eng_msg(LOC_ENG_MSG_REQUEST_XTRA_DATA));
-    locEngHandle.sendMsge(msg);
+    loc_eng_msg *msg(new loc_eng_msg(locEngHandle.owner, LOC_ENG_MSG_REQUEST_XTRA_DATA));
+    locEngHandle.sendMsge(locEngHandle.owner, msg);
 }
 
 void LocApiAdapter::requestTime()
 {
     LOC_LOGD("loc_event_cb: XTRA time download request... not supported");
-    // loc_eng_msg *msg(new loc_eng_msg(LOC_ENG_MSG_REQUEST_TIME));
-    // locEngHandle.sendMsge(msg, sizeof(*msg));
+    // loc_eng_msg *msg(new loc_eng_msg(locEngHandle.owner, LOC_ENG_MSG_REQUEST_TIME));
+    // locEngHandle.sendMsge(locEngHandle.owner, msg);
 }
 
 void LocApiAdapter::requestLocation()
 {
     LOC_LOGD("loc_event_cb: XTRA time download request... not supported");
-    // loc_eng_msg *msg(new loc_eng_msg(LOC_ENG_MSG_REQUEST_POSITION));
-    // locEngHandle.sendMsge(msg, sizeof(*msg));
+    // loc_eng_msg *msg(new loc_eng_msg(locEngHandle.owner, LOC_ENG_MSG_REQUEST_POSITION));
+    // locEngHandle.sendMsge(locEngHandle.owner, msg);
 }
 
 void LocApiAdapter::requestNiNotify(GpsNiNotification &notif, const void* data)
@@ -146,18 +179,18 @@ void LocApiAdapter::requestNiNotify(GpsNiNotification &notif, const void* data)
     notif.size = sizeof(notif);
     notif.timeout     = LOC_NI_NO_RESPONSE_TIME;
 
-    loc_eng_msg_request_ni *msg(new loc_eng_msg_request_ni(notif, data));
-    locEngHandle.sendMsge(msg);
+    loc_eng_msg_request_ni *msg(new loc_eng_msg_request_ni(locEngHandle.owner, notif, data));
+    locEngHandle.sendMsge(locEngHandle.owner, msg);
 }
 
 void LocApiAdapter::handleEngineDownEvent()
 {
-    loc_eng_msg *msg(new loc_eng_msg(LOC_ENG_MSG_ENGINE_DOWN));
-    locEngHandle.sendMsge(msg);
+    loc_eng_msg *msg(new loc_eng_msg(locEngHandle.owner, LOC_ENG_MSG_ENGINE_DOWN));
+    locEngHandle.sendMsge(locEngHandle.owner, msg);
 }
 
 void LocApiAdapter::handleEngineUpEvent()
 {
-    loc_eng_msg *msg(new loc_eng_msg(LOC_ENG_MSG_ENGINE_UP));
-    locEngHandle.sendMsge(msg);
+    loc_eng_msg *msg(new loc_eng_msg(locEngHandle.owner, LOC_ENG_MSG_ENGINE_UP));
+    locEngHandle.sendMsge(locEngHandle.owner, msg);
 }

@@ -109,7 +109,7 @@ static void globalRespCb(locClientHandleType client_handle,
 LocApiV02Adapter :: LocApiV02Adapter(LocEng &locEng):
   LocApiAdapter(locEng), clientHandle( LOC_CLIENT_INVALID_HANDLE_VALUE),
   eventMask(convertMask(locEng.eventMask)), navigating(false),
-   fixCriteria (GPS_POSITION_MODE_MS_BASED, GPS_POSITION_RECURRENCE_PERIODIC,
+   fixCriteria (LOC_POSITION_MODE_MS_BASED, GPS_POSITION_RECURRENCE_PERIODIC,
                 LOC_API_V02_DEF_MIN_INTERVAL, LOC_API_V02_DEF_HORZ_ACCURACY,
                 LOC_API_V02_DEF_TIMEOUT )
 {
@@ -166,13 +166,17 @@ enum loc_api_adapter_err LocApiV02Adapter :: startFix()
   // fill in the start request
   switch(fixCriteria.mode)
   {
-    case GPS_POSITION_MODE_MS_BASED:
+    case LOC_POSITION_MODE_MS_BASED:
       set_mode_msg.operationMode = eQMI_LOC_OPER_MODE_MSB_V02;
       break;
 
-    case GPS_POSITION_MODE_MS_ASSISTED:
+    case LOC_POSITION_MODE_MS_ASSISTED:
       set_mode_msg.operationMode = eQMI_LOC_OPER_MODE_MSA_V02;
       break;
+
+    case LOC_POSITION_MODE_RESERVED_4:
+      set_mode_msg.operationMode = eQMI_LOC_OPER_MODE_CELL_ID_V02;
+        break;
 
     default:
       set_mode_msg.operationMode = eQMI_LOC_OPER_MODE_STANDALONE_V02;
@@ -286,13 +290,13 @@ enum loc_api_adapter_err LocApiV02Adapter :: stopFix()
 
 /* set the positioning fix criteria */
 enum loc_api_adapter_err LocApiV02Adapter ::  setPositionMode(
-  GpsPositionMode mode, GpsPositionRecurrence recurrence,
+  LocPositionMode mode, GpsPositionRecurrence recurrence,
   uint32_t min_interval, uint32_t preferred_accuracy,
   uint32_t preferred_time)
 {
 
-  LOC_UTIL_LOGV ("%s:%d]: interval = %d, mode = %d\n",__func__, __LINE__,
-                 min_interval, mode);
+  LOC_UTIL_LOGV ("%s:%d]: interval = %d, mode = %d, recurrence = %d, preferred_accuracy = %d\n",__func__, __LINE__,
+                 min_interval, mode, recurrence, preferred_accuracy);
 
   //store the fix criteria
   fixCriteria.mode = mode;
@@ -780,18 +784,31 @@ enum loc_api_adapter_err LocApiV02Adapter :: setServer(
 }
 
 enum loc_api_adapter_err LocApiV02Adapter ::
-    setServer(unsigned int ip, int port)
+    setServer(unsigned int ip, int port, LocServerType type)
 {
   locClientReqUnionType req_union;
   locClientStatusEnumType status;
   qmiLocSetServerReqMsgT_v02 set_server_req;
   qmiLocSetServerIndMsgT_v02 set_server_ind;
+  qmiLocServerTypeEnumT_v02 set_server_cmd;
+
+  switch (type) {
+  case LOC_AGPS_MPC_SERVER:
+      set_server_cmd = eQMI_LOC_SERVER_TYPE_CDMA_MPC_V02;
+      break;
+  case LOC_AGPS_CUSTOM_PDE_SERVER:
+      set_server_cmd = eQMI_LOC_SERVER_TYPE_CUSTOM_PDE_V02;
+      break;
+  default:
+      set_server_cmd = eQMI_LOC_SERVER_TYPE_CDMA_PDE_V02;
+      break;
+  }
 
   memset(&set_server_req, 0, sizeof(set_server_req));
 
   LOC_UTIL_LOGD("%s:%d]:, ip = %u, port = %d\n", __func__, __LINE__, ip, port);
 
-  set_server_req.serverType = eQMI_LOC_SERVER_TYPE_CDMA_PDE_V02;
+  set_server_req.serverType = set_server_cmd;
   set_server_req.ipv4Addr_valid = 1;
   set_server_req.ipv4Addr.addr = ip;
   set_server_req.ipv4Addr.port = port;
@@ -1274,74 +1291,83 @@ enum loc_api_adapter_err LocApiV02Adapter :: convertErr(
 void LocApiV02Adapter :: reportPosition (
   const qmiLocEventPositionReportIndMsgT_v02 *location_report_ptr)
 {
-  GpsLocation location;
+    GpsLocation location;
 
-  memset(&location, 0, sizeof (GpsLocation));
-  location.size = sizeof(location);
-  // Process the position from final and intermediate reports
+    memset(&location, 0, sizeof (GpsLocation));
+    location.size = sizeof(location);
+    // Process the position from final and intermediate reports
 
-  if( (location_report_ptr->sessionStatus == eQMI_LOC_SESS_STATUS_SUCCESS_V02) ||
-      (location_report_ptr->sessionStatus == eQMI_LOC_SESS_STATUS_IN_PROGRESS_V02)
-    )
-  {
-    // Time stamp (UTC)
-    if(location_report_ptr->timestampUtc_valid == 1)
+    if( (location_report_ptr->sessionStatus == eQMI_LOC_SESS_STATUS_SUCCESS_V02) ||
+        (location_report_ptr->sessionStatus == eQMI_LOC_SESS_STATUS_IN_PROGRESS_V02)
+        )
     {
-      location.timestamp = location_report_ptr->timestampUtc;
-    }
+        // Latitude & Longitude
+        if( (location_report_ptr->latitude_valid == 1 ) &&
+            (location_report_ptr->longitude_valid == 1)  &&
+            (location_report_ptr->latitude != 0 ||
+             location_report_ptr->longitude!= 0))
+        {
+            location.flags  |= GPS_LOCATION_HAS_LAT_LONG;
+            location.latitude  = location_report_ptr->latitude;
+            location.longitude = location_report_ptr->longitude;
 
-    // Latitude & Longitude
-    if( (location_report_ptr->latitude_valid == 1 ) &&
-        (location_report_ptr->longitude_valid == 1) )
-    {
-      location.flags  |= GPS_LOCATION_HAS_LAT_LONG;
-      location.latitude  = location_report_ptr->latitude;
-      location.longitude = location_report_ptr->longitude;
-    }
+            // Time stamp (UTC)
+            if(location_report_ptr->timestampUtc_valid == 1)
+            {
+                location.timestamp = location_report_ptr->timestampUtc;
+            }
 
-    // Altitude
-    if(location_report_ptr->altitudeWrtEllipsoid_valid == 1  )
-    {
-      location.flags  |= GPS_LOCATION_HAS_ALTITUDE;
-      location.altitude = location_report_ptr->altitudeWrtEllipsoid;
-    }
+            // Altitude
+            if(location_report_ptr->altitudeWrtEllipsoid_valid == 1  )
+            {
+                location.flags  |= GPS_LOCATION_HAS_ALTITUDE;
+                location.altitude = location_report_ptr->altitudeWrtEllipsoid;
+            }
 
-    // Speed
-    if((location_report_ptr->speedHorizontal_valid == 1) &&
-       (location_report_ptr->speedVertical_valid ==1 ) )
-    {
-      location.flags  |= GPS_LOCATION_HAS_SPEED;
-      location.speed = sqrt(
-                           (location_report_ptr->speedHorizontal *
-                            location_report_ptr->speedHorizontal) +
-                           (location_report_ptr->speedVertical *
-                            location_report_ptr->speedVertical) );
-    }
+            // Speed
+            if((location_report_ptr->speedHorizontal_valid == 1) &&
+               (location_report_ptr->speedVertical_valid ==1 ) )
+            {
+                location.flags  |= GPS_LOCATION_HAS_SPEED;
+                location.speed = sqrt(
+                    (location_report_ptr->speedHorizontal *
+                     location_report_ptr->speedHorizontal) +
+                    (location_report_ptr->speedVertical *
+                     location_report_ptr->speedVertical) );
+            }
 
-    // Heading
-    if(location_report_ptr->heading_valid == 1)
-    {
-      location.flags  |= GPS_LOCATION_HAS_BEARING;
-      location.bearing = location_report_ptr->heading;
-    }
+            // Heading
+            if(location_report_ptr->heading_valid == 1)
+            {
+                location.flags  |= GPS_LOCATION_HAS_BEARING;
+                location.bearing = location_report_ptr->heading;
+            }
 
-    // Uncertainty (circular)
-    if( (location_report_ptr->horUncCircular_valid ) )
-    {
-      location.flags  |= GPS_LOCATION_HAS_ACCURACY;
-      location.accuracy = location_report_ptr->horUncCircular;
+            // Uncertainty (circular)
+            if( (location_report_ptr->horUncCircular_valid ) )
+            {
+                location.flags  |= GPS_LOCATION_HAS_ACCURACY;
+                location.accuracy = location_report_ptr->horUncCircular;
+            }
+
+            LocApiAdapter::reportPosition( location,
+                                           locEngHandle.extPosInfo((void*)location_report_ptr),
+                                           (location_report_ptr->sessionStatus
+                                            == eQMI_LOC_SESS_STATUS_IN_PROGRESS_V02 ?
+                                            LOC_SESS_INTERMEDIATE : LOC_SESS_SUCCESS));
+        }
     }
-    LocApiAdapter::reportPosition( location,
-                                   (location_report_ptr->sessionStatus
-                                    == eQMI_LOC_SESS_STATUS_IN_PROGRESS_V02));
-  }
-  else
-  {
-    LOC_UTIL_LOGD("%s:%d]: Ignoring position report with sess status = %d, "
-                  "fix id = %u\n", __func__, __LINE__,
-                  location_report_ptr->sessionStatus,
-                  location_report_ptr->fixId );
-  }
+    else
+    {
+        LocApiAdapter::reportPosition(location,
+                                      NULL,
+                                      LOC_SESS_FAILURE);
+
+        LOC_UTIL_LOGD("%s:%d]: Ignoring position report with sess status = %d, "
+                      "fix id = %u\n", __func__, __LINE__,
+                      location_report_ptr->sessionStatus,
+                      location_report_ptr->fixId );
+    }
 }
 
 /* convert satellite report to loc eng format and  send the converted
@@ -1447,7 +1473,8 @@ void  LocApiV02Adapter :: reportSv (
   if (SvStatus.num_svs != 0)
   {
     LOC_UTIL_LOGV ("%s:%d]: firing SV callback\n", __func__, __LINE__);
-    LocApiAdapter::reportSv(SvStatus);
+    LocApiAdapter::reportSv(SvStatus,
+                            locEngHandle.extSvInfo((void*)gnss_report_ptr));
   }
 }
 
@@ -1564,12 +1591,6 @@ void LocApiV02Adapter :: reportNiRequest(
   notif.notify_flags       = 0;
 
   notif.default_response   = GPS_NI_RESPONSE_NORESP;
-
- //randomize the notification id
-  notif.notification_id = abs(rand());
-
-  LOC_UTIL_LOGV("%s:%d]: Setting the notification id to %d\n", __func__,
-                __LINE__, notif.notification_id);
 
   /*Handle Vx request */
   if(ni_req_ptr->NiVxInd_valid == 1)

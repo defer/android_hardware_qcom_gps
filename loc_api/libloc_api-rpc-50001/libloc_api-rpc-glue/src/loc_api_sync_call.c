@@ -38,7 +38,7 @@
 #include "loc_api_sync_call.h"
 
 /* Logging */
-#define LOG_TAG "loc_api_rpc_glue"
+#define LOG_TAG "libloc_api_rpc_glue"
 // #define LOG_NDDEBUG 0
 #include <utils/Log.h>
 

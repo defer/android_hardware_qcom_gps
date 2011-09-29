@@ -30,27 +30,21 @@
 #ifndef LOC_ENG_NI_H
 #define LOC_ENG_NI_H
 
-#define LOC_NI_NO_RESPONSE_TIME            20                      /* secs */
+#include <stdbool.h>
 
+#define LOC_NI_NO_RESPONSE_TIME            20                      /* secs */
 #define LOC_NI_NOTIF_KEY_ADDRESS           "Address"
 
-extern const GpsNiInterface sLocEngNiInterface;
-
 typedef struct {
-   pthread_t               loc_ni_thread;            /* NI thread */
-   pthread_mutex_t         loc_ni_lock;
-   int                     response_time_left;       /* examine time for NI response */
-   boolean                 user_response_received;   /* NI User reponse received or not from Java layer*/
-   void*                   loc_ni_request;
-   int                     current_notif_id;         /* ID to check against response */
-   GpsUserResponseType     resp;
+    pthread_t               thread;            /* NI thread */
+    int                     respTimeLeft;       /* examine time for NI response */
+    bool                    respRecvd;   /* NI User reponse received or not from Java layer*/
+    void*                   rawRequest;
+    int                     reqID;         /* ID to check against response */
+    GpsUserResponseType     resp;
+    pthread_cond_t          tCond;
+    pthread_mutex_t         tLock;
 } loc_eng_ni_data_s_type;
-
-// Functions for sLocEngNiInterface
-extern void loc_eng_ni_init(GpsNiCallbacks *callbacks);
-extern void loc_eng_ni_respond(int notif_id, GpsUserResponseType user_response);
-extern void loc_ni_request_handler(const GpsNiNotification &notif, const void* passThrough);
-extern void loc_ni_reset_on_engine_restart();
 
 
 #endif /* LOC_ENG_NI_H */

@@ -28,7 +28,7 @@
  */
 
 #define LOG_NDDEBUG 0
-#define LOG_TAG "libloc"
+#define LOG_TAG "libloc_cfg"
 
 #include <stdio.h>
 #include <stdlib.h>

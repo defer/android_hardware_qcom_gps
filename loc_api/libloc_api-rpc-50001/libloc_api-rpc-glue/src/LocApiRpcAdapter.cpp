@@ -27,10 +27,9 @@
  *
  */
 #define LOG_NDDEBUG 0
-#define LOG_TAG "LocApiRpcAdapter"
+#define LOG_TAG "libloc_adapter"
 
 #include <unistd.h>
-#include <stdlib.h>
 #include <math.h>
 #include <utils/SystemClock.h>
 #include "LocApiRpcAdapter.h"
@@ -96,7 +95,7 @@ static void loc_rpc_global_cb(void* user, CLIENT* clnt, enum rpc_reset_event eve
 {
     MODEM_LOG_CALLFLOW();
     ((LocApiRpcAdapter*)user)->locRpcGlobalCB(clnt, event);
-    EXIT_LOG(%d, VOID_RET);
+    EXIT_LOG(%p, VOID_RET);
 }
 
 
@@ -296,7 +295,7 @@ LocApiRpcAdapter::stopFix() {
 }
 
 enum loc_api_adapter_err
-LocApiRpcAdapter::setPositionMode(GpsPositionMode mode,
+LocApiRpcAdapter::setPositionMode(LocPositionMode mode,
             GpsPositionRecurrence recurrence, uint32_t min_interval,
             uint32_t preferred_accuracy, uint32_t preferred_time)
 {
@@ -311,11 +310,24 @@ LocApiRpcAdapter::setPositionMode(GpsPositionMode mode,
 
     switch (mode)
     {
-    case GPS_POSITION_MODE_MS_BASED:
+    case LOC_POSITION_MODE_MS_BASED:
         op_mode = RPC_LOC_OPER_MODE_MSB;
         break;
-    case GPS_POSITION_MODE_MS_ASSISTED:
+    case LOC_POSITION_MODE_MS_ASSISTED:
         op_mode = RPC_LOC_OPER_MODE_MSA;
+        break;
+    case LOC_POSITION_MODE_RESERVED_1:
+        op_mode = RPC_LOC_OPER_MODE_SPEED_OPTIMAL;
+        break;
+    case LOC_POSITION_MODE_RESERVED_2:
+        op_mode = RPC_LOC_OPER_MODE_ACCURACY_OPTIMAL;
+        break;
+    case LOC_POSITION_MODE_RESERVED_3:
+        op_mode = RPC_LOC_OPER_MODE_DATA_OPTIMAL;
+        break;
+    case LOC_POSITION_MODE_RESERVED_4:
+        op_mode = RPC_LOC_OPER_MODE_MSA;
+        fix_criteria_ptr->preferred_response_time  = 0;
         break;
     default:
         op_mode = RPC_LOC_OPER_MODE_STANDALONE;
@@ -517,13 +529,23 @@ LocApiRpcAdapter::setServer(const char* url, int len)
 }
 
 enum loc_api_adapter_err
-LocApiRpcAdapter::setServer(unsigned int ip, int port)
+LocApiRpcAdapter::setServer(unsigned int ip, int port, LocServerType type)
 {
     rpc_loc_ioctl_data_u_type         ioctl_data;
     rpc_loc_server_info_s_type       *server_info_ptr;
     rpc_loc_ioctl_e_type              ioctl_cmd;
 
-    ioctl_cmd = RPC_LOC_IOCTL_SET_CDMA_PDE_SERVER_ADDR;
+    switch (type) {
+    case LOC_AGPS_MPC_SERVER:
+        ioctl_cmd = RPC_LOC_IOCTL_SET_CDMA_MPC_SERVER_ADDR;
+        break;
+    case LOC_AGPS_CUSTOM_PDE_SERVER:
+        ioctl_cmd = RPC_LOC_IOCTL_SET_CUSTOM_PDE_SERVER_ADDR;
+        break;
+    default:
+        ioctl_cmd = RPC_LOC_IOCTL_SET_CDMA_PDE_SERVER_ADDR;
+        break;
+    }
     ioctl_data.disc = ioctl_cmd;
     server_info_ptr = &ioctl_data.rpc_loc_ioctl_data_u_type_u.server_addr;
     server_info_ptr->addr_type = RPC_LOC_SERVER_ADDR_IPV4;
@@ -629,11 +651,17 @@ void LocApiRpcAdapter::reportPosition(const rpc_loc_parsed_position_s_type *loca
                 }
 
                 LOC_LOGV("reportPosition: fire callback\n");
-                LocApiAdapter::reportPosition(location, location_report_ptr->session_status == RPC_LOC_SESS_STATUS_IN_PROGESS);
+                LocApiAdapter::reportPosition(location,
+                                              locEngHandle.extPosInfo((void*)location_report_ptr),
+                                              (location_report_ptr->session_status == RPC_LOC_SESS_STATUS_IN_PROGESS ?
+                                               LOC_SESS_INTERMEDIATE : LOC_SESS_SUCCESS));
             }
         }
         else
         {
+            LocApiAdapter::reportPosition(location,
+                                          NULL,
+                                          LOC_SESS_FAILURE);
             LOC_LOGV("loc_eng_report_position: ignore position report when session status = %d\n", location_report_ptr->session_status);
         }
     }
@@ -731,7 +759,8 @@ void LocApiRpcAdapter::reportSv(const rpc_loc_gnss_info_s_type *gnss_report_ptr)
 
     if (SvStatus.num_svs >= 0)
     {
-        LocApiAdapter::reportSv(SvStatus);
+        LocApiAdapter::reportSv(SvStatus,
+                                locEngHandle.extSvInfo((void*)gnss_report_ptr));
     }
 }
 
@@ -871,8 +900,12 @@ LocApiRpcAdapter::atlOpenStatus(int handle, int is_succ, char* apn, AGpsBearerTy
 #if (AMSS_VERSION==3200)
         conn_open_status_ptr->apn_name = apn; /* requires APN */
 #else
-        strlcpy(conn_open_status_ptr->apn_name, apn,
-                sizeof conn_open_status_ptr->apn_name);
+        if (is_succ) {
+            strlcpy(conn_open_status_ptr->apn_name, apn,
+                    sizeof conn_open_status_ptr->apn_name);
+        } else {
+            conn_open_status_ptr->apn_name[0] = 0;
+        }
 #endif /* #if (AMSS_VERSION==3200) */
 
         LOC_LOGD("ATL RPC_LOC_IOCTL_INFORM_SERVER_OPEN_STATUS open %s, APN name = [%s]\n",
@@ -886,8 +919,12 @@ LocApiRpcAdapter::atlOpenStatus(int handle, int is_succ, char* apn, AGpsBearerTy
         ioctl_data.disc = RPC_LOC_IOCTL_INFORM_SERVER_MULTI_OPEN_STATUS;
         conn_multi_open_status_ptr->conn_handle = handle;
         conn_multi_open_status_ptr->open_status = open_status;
-        strlcpy(conn_multi_open_status_ptr->apn_name, apn,
-                sizeof conn_multi_open_status_ptr->apn_name);
+        if (is_succ) {
+            strlcpy(conn_multi_open_status_ptr->apn_name, apn,
+                    sizeof conn_multi_open_status_ptr->apn_name);
+        } else {
+            conn_multi_open_status_ptr->apn_name[0] = 0;
+        }
 
         switch(bearer)
         {
@@ -980,9 +1017,6 @@ void LocApiRpcAdapter::ATLEvent(const rpc_loc_server_request_s_type *server_requ
 void LocApiRpcAdapter::NIEvent(const rpc_loc_ni_event_s_type *ni_req)
 {
     GpsNiNotification notif = {0};
-
-    //randomize the notification id
-    notif.notification_id = abs(rand());
 
     switch (ni_req->event)
     {

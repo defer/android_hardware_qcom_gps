@@ -32,9 +32,6 @@
 
 #include <hardware/gps.h>
 
-extern const GpsXtraInterface sLocEngXTRAInterface;
-extern int loc_eng_inject_xtra_data_in_buffer();
-
 // Module data
 typedef struct
 {

@@ -29,9 +29,16 @@ LOCAL_CFLAGS += \
 LOCAL_C_INCLUDES:= \
     $(TARGET_OUT_HEADERS)/gps.utils
 
-LOCAL_COPY_HEADERS_TO:= libloc_adapter/
+LOCAL_COPY_HEADERS_TO:= libloc_eng/
 LOCAL_COPY_HEADERS:= \
-   LocApiAdapter.h
+   LocApiAdapter.h \
+   loc.h \
+   loc_eng.h \
+   loc_eng_xtra.h \
+   loc_eng_ni.h \
+   loc_eng_msg.h \
+   loc_eng_msg_id.h \
+   loc_eng_log.h
 
 LOCAL_PRELINK_MODULE := false
 
@@ -39,21 +46,20 @@ include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
 
-LOCAL_MODULE := gps.$(BOARD_VENDOR_QCOM_GPS_LOC_API_HARDWARE)
-
-## Libs
+LOCAL_MODULE := libloc_eng
 
 LOCAL_SHARED_LIBRARIES := \
     libutils \
     libcutils \
+    libloc_adapter \
     libgps.utils \
     libdl
 
 LOCAL_SRC_FILES += \
     loc_eng.cpp \
+    loc.cpp \
     loc_eng_xtra.cpp \
-    loc_eng_ni.cpp \
-    gps.c
+    loc_eng_ni.cpp
 
 ifeq ($(FEATURE_GNSS_BIT_API), true)
 LOCAL_CFLAGS += -DFEATURE_GNSS_BIT_API
@@ -77,7 +83,28 @@ endif #TARGET_NO_RPC
 
 endif #is-board-platform-in-list
 
-LOCAL_SHARED_LIBRARIES +=  libloc_adapter
+LOCAL_CFLAGS += \
+     -fno-short-enums \
+     -D_ANDROID_
+
+LOCAL_C_INCLUDES:= \
+    $(TARGET_OUT_HEADERS)/gps.utils \
+    hardware/qcom/gps/loc_api/ulp/inc
+
+LOCAL_PRELINK_MODULE := false
+
+include $(BUILD_SHARED_LIBRARY)
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE := gps.$(BOARD_VENDOR_QCOM_GPS_LOC_API_HARDWARE)
+
+## Libs
+
+LOCAL_SHARED_LIBRARIES :=  libloc_eng
+
+LOCAL_SRC_FILES += \
+    gps.c
 
 LOCAL_CFLAGS += \
     -fno-short-enums \
@@ -85,8 +112,7 @@ LOCAL_CFLAGS += \
 
 ## Includes
 LOCAL_C_INCLUDES:= \
-    $(TARGET_OUT_HEADERS)/gps.utils \
-    hardware/qcom/gps/loc_api/ulp/inc
+    $(TARGET_OUT_HEADERS)/gps.utils
 
 LOCAL_PRELINK_MODULE := false
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw

@@ -71,7 +71,7 @@ public:
     virtual enum loc_api_adapter_err
         stopFix();
     virtual enum loc_api_adapter_err
-        setPositionMode(GpsPositionMode mode, GpsPositionRecurrence recurrence,
+        setPositionMode(LocPositionMode mode, GpsPositionRecurrence recurrence,
             uint32_t min_interval, uint32_t preferred_accuracy, uint32_t preferred_time);
     virtual enum loc_api_adapter_err
         enableData(int enable);
@@ -88,7 +88,7 @@ public:
     virtual enum loc_api_adapter_err
         setServer(const char* url, int len);
     virtual enum loc_api_adapter_err
-        setServer(unsigned int ip, int port);
+        setServer(unsigned int ip, int port, LocServerType type);
     virtual enum loc_api_adapter_err
         setXtraData(char* data, int length);
     virtual enum loc_api_adapter_err

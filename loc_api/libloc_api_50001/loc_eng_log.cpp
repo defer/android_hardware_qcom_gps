@@ -28,9 +28,10 @@
  */
 
 #define LOG_NDDEBUG 0
-#define LOG_TAG "libloc"
+#define LOG_TAG "libloc_eng"
 
 #include "hardware/gps.h"
+#include "loc.h"
 #include "loc_log.h"
 #include "loc_eng_log.h"
 #include "loc_eng_msg_id.h"
@@ -102,9 +103,13 @@ const char* loc_get_msg_name(int id)
 
 static loc_name_val_s_type loc_eng_position_modes[] =
 {
-    NAME_VAL( GPS_POSITION_MODE_STANDALONE ),
-    NAME_VAL( GPS_POSITION_MODE_MS_BASED ),
-    NAME_VAL( GPS_POSITION_MODE_MS_ASSISTED )
+    NAME_VAL( LOC_POSITION_MODE_STANDALONE ),
+    NAME_VAL( LOC_POSITION_MODE_MS_BASED ),
+    NAME_VAL( LOC_POSITION_MODE_MS_ASSISTED ),
+    NAME_VAL( LOC_POSITION_MODE_RESERVED_1 ),
+    NAME_VAL( LOC_POSITION_MODE_RESERVED_2 ),
+    NAME_VAL( LOC_POSITION_MODE_RESERVED_3 ),
+    NAME_VAL( LOC_POSITION_MODE_RESERVED_4 )
 };
 static int loc_eng_position_mode_num = sizeof(loc_eng_position_modes) / sizeof(loc_name_val_s_type);
 
@@ -230,7 +235,34 @@ static loc_name_val_s_type loc_eng_agps_bears[] =
 };
 static int loc_eng_agps_bears_num = sizeof(loc_eng_agps_bears) / sizeof(loc_name_val_s_type);
 
-const char* loc_get_agps_bear_name(AGpsBearerType bear)
+const char* loc_get_agps_bear_name(AGpsBearerType bearer)
 {
-    return loc_get_name_from_val(loc_eng_agps_bears, loc_eng_agps_bears_num, (long) bear);
+    return loc_get_name_from_val(loc_eng_agps_bears, loc_eng_agps_bears_num, (long) bearer);
+}
+
+static loc_name_val_s_type loc_eng_server_types[] =
+{
+    NAME_VAL( LOC_AGPS_CDMA_PDE_SERVER ),
+    NAME_VAL( LOC_AGPS_CUSTOM_PDE_SERVER ),
+    NAME_VAL( LOC_AGPS_MPC_SERVER ),
+    NAME_VAL( LOC_AGPS_SUPL_SERVER )
+};
+static int loc_eng_server_types_num = sizeof(loc_eng_server_types) / sizeof(loc_name_val_s_type);
+
+const char* loc_get_server_type_name(LocServerType type)
+{
+    return loc_get_name_from_val(loc_eng_server_types, loc_eng_server_types_num, (long) type);
+}
+
+static loc_name_val_s_type loc_eng_position_sess_status_types[] =
+{
+    NAME_VAL( LOC_SESS_SUCCESS ),
+    NAME_VAL( LOC_SESS_INTERMEDIATE ),
+    NAME_VAL( LOC_SESS_FAILURE )
+};
+static int loc_eng_position_sess_status_num = sizeof(loc_eng_position_sess_status_types) / sizeof(loc_name_val_s_type);
+
+const char* loc_get_position_sess_status_name(enum loc_sess_status status)
+{
+    return loc_get_name_from_val(loc_eng_position_sess_status_types, loc_eng_position_sess_status_num, (long) status);
 }

@@ -34,7 +34,10 @@
 #define LOC_MAX_PARAM_STRING               80
 #define LOC_MAX_PARAM_LINE                 80
 
+// Don't want to overwrite the pre-def'ed value
+#ifndef GPS_CONF_FILE
 #define GPS_CONF_FILE            "/etc/gps.conf"   //??? platform independent
+#endif
 
 /*=============================================================================
  *

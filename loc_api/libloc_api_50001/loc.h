@@ -26,45 +26,63 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
 
-#include "log_util.h"
+#ifndef __LOC_H__
+#define __LOC_H__
 
-#include "loc_eng_dmn_conn.h"
-#include "loc_eng_dmn_conn_handler.h"
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
-#ifndef DEBUG_DMN_LOC_API
-extern "C" void loc_if_wakeup(int if_req, unsigned is_supl, unsigned long ipv4_addr, unsigned char * ipv6_addr);
-#endif
+#include <ctype.h>
+#include <cutils/properties.h>
+#include <hardware/gps.h>
 
-int loc_eng_dmn_conn_loc_api_server_if_request_handler(struct ctrl_msgbuf *pmsg, int len)
-{
-    LOC_LOGD("%s:%d]\n", __func__, __LINE__);
-#ifndef DEBUG_DMN_LOC_API
-    loc_if_wakeup( 1,
-                       pmsg->cmsg.cmsg_if_request.is_supl,
-                       pmsg->cmsg.cmsg_if_request.ipv4_addr,
-                       pmsg->cmsg.cmsg_if_request.ipv6_addr);
-#else
-   loc_eng_dmn_conn_loc_api_server_data_conn(GPSONE_LOC_API_IF_REQUEST_SUCCESS);
-#endif
-    return 0;
+typedef enum loc_server_type {
+    LOC_AGPS_CDMA_PDE_SERVER,
+    LOC_AGPS_CUSTOM_PDE_SERVER,
+    LOC_AGPS_MPC_SERVER,
+    LOC_AGPS_SUPL_SERVER
+} LocServerType;
+
+typedef enum loc_position_mode_type {
+    LOC_POSITION_MODE_STANDALONE,
+    LOC_POSITION_MODE_MS_BASED,
+    LOC_POSITION_MODE_MS_ASSISTED,
+    LOC_POSITION_MODE_RESERVED_1,
+    LOC_POSITION_MODE_RESERVED_2,
+    LOC_POSITION_MODE_RESERVED_3,
+    LOC_POSITION_MODE_RESERVED_4
+} LocPositionMode;
+
+typedef void (*loc_location_cb_ext) (GpsLocation* location, void* locExt);
+typedef void (*loc_sv_status_cb_ext) (GpsSvStatus* sv_status, void* svExt);
+typedef void* (*loc_ext_parser)(void* data);
+
+typedef struct {
+    loc_location_cb_ext location_cb;
+    gps_status_callback status_cb;
+    loc_sv_status_cb_ext sv_status_cb;
+    gps_nmea_callback nmea_cb;
+    gps_set_capabilities set_capabilities_cb;
+    gps_acquire_wakelock acquire_wakelock_cb;
+    gps_release_wakelock release_wakelock_cb;
+    gps_create_thread create_thread_cb;
+    loc_ext_parser location_ext_parser;
+    loc_ext_parser sv_ext_parser;
+} LocCallbacks;
+
+enum loc_sess_status {
+    LOC_SESS_SUCCESS,
+    LOC_SESS_INTERMEDIATE,
+    LOC_SESS_FAILURE
+};
+
+
+void loc_if_wakeup(int if_req, unsigned is_supl, unsigned long ipv4_addr, unsigned char * ipv6_addr);
+
+#ifdef __cplusplus
 }
+#endif /* __cplusplus */
 
-int loc_eng_dmn_conn_loc_api_server_if_release_handler(struct ctrl_msgbuf *pmsg, int len)
-{
-    LOC_LOGD("%s:%d]\n", __func__, __LINE__);
-#ifndef DEBUG_DMN_LOC_API
-    loc_if_wakeup( 0,
-                       pmsg->cmsg.cmsg_if_request.is_supl,
-                       pmsg->cmsg.cmsg_if_request.ipv4_addr,
-                       pmsg->cmsg.cmsg_if_request.ipv6_addr);
-#else
-   loc_eng_dmn_conn_loc_api_server_data_conn(GPSONE_LOC_API_IF_RELEASE_SUCCESS);
-#endif
-    return 0;
-}
-
+#endif //__LOC_H__

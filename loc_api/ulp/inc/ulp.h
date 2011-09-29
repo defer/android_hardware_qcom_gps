@@ -39,6 +39,7 @@ extern "C"
 
 typedef int (ulp_report_position_cb)
 (
+      void* owner,
       const GpsLocation* location_report_ptr,
       unsigned int ext_data_length,
       unsigned char* ext_data
@@ -52,7 +53,7 @@ typedef struct {
     /**
      * Starts the ulp module. 0: success
      */
-    int   (*init)( ulp_report_position_cb* cb);
+    int   (*init)( void* owner, ulp_report_position_cb* cb);
 
     /** Starts the ulp engine. 0: success      */
     int   (*start_fix)( void );

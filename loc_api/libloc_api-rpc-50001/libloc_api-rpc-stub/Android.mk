@@ -23,7 +23,7 @@ LOCAL_C_INCLUDES += hardware/msm7k/librpc
 LOCAL_C_INCLUDES += $(LOC_RPCGEN_APIS_PATH)/../../SHARED_LIBRARIES/libcommondefs_intermediates/inc
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/inc
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/libcommondefs/rpcgen/inc
-    
+
 LOCAL_COPY_HEADERS_TO := loc_api/rpcgen/inc
 LOCAL_COPY_HEADERS := inc/loc_api_rpcgen_rpc.h
 LOCAL_COPY_HEADERS += inc/loc_api_rpcgen_common_rpc.h
