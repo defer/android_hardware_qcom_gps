@@ -182,8 +182,8 @@ void loc_read_gps_conf(void)
    char input_buf[LOC_MAX_PARAM_LINE];  /* declare a char array */
    char *lasts;
    char *param_name, *param_str_value;
-   int     param_int_value;
-   double  param_double_value;
+   int     param_int_value = 0;
+   double  param_double_value = 0;
    int i;
 
    loc_default_parameters();

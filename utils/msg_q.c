@@ -108,6 +108,7 @@ msq_q_err_type msg_q_init(void** msg_q_data)
    if( linked_list_init(&tmp_msg_q->msg_list) != 0 )
    {
       LOC_LOGE("%s: Unable to initialize storage list!\n", __FUNCTION__);
+      free(tmp_msg_q);
       return eMSG_Q_FAILURE_GENERAL;
    }
 
@@ -115,6 +116,7 @@ msq_q_err_type msg_q_init(void** msg_q_data)
    {
       LOC_LOGE("%s: Unable to initialize list mutex!\n", __FUNCTION__);
       linked_list_destroy(&tmp_msg_q->msg_list);
+      free(tmp_msg_q);
       return eMSG_Q_FAILURE_GENERAL;
    }
 
@@ -123,6 +125,7 @@ msq_q_err_type msg_q_init(void** msg_q_data)
       LOC_LOGE("%s: Unable to initialize msg q cond var!\n", __FUNCTION__);
       linked_list_destroy(&tmp_msg_q->msg_list);
       pthread_mutex_destroy(&tmp_msg_q->list_mutex);
+      free(tmp_msg_q);
       return eMSG_Q_FAILURE_GENERAL;
    }
 
