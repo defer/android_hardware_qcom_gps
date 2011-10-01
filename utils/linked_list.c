@@ -259,3 +259,64 @@ linked_list_err_type linked_list_flush(void* list_data)
    return eLINKED_LIST_SUCCESS;
 }
 
+/*===========================================================================
+
+  FUNCTION:   linked_list_search
+
+  ===========================================================================*/
+linked_list_err_type linked_list_search(void* list_data, void **data_p,
+                                        bool (*equal)(void* data_0, void* data),
+                                        void* data_0, bool rm_if_found)
+{
+   LOC_LOGD("%s: Search the list\n", __FUNCTION__);
+   if( list_data == NULL || NULL == equal )
+   {
+      LOC_LOGE("%s: Invalid list parameter! list_data %p equal %p\n",
+               __FUNCTION__, list_data, equal);
+      return eLINKED_LIST_INVALID_HANDLE;
+   }
+
+   list_state* p_list = (list_state*)list_data;
+   if( p_list->p_tail == NULL )
+   {
+      return eLINKED_LIST_UNAVAILABLE_RESOURCE;
+   }
+
+   list_element* tmp = p_list->p_head;
+
+   if (NULL != data_p) {
+     *data_p = NULL;
+   }
+
+   while (NULL != tmp) {
+     if ((*equal)(data_0, tmp->data_ptr)) {
+       if (NULL != data_p) {
+         *data_p = tmp->data_ptr;
+       }
+
+       if (rm_if_found) {
+         if (NULL == tmp->prev) {
+           p_list->p_head = tmp->next;
+         } else {
+           tmp->prev->next = tmp->next;
+         }
+
+         if (NULL == tmp->next) {
+           p_list->p_tail = tmp->prev;
+         } else {
+           tmp->next->prev = tmp->prev;
+         }
+
+         tmp->prev = tmp->next = NULL;
+       }
+
+       free(tmp);
+       tmp = NULL;
+     } else {
+       tmp = tmp->next;
+     }
+   }
+
+   return eLINKED_LIST_SUCCESS;
+}
+

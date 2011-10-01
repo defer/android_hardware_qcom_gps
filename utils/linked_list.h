@@ -32,6 +32,7 @@
 extern "C" {
 #endif /* __cplusplus */
 
+#include <stdbool.h>
 #include <stdlib.h>
 
 /** Linked List Return Codes */
@@ -180,6 +181,34 @@ SIDE EFFECTS
 
 ===========================================================================*/
 linked_list_err_type linked_list_flush(void* list_data);
+
+/*===========================================================================
+FUNCTION    linked_list_search
+
+DESCRIPTION
+   Searches for an element in the linked list.
+
+   p_list_data:  List handle.
+   data_p:       to be stored with the data found; NUll if no match.
+                 if data_p passed in as NULL, then no write to it.
+   equal:        Function ptr takes in a list element, and returns
+                 indication if this the one looking for.
+   data_0:       The data being compared against.
+   rm_if_found:  Should data be removed if found?
+
+DEPENDENCIES
+   N/A
+
+RETURN VALUE
+   Look at error codes above.
+
+SIDE EFFECTS
+   N/A
+
+===========================================================================*/
+linked_list_err_type linked_list_search(void* list_data, void **data_p,
+                                        bool (*equal)(void* data_0, void* data),
+                                        void* data_0, bool rm_if_found);
 
 #ifdef __cplusplus
 }
