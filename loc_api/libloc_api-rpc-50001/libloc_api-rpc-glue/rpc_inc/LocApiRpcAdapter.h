@@ -96,7 +96,7 @@ public:
     virtual enum loc_api_adapter_err
         atlCloseStatus(int handle, int is_succ);
     virtual enum loc_api_adapter_err
-        setSUPLVersion(int version);
+        setSUPLVersion(uint32_t version);
 };
 
 #endif //LOC_API_RPC_ADAPTER_H

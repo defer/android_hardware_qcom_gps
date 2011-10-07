@@ -163,7 +163,7 @@ public:
     atlOpenStatus(int handle, int is_succ, char* apn, AGpsBearerType bear,
                    AGpsType agpsType);
   virtual enum loc_api_adapter_err atlCloseStatus(int handle, int is_succ);
-  virtual enum loc_api_adapter_err setSUPLVersion(int version);
+  virtual enum loc_api_adapter_err setSUPLVersion(uint32_t version);
 
   virtual enum loc_api_adapter_err
     setSensorControlConfig(int sensorUsage);

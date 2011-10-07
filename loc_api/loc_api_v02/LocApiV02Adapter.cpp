@@ -60,6 +60,15 @@
 /* UMTS CP Address key*/
 #define LOC_NI_NOTIF_KEY_ADDRESS           "Address"
 
+/* GPS SV Id offset */
+#define GPS_SV_ID_OFFSET        (1)
+
+/* GLONASS SV Id offset */
+#define GLONASS_SV_ID_OFFSET    (65)
+
+/* SV ID range */
+#define SV_ID_RANGE             (32)
+
 /* global reference to Loc API V02 adapter object */
 static LocApiV02Adapter *locApiV02AdapterInstance;
 
@@ -426,21 +435,28 @@ enum loc_api_adapter_err LocApiV02Adapter ::  deleteAidingData(GpsAidingData f)
     /* to keep track of svInfoList for GPS and GLO*/
     uint32_t curr_sv_len = 0;
     uint32_t curr_sv_idx = 0;
+    uint32_t sv_id =  0;
+
     if((f & GPS_DELETE_EPHEMERIS ) || ( f & GPS_DELETE_ALMANAC ))
     {
       /* do delete for all GPS SV's */
-      curr_sv_len += 32;
+
+      curr_sv_len += SV_ID_RANGE;
+
+      sv_id = GPS_SV_ID_OFFSET;
 
       delete_req.deleteSvInfoList_valid = 1;
 
       delete_req.deleteSvInfoList_len = curr_sv_len;
 
-      LOC_UTIL_LOGV("%s:%d]: Delete GPS SV info for idx %d to %d\n",
-                    __func__, __LINE__, curr_sv_idx, curr_sv_len - 1);
+      LOC_UTIL_LOGV("%s:%d]: Delete GPS SV info for index %d to %d"
+                    "and sv id %d to %d \n",
+                    __func__, __LINE__, curr_sv_idx, curr_sv_len - 1,
+                    sv_id, sv_id+SV_ID_RANGE);
 
-      for( uint32_t i = curr_sv_idx; i< curr_sv_len ; i++ )
+      for( uint32_t i = curr_sv_idx; i< curr_sv_len ; i++, sv_id++ )
       {
-        delete_req.deleteSvInfoList[i].gnssSvId = i;
+        delete_req.deleteSvInfoList[i].gnssSvId = sv_id;
 
         delete_req.deleteSvInfoList[i].system = eQMI_LOC_SV_SYSTEM_GPS_V02;
 
@@ -458,7 +474,7 @@ enum loc_api_adapter_err LocApiV02Adapter ::  deleteAidingData(GpsAidingData f)
         }
       }
       // increment the current index
-      curr_sv_idx += 32;
+      curr_sv_idx += SV_ID_RANGE;
 
     }
 
@@ -543,18 +559,23 @@ enum loc_api_adapter_err LocApiV02Adapter ::  deleteAidingData(GpsAidingData f)
     {
       /* do delete for all GLONASS SV's (65 - 96)
       */
-      curr_sv_len += 32;
+      curr_sv_len += SV_ID_RANGE;
+
+      sv_id = GLONASS_SV_ID_OFFSET;
 
       delete_req.deleteSvInfoList_valid = 1;
 
       delete_req.deleteSvInfoList_len = curr_sv_len;
 
-      LOC_UTIL_LOGV("%s:%d]: Delete GLO SV info for idx %d to %d\n", __func__,
-                    __LINE__, curr_sv_idx, curr_sv_len - 1);
+      LOC_UTIL_LOGV("%s:%d]: Delete GLO SV info for index %d to %d"
+                    "and sv id %d to %d \n",
+                    __func__, __LINE__, curr_sv_idx, curr_sv_len - 1,
+                    sv_id, sv_id+SV_ID_RANGE);
 
-      for( uint32_t i = curr_sv_idx; i< curr_sv_len ; i++ )
+
+      for( uint32_t i = curr_sv_idx; i< curr_sv_len ; i++, sv_id++ )
       {
-        delete_req.deleteSvInfoList[i].gnssSvId = i;
+        delete_req.deleteSvInfoList[i].gnssSvId = sv_id;
 
         delete_req.deleteSvInfoList[i].system = eQMI_LOC_SV_SYSTEM_GLONASS_V02;
 
@@ -571,7 +592,7 @@ enum loc_api_adapter_err LocApiV02Adapter ::  deleteAidingData(GpsAidingData f)
             QMI_LOC_MASK_DELETE_ALMANAC_V02;
         }
       }
-      curr_sv_idx += 32;
+      curr_sv_idx += SV_ID_RANGE;
     }
 
     if(f & GPS_DELETE_SVDIR_GLO )
@@ -999,7 +1020,7 @@ enum loc_api_adapter_err LocApiV02Adapter :: atlCloseStatus(
 }
 
 /* set the SUPL version */
-enum loc_api_adapter_err LocApiV02Adapter :: setSUPLVersion(int version)
+enum loc_api_adapter_err LocApiV02Adapter :: setSUPLVersion(uint32_t version)
 {
   locClientStatusEnumType result = eLOC_CLIENT_SUCCESS;
   locClientReqUnionType req_union;
@@ -1014,7 +1035,10 @@ enum loc_api_adapter_err LocApiV02Adapter :: setSUPLVersion(int version)
   memset(&supl_config_ind, 0, sizeof(supl_config_ind));
 
    supl_config_req.suplVersion_valid = 1;
-   supl_config_req.suplVersion = (version == 2)?
+   // SUPL version from MSByte to LSByte:
+   // (reserved)(major version)(minor version)(serviceIndicator)
+
+   supl_config_req.suplVersion = (version == 0x00020000)?
      eQMI_LOC_SUPL_VERSION_2_0_V02 : eQMI_LOC_SUPL_VERSION_1_0_V02;
 
   req_union.pSetProtocolConfigParametersReq = &supl_config_req;
