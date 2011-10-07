@@ -110,7 +110,7 @@ bool_t rpc_loc_event_cb_f_type_svc(
     int index = argp->cb_id & 0xFFFF;
 
     /* Callback not registered, or unexpected ID (shouldn't happen) */
-    if (index > LOC_API_CB_MAX_CLIENTS || loc_glue_callback_table[index].cb_func == NULL)
+    if (index >= LOC_API_CB_MAX_CLIENTS || loc_glue_callback_table[index].cb_func == NULL)
     {
         LOGE("Warning: No callback handler %d.\n", index);
         ret->loc_event_cb_f_type_result = 0;
