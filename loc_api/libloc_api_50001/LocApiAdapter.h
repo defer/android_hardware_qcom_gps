@@ -155,7 +155,7 @@ public:
     inline virtual enum loc_api_adapter_err
         informNiResponse(GpsUserResponseType userResponse, const void* passThroughData) {return LOC_API_ADAPTER_ERR_SUCCESS;};
     inline virtual enum loc_api_adapter_err
-        setSUPLVersion(int version) {return LOC_API_ADAPTER_ERR_SUCCESS;};
+        setSUPLVersion(uint32_t version) {return LOC_API_ADAPTER_ERR_SUCCESS;};
     inline virtual enum loc_api_adapter_err
         setSensorControlConfig(int sensorUsage) {return LOC_API_ADAPTER_ERR_SUCCESS;};
     inline virtual enum loc_api_adapter_err

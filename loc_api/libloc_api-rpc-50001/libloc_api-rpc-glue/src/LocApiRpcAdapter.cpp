@@ -1157,10 +1157,10 @@ int LocApiRpcAdapter::NIEventFillVerfiyType(GpsNiNotification &notif,
 }
 
 enum loc_api_adapter_err
-LocApiRpcAdapter::setSUPLVersion(int version)
+LocApiRpcAdapter::setSUPLVersion(uint32_t version)
 {
    rpc_loc_ioctl_data_u_type ioctl_data = {RPC_LOC_IOCTL_SET_SUPL_VERSION, {0}};
-   ioctl_data.rpc_loc_ioctl_data_u_type_u.supl_version = version;
+   ioctl_data.rpc_loc_ioctl_data_u_type_u.supl_version = (int)version;
    return convertErr(
        loc_eng_ioctl (client_handle,
                       RPC_LOC_IOCTL_SET_SUPL_VERSION,
