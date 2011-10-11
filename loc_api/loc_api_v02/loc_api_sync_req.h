@@ -37,7 +37,7 @@ extern "C"
 #include <stdint.h>
 #include "loc_api_v02_client.h"
 
-#define LOC_ENGINE_SYNC_REQUEST_TIMEOUT  (1000) // 1 seconds
+#define LOC_ENGINE_SYNC_REQUEST_TIMEOUT  (1000) // 1 second
 
 /* Init function */
 extern void loc_sync_req_init();

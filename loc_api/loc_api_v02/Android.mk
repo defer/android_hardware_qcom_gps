@@ -18,7 +18,7 @@ LOCAL_SRC_FILES += \
     LocApiV02Adapter.cpp \
     loc_api_v02_client.c \
     loc_api_sync_req.c \
-    qmi_loc_v02.c
+    location_service_v02.c
 
 LOCAL_CFLAGS += \
     -fno-short-enums \

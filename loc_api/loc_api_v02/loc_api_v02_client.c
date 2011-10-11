@@ -343,8 +343,23 @@ static locClientRespIndTableStructT locClientRespIndTable[]= {
 
    //Get Sensor Performance Control Config
    { QMI_LOC_GET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_IND_V02,
-     sizeof(qmiLocGetSensorPerformanceControlConfigIndMsgT_v02)}
+     sizeof(qmiLocGetSensorPerformanceControlConfigIndMsgT_v02)},
 
+   //Inject SUPL certificate
+   { QMI_LOC_INJECT_SUPL_CERTIFICATE_IND_V02,
+     sizeof(qmiLocInjectSuplCertificateIndMsgT_v02) },
+
+   //Delete SUPL certificate
+   { QMI_LOC_DELETE_SUPL_CERTIFICATE_IND_V02,
+     sizeof(qmiLocDeleteSuplCertificateIndMsgT_v02) },
+
+   // Set Position Engine Config
+   { QMI_LOC_SET_POSITION_ENGINE_CONFIG_PARAMETERS_IND_V02,
+     sizeof(qmiLocSetPositionEngineConfigParametersIndMsgT_v02)},
+
+   // Get Position Engine Config
+   { QMI_LOC_GET_POSITION_ENGINE_CONFIG_PARAMETERS_IND_V02,
+     sizeof(qmiLocGetPositionEngineConfigParametersIndMsgT_v02)}
 };
 
 
@@ -867,7 +882,22 @@ static bool locClientHandleIndication(
 
     case QMI_LOC_SET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_IND_V02:
     {
-      //locClientHandleSetSensorPerformanceControlConfigInd(user_handle, msg_id, ind_buf, ind_buf_len);
+      //locClientHandleSetSensorPerformanceControlConfigInd(
+      //user_handle, msg_id, ind_buf, ind_buf_len);
+      status = true;
+      break;
+    }
+    case QMI_LOC_SET_POSITION_ENGINE_CONFIG_PARAMETERS_IND_V02:
+    {
+    // locClientHandleSetPositionEngineConfigParam(
+    //     user_handle, msg_id, ind_buf, ind_buf_len);
+      status = true;
+      break;
+    }
+    case QMI_LOC_GET_POSITION_ENGINE_CONFIG_PARAMETERS_IND_V02:
+    {
+      // locClientHandleSetPositionEngineConfigParam(
+      //     user_handle, msg_id, ind_buf, ind_buf_len);
       status = true;
       break;
     }
@@ -892,6 +922,8 @@ static bool locClientHandleIndication(
     case QMI_LOC_INFORM_LOCATION_SERVER_CONN_STATUS_IND_V02:
     case QMI_LOC_SET_SENSOR_CONTROL_CONFIG_IND_V02:
     case QMI_LOC_SET_SENSOR_PROPERTIES_IND_V02:
+    case QMI_LOC_INJECT_SUPL_CERTIFICATE_IND_V02:
+    case QMI_LOC_DELETE_SUPL_CERTIFICATE_IND_V02:
     {
       status = true;
       break;
@@ -1141,11 +1173,11 @@ static locClientStatusEnumType convertResponseToStatus(
   {
     switch(pResponse->resp.error)
     {
-      case QMI_ERR_MALFORMED_MSG:
+      case QMI_ERR_MALFORMED_MSG_V01:
         status = eLOC_CLIENT_FAILURE_INVALID_PARAMETER;
         break;
 
-      case QMI_ERR_DEVICE_IN_USE:
+      case QMI_ERR_DEVICE_IN_USE_V01:
         status = eLOC_CLIENT_FAILURE_ENGINE_BUSY;
         break;
 
@@ -1355,6 +1387,26 @@ static bool validateRequest(
       *pOutLen = sizeof(qmiLocSetSensorPerformanceControlConfigReqMsgT_v02);
       break;
     }
+    case QMI_LOC_INJECT_SUPL_CERTIFICATE_REQ_V02:
+    {
+      *pOutLen = sizeof(qmiLocInjectSuplCertificateReqMsgT_v02);
+      break;
+    }
+    case QMI_LOC_DELETE_SUPL_CERTIFICATE_REQ_V02:
+    {
+      *pOutLen = sizeof(qmiLocDeleteSuplCertificateReqMsgT_v02);
+      break;
+    }
+    case QMI_LOC_SET_POSITION_ENGINE_CONFIG_PARAMETERS_REQ_V02:
+    {
+      *pOutLen = sizeof(qmiLocSetPositionEngineConfigParametersReqMsgT_v02);
+      break;
+    }
+    case QMI_LOC_GET_POSITION_ENGINE_CONFIG_PARAMETERS_REQ_V02:
+    {
+      *pOutLen = sizeof(qmiLocGetPositionEngineConfigParametersReqMsgT_v02);
+      break;
+    }
 
     // ALL requests with no payload
     case QMI_LOC_GET_SERVICE_REVISION_REQ_V02:
@@ -1472,7 +1524,7 @@ static locClientStatusEnumType locClientQmiCtrlPointInit(qmi_client_type *pQmiCl
 
   // Get the service object for the qmiLoc Service
   qmi_idl_service_object_type locClientServiceObject =
-    qmiLoc_get_service_object_v02();
+    loc_get_service_object_v02();
 
   // Verify that qmiLoc_get_service_object did not return NULL
   if (NULL == locClientServiceObject)
@@ -1574,8 +1626,8 @@ static locClientStatusEnumType locClientQmiCtrlPointInit(qmi_client_type *pQmiCl
 
   @return
   One of the following error codes:
-  - eLOC_CLIENT_SUCCESS  -– If the connection is opened.
-  - non-zero error code(see locClientStatusEnumType) -– On failure.
+  - eLOC_CLIENT_SUCCESS  -ï¿½ If the connection is opened.
+  - non-zero error code(see locClientStatusEnumType) -ï¿½ On failure.
 */
 
 locClientStatusEnumType locClientOpen (
@@ -1651,8 +1703,8 @@ locClientStatusEnumType locClientOpen (
           function.
   @return
   One of the following error codes:
-  - 0 (eLOC_CLIENT_SUCCESS) -– On success.
-  - non-zero error code(see locClientStatusEnumType) -– On failure.
+  - 0 (eLOC_CLIENT_SUCCESS) -ï¿½ On success.
+  - non-zero error code(see locClientStatusEnumType) -ï¿½ On failure.
 */
 
 locClientStatusEnumType locClientClose(
@@ -1690,8 +1742,8 @@ locClientStatusEnumType locClientClose(
 
   @return
   One of the following error codes:
-  - 0 (eLOC_CLIENT_SUCCESS ) -– On success.
-  - non-zero error code (see locClientStatusEnumType) -– On failure.
+  - 0 (eLOC_CLIENT_SUCCESS ) -ï¿½ On success.
+  - non-zero error code (see locClientStatusEnumType) -ï¿½ On failure.
 */
 
 locClientStatusEnumType locClientSendReq(
