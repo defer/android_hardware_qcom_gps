@@ -292,6 +292,8 @@ linked_list_err_type linked_list_search(void* list_data, void **data_p,
      if ((*equal)(data_0, tmp->data_ptr)) {
        if (NULL != data_p) {
          *data_p = tmp->data_ptr;
+       } else if (NULL != tmp->dealloc_func) {
+           tmp->dealloc_func(tmp->data_ptr);
        }
 
        if (rm_if_found) {
