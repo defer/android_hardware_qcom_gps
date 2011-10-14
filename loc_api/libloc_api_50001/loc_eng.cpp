@@ -1935,7 +1935,7 @@ void loc_eng_if_wakeup(int if_req, unsigned is_supl, unsigned long ipv4_addr, un
 {
     ENTRY_LOG();
 
-    AGpsType agps_type = is_supl? AGPS_TYPE_SUPL : AGPS_TYPE_ANY;  // No C2k?
+    AGpsType agps_type = is_supl? AGPS_TYPE_SUPL : AGPS_TYPE_WWAN_ANY;  // No C2k?
     AGpsStatusValue status = if_req ? GPS_REQUEST_AGPS_DATA_CONN : GPS_RELEASE_AGPS_DATA_CONN;
     int tries = 3;
 
