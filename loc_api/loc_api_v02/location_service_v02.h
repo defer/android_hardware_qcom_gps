@@ -25,16 +25,48 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef QMILOC_SERVICE_H
-#define QMILOC_SERVICE_H
 
-/** @defgroup qmiLoc_qmi_consts Constant values defined in the IDL */
-/** @defgroup qmiLoc_qmi_msg_ids Constant values for QMI message IDs */
-/** @defgroup qmiLoc_qmi_enums Enumerated types used in QMI messages */
-/** @defgroup qmiLoc_qmi_messages Structures sent as QMI messages */
-/** @defgroup qmiLoc_qmi_aggregates Aggregate types used in QMI messages */
-/** @defgroup qmiLoc_qmi_accessor Accessor for QMI service object */
-/** @defgroup qmiLoc_qmi_version Constant values for versioning information */
+#ifndef LOC_SERVICE_H
+#define LOC_SERVICE_H
+/**
+  @file location_service_v02.h
+
+  @brief This is the public header file which defines the loc service Data structures.
+
+  This header file defines the types and structures that were defined in
+  loc. It contains the constant values defined, enums, structures,
+  messages, and service message IDs (in that order) Structures that were
+  defined in the IDL as messages contain mandatory elements, optional
+  elements, a combination of mandatory and optional elements (mandatory
+  always come before optionals in the structure), or nothing (null message)
+
+  An optional element in a message is preceded by a uint8_t value that must be
+  set to true if the element is going to be included. When decoding a received
+  message, the uint8_t values will be set to true or false by the decode
+  routine, and should be checked before accessing the values that they
+  correspond to.
+
+  Variable sized arrays are defined as static sized arrays with an unsigned
+  integer (32 bit) preceding it that must be set to the number of elements
+  in the array that are valid. For Example:
+
+  uint32_t test_opaque_len;
+  uint8_t test_opaque[16];
+
+  If only 4 elements are added to test_opaque[] then test_opaque_len must be
+  set to 4 before sending the message.  When decoding, the _len value is set
+  by the decode routine and should be checked so that the correct number of
+  elements in the array will be accessed.
+
+*/
+
+/** @defgroup loc_qmi_consts Constant values defined in the IDL */
+/** @defgroup loc_qmi_msg_ids Constant values for QMI message IDs */
+/** @defgroup loc_qmi_enums Enumerated types used in QMI messages */
+/** @defgroup loc_qmi_messages Structures sent as QMI messages */
+/** @defgroup loc_qmi_aggregates Aggregate types used in QMI messages */
+/** @defgroup loc_qmi_accessor Accessor for QMI service object */
+/** @defgroup loc_qmi_version Constant values for versioning information */
 
 #include <stdint.h>
 #include "qmi_idl_lib.h"
@@ -45,23 +77,23 @@
 extern "C" {
 #endif
 
-/** @addtogroup qmiLoc_qmi_version
+/** @addtogroup loc_qmi_version
     @{
   */
 /** Major Version Number of the IDL used to generate this file */
-#define QMILOC_V02_IDL_MAJOR_VERS 0x02
+#define LOC_V02_IDL_MAJOR_VERS 0x02
 /** Revision Number of the IDL used to generate this file */
-#define QMILOC_V02_IDL_MINOR_VERS 0x00
+#define LOC_V02_IDL_MINOR_VERS 0x03
 /** Major Version Number of the qmi_idl_compiler used to generate this file */
-#define QMILOC_V02_IDL_TOOL_VERS 0x02
+#define LOC_V02_IDL_TOOL_VERS 0x02
 /** Maximum Defined Message ID */
-#define QMILOC_V02_MAX_MESSAGE_ID 0x005B;
+#define LOC_V02_MAX_MESSAGE_ID 0x005F;
 /**
     @}
   */
 
 
-/** @addtogroup qmiLoc_qmi_consts
+/** @addtogroup loc_qmi_consts
     @{
   */
 
@@ -107,7 +139,7 @@ extern "C" {
      request indication and pick the minimum of the two.   */
 #define QMI_LOC_MAX_PREDICTED_ORBITS_PART_LEN_V02 1024
 
-/**  Maximum length of the delete SV info list.  */
+/**  Maximum length of the delete SV information list  */
 #define QMI_LOC_DELETE_MAX_SV_INFO_LENGTH_V02 128
 
 /**  MAC address length in bytes.  */
@@ -124,11 +156,14 @@ extern "C" {
 
 /**  Maximum APN profiles supported. */
 #define QMI_LOC_MAX_APN_PROFILES_V02 6
+
+/**  Maximum length of SUPL CERT. */
+#define QMI_LOC_MAX_SUPL_CERT_LENGTH_V02 2000
 /**
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Response Message; Generic response definition. This message is used to tell
@@ -144,7 +179,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Request Message; Informs the service of the minor revision of the interface
@@ -152,6 +187,7 @@ typedef struct {
 typedef struct {
 
   /* Mandatory */
+  /*  Revision */
   uint32_t revision;
   /**<   Revision that the control point is using. \n
        - Type: Unsigned integer   */
@@ -161,21 +197,38 @@ typedef struct {
   */
 
 typedef uint64_t qmiLocEventRegMaskT_v02;
-#define QMI_LOC_EVENT_MASK_POSITION_REPORT_V02 ((qmiLocEventRegMaskT_v02)0x00000001)
-#define QMI_LOC_EVENT_MASK_GNSS_SV_INFO_V02 ((qmiLocEventRegMaskT_v02)0x00000002)
-#define QMI_LOC_EVENT_MASK_NMEA_V02 ((qmiLocEventRegMaskT_v02)0x00000004)
-#define QMI_LOC_EVENT_MASK_NI_NOTIFY_VERIFY_REQ_V02 ((qmiLocEventRegMaskT_v02)0x00000008)
-#define QMI_LOC_EVENT_MASK_INJECT_TIME_REQ_V02 ((qmiLocEventRegMaskT_v02)0x00000010)
-#define QMI_LOC_EVENT_MASK_INJECT_PREDICTED_ORBITS_REQ_V02 ((qmiLocEventRegMaskT_v02)0x00000020)
-#define QMI_LOC_EVENT_MASK_INJECT_POSITION_REQ_V02 ((qmiLocEventRegMaskT_v02)0x00000040)
-#define QMI_LOC_EVENT_MASK_ENGINE_STATE_V02 ((qmiLocEventRegMaskT_v02)0x00000080)
-#define QMI_LOC_EVENT_MASK_FIX_SESSION_STATE_V02 ((qmiLocEventRegMaskT_v02)0x00000100)
-#define QMI_LOC_EVENT_MASK_WIFI_REQ_V02 ((qmiLocEventRegMaskT_v02)0x00000200)
-#define QMI_LOC_EVENT_MASK_SENSOR_STREAMING_READY_STATUS_V02 ((qmiLocEventRegMaskT_v02)0x00000400)
-#define QMI_LOC_EVENT_MASK_TIME_SYNC_REQ_V02 ((qmiLocEventRegMaskT_v02)0x00000800)
-#define QMI_LOC_EVENT_MASK_SET_SPI_STREAMING_REPORT_V02 ((qmiLocEventRegMaskT_v02)0x00001000)
-#define QMI_LOC_EVENT_MASK_LOCATION_SERVER_CONNECTION_REQ_V02 ((qmiLocEventRegMaskT_v02)0x00002000)
-/** @addtogroup qmiLoc_qmi_messages
+#define QMI_LOC_EVENT_MASK_POSITION_REPORT_V02 ((qmiLocEventRegMaskT_v02)0x00000001) /**<  The control point must enable this mask to receive position report
+       event indications.  */
+#define QMI_LOC_EVENT_MASK_GNSS_SV_INFO_V02 ((qmiLocEventRegMaskT_v02)0x00000002) /**<  The control point must enable this mask to receive satellite report
+       event indications. These reports are sent at a 1 Hz rate.  */
+#define QMI_LOC_EVENT_MASK_NMEA_V02 ((qmiLocEventRegMaskT_v02)0x00000004) /**<  The control point must enable this mask to receive NMEA reports for
+       position and satellites in view. The report is at a 1 Hz rate.  */
+#define QMI_LOC_EVENT_MASK_NI_NOTIFY_VERIFY_REQ_V02 ((qmiLocEventRegMaskT_v02)0x00000008) /**<  The control point must enable this mask to receive NI notify verify request
+       event indications.  */
+#define QMI_LOC_EVENT_MASK_INJECT_TIME_REQ_V02 ((qmiLocEventRegMaskT_v02)0x00000010) /**<  The control point must enable this mask to receive time injection request
+       event indications.  */
+#define QMI_LOC_EVENT_MASK_INJECT_PREDICTED_ORBITS_REQ_V02 ((qmiLocEventRegMaskT_v02)0x00000020) /**<  The control point must enable this mask to receive predicted orbits request
+       event indications.  */
+#define QMI_LOC_EVENT_MASK_INJECT_POSITION_REQ_V02 ((qmiLocEventRegMaskT_v02)0x00000040) /**<  The control point must enable this mask to receive position injection request
+       event indications.  */
+#define QMI_LOC_EVENT_MASK_ENGINE_STATE_V02 ((qmiLocEventRegMaskT_v02)0x00000080) /**<  The control point must enable this mask to receive engine state report
+       event indications.  */
+#define QMI_LOC_EVENT_MASK_FIX_SESSION_STATE_V02 ((qmiLocEventRegMaskT_v02)0x00000100) /**<  The control point must enable this mask to receive fix session status report
+       event indications.  */
+#define QMI_LOC_EVENT_MASK_WIFI_REQ_V02 ((qmiLocEventRegMaskT_v02)0x00000200) /**<  The control point must enable this mask to receive WiFi position request
+       event indications.  */
+#define QMI_LOC_EVENT_MASK_SENSOR_STREAMING_READY_STATUS_V02 ((qmiLocEventRegMaskT_v02)0x00000400) /**<  The control point must enable this mask to receive notifications from the
+       GPS engine indicating its readiness to accept data from the
+       sensors (accelerometer, gyrometer, etc.).  */
+#define QMI_LOC_EVENT_MASK_TIME_SYNC_REQ_V02 ((qmiLocEventRegMaskT_v02)0x00000800) /**<  The control point must enable this mask to receive time-sync requests from
+       the GPS engine. Time sync enables the GPS engine to synchronize
+       its clock with the sensor processor's clock.  */
+#define QMI_LOC_EVENT_MASK_SET_SPI_STREAMING_REPORT_V02 ((qmiLocEventRegMaskT_v02)0x00001000) /**<  The control point must enable this mask to receive Stationary Position
+     Indicator (SPI) streaming report indications.  */
+#define QMI_LOC_EVENT_MASK_LOCATION_SERVER_CONNECTION_REQ_V02 ((qmiLocEventRegMaskT_v02)0x00002000) /**<  The control point must enable this mask to receive location server requests.
+     These requests are generated when the service wishes to establish a
+     connection with a location server. */
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Request Message; Used by the control point to register for events from the
@@ -183,9 +236,10 @@ typedef uint64_t qmiLocEventRegMaskT_v02;
 typedef struct {
 
   /* Mandatory */
+  /*  Event Registration Mask */
   qmiLocEventRegMaskT_v02 eventRegMask;
   /**<   Specifies the events that the control point is interested in receiving.
-       Refer to the definition. of the following bitmasks: \n
+       Refer to the definition of the following bitmasks: \n
 
        - 0x00000001 -- POSITION_REPORT \n
        - 0x00000002 -- GNSS_SV_INFO \n
@@ -210,7 +264,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -224,7 +278,7 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -239,7 +293,7 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -253,7 +307,7 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Request Message; The control point sends this message when it wants to
@@ -261,6 +315,7 @@ typedef enum {
 typedef struct {
 
   /* Mandatory */
+  /*  Session ID  */
   uint8_t sessionId;
   /**<   ID of the session as identified by the control point. The session ID
        is reported back in the position reports. The control point must
@@ -270,9 +325,10 @@ typedef struct {
    */
 
   /* Optional */
+  /*  Recurrence Type */
   uint8_t fixRecurrence_valid;  /**< Must be set to true if fixRecurrence is being passed */
   qmiLocFixRecurrenceEnumT_v02 fixRecurrence;
-  /**<   Specifies the type of session the control point is interested in.
+  /**<   Specifies the type of session in which the control point is interested.
        If this TLV is not specified, recurrence defaults to SINGLE.
 
        Valid values: \n
@@ -281,6 +337,7 @@ typedef struct {
    */
 
   /* Optional */
+  /*  Horizontal Accuracy */
   uint8_t horizontalAccuracyLevel_valid;  /**< Must be set to true if horizontalAccuracyLevel is being passed */
   qmiLocAccuracyLevelEnumT_v02 horizontalAccuracyLevel;
   /**<   Specifies the horizontal accuracy level required by the control point.
@@ -293,6 +350,7 @@ typedef struct {
     */
 
   /* Optional */
+  /*  Enable/Disable Intermediate Reports */
   uint8_t intermediateReportState_valid;  /**< Must be set to true if intermediateReportState is being passed */
   qmiLocIntermediateReportStateEnumT_v02 intermediateReportState;
   /**<   Specifies if the control point is interested in receiving intermediate
@@ -310,6 +368,7 @@ typedef struct {
    */
 
   /* Optional */
+  /*  Minimum Interval Between Position Reports */
   uint8_t minInterval_valid;  /**< Must be set to true if minInterval is being passed */
   uint32_t minInterval;
   /**<   Minimum time interval, specified by the control point, that must elapse between
@@ -323,7 +382,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Request Message; The control point sends this message when it wants to
@@ -331,8 +390,9 @@ typedef struct {
 typedef struct {
 
   /* Mandatory */
+  /*   Session ID */
   uint8_t sessionId;
-  /**<   ID of the session that was specified in the start request
+  /**<   ID of the session that was specified in the Start request
        (QMI_LOC_START_REQ).\n
        - Type: Unsigned integer \n
        - Range: 0 to 255  */
@@ -342,10 +402,10 @@ typedef struct {
   */
 
 typedef uint32_t qmiLocPosTechMaskT_v02;
-#define QMI_LOC_POS_TECH_MASK_SATELLITE_V02 ((qmiLocPosTechMaskT_v02)0x00000001)
-#define QMI_LOC_POS_TECH_MASK_CELLID_V02 ((qmiLocPosTechMaskT_v02)0x00000002)
-#define QMI_LOC_POS_TECH_MASK_WIFI_V02 ((qmiLocPosTechMaskT_v02)0x00000004)
-/** @addtogroup qmiLoc_qmi_enums
+#define QMI_LOC_POS_TECH_MASK_SATELLITE_V02 ((qmiLocPosTechMaskT_v02)0x00000001) /**<  Satellites were used to generate the fix.  */
+#define QMI_LOC_POS_TECH_MASK_CELLID_V02 ((qmiLocPosTechMaskT_v02)0x00000002) /**<  Cell towers were used to generate the fix.  */
+#define QMI_LOC_POS_TECH_MASK_WIFI_V02 ((qmiLocPosTechMaskT_v02)0x00000004) /**<  WiFi access points were used to generate the fix.  */
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -367,14 +427,15 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_aggregates
+/** @addtogroup loc_qmi_aggregates
     @{
   */
 typedef struct {
 
   uint16_t gpsWeek;
   /**<   Current GPS week as calculated from midnight, Jan. 6, 1980. \n
-       - Type: Unsigned integer  */
+       - Type: Unsigned integer \n
+       - Units: Weeks  */
 
   uint32_t gpsTimeOfWeekMs;
   /**<   Amount of time into the current GPS week. \n
@@ -385,24 +446,24 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_aggregates
+/** @addtogroup loc_qmi_aggregates
     @{
   */
 typedef struct {
 
   float PDOP;
-  /**<   Position dilution of position.\n
+  /**<   Position dilution of precision.\n
        - Type: Floating point \n
        - Range: 1 (highest accuracy) to 50 (lowest accuracy)\n
        - PDOP = square root of (HDOP^2 + VDOP^2)        */
 
   float HDOP;
-  /**<   Horizontal dilution of position.\n
+  /**<   Horizontal dilution of precision.\n
        - Type: Floating point \n
        - Range: 1 (highest accuracy) to 50 (lowest accuracy)  */
 
   float VDOP;
-  /**<   Vertical dilution of position.\n
+  /**<   Vertical dilution of precision.\n
        - Type: Floating point. \n
        - Range: 1 (highest accuracy) to 50 (lowest accuracy)  */
 }qmiLocDOPStructT_v02;  /* Type */
@@ -411,14 +472,14 @@ typedef struct {
   */
 
 typedef uint32_t qmiLocSensorUsageMaskT_v02;
-#define QMI_LOC_SENSOR_MASK_USED_ACCEL_V02 ((qmiLocSensorUsageMaskT_v02)0x00000001)
-#define QMI_LOC_SENSOR_MASK_USED_GYRO_V02 ((qmiLocSensorUsageMaskT_v02)0x00000002)
+#define QMI_LOC_SENSOR_MASK_USED_ACCEL_V02 ((qmiLocSensorUsageMaskT_v02)0x00000001) /**<  Bitmask to specify whether an accelerometer was used.  */
+#define QMI_LOC_SENSOR_MASK_USED_GYRO_V02 ((qmiLocSensorUsageMaskT_v02)0x00000002) /**<  Bitmask to specify whether a gyrometer was used.  */
 typedef uint32_t qmiLocSensorAidedMaskT_v02;
-#define QMI_LOC_SENSOR_AIDED_MASK_HEADING_V02 ((qmiLocSensorAidedMaskT_v02)0x00000001)
-#define QMI_LOC_SENSOR_AIDED_MASK_SPEED_V02 ((qmiLocSensorAidedMaskT_v02)0x00000002)
-#define QMI_LOC_SENSOR_AIDED_MASK_POSITION_V02 ((qmiLocSensorAidedMaskT_v02)0x00000004)
-#define QMI_LOC_SENSOR_AIDED_MASK_VELOCITY_V02 ((qmiLocSensorAidedMaskT_v02)0x00000008)
-/** @addtogroup qmiLoc_qmi_aggregates
+#define QMI_LOC_SENSOR_AIDED_MASK_HEADING_V02 ((qmiLocSensorAidedMaskT_v02)0x00000001) /**<  Bitmask to specify whether a sensor was used to calculate heading.  */
+#define QMI_LOC_SENSOR_AIDED_MASK_SPEED_V02 ((qmiLocSensorAidedMaskT_v02)0x00000002) /**<  Bitmask to specify whether a sensor was used to calculate speed.  */
+#define QMI_LOC_SENSOR_AIDED_MASK_POSITION_V02 ((qmiLocSensorAidedMaskT_v02)0x00000004) /**<  Bitmask to specify whether a sensor was used to calculate position.  */
+#define QMI_LOC_SENSOR_AIDED_MASK_VELOCITY_V02 ((qmiLocSensorAidedMaskT_v02)0x00000008) /**<  Bitmask to specify whether a sensor was used to calculate velocity.  */
+/** @addtogroup loc_qmi_aggregates
     @{
   */
 typedef struct {
@@ -443,7 +504,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -463,9 +524,9 @@ typedef enum {
        This is done when the clock time uncertainty is large.  */
   eQMI_LOC_TIME_SRC_GLO_TOW_DECODE_V02 = 9, /**<  Time is set after decoding GLO satellites  */
   eQMI_LOC_TIME_SRC_TIME_TRANSFORM_V02 = 10, /**<  Time is set after transforming the GPS to GLO time  */
-  eQMI_LOC_TIME_SRC_WCDMA_SLEEP_TIME_TAGGING_V02 = 11, /**<  Time is set by the sleep timetag provided by WCDMA network  */
-  eQMI_LOC_TIME_SRC_GSM_SLEEP_TIME_TAGGING_V02 = 12, /**<  Time is set by the sleep timetag provided by GSM network
- Source of Time is Unknown  */
+  eQMI_LOC_TIME_SRC_WCDMA_SLEEP_TIME_TAGGING_V02 = 11, /**<  Time is set by the sleep time tag provided by the WCDMA network  */
+  eQMI_LOC_TIME_SRC_GSM_SLEEP_TIME_TAGGING_V02 = 12, /**<  Time is set by the sleep time tag provided by the GSM network
+ Source of the time is unknown  */
   eQMI_LOC_TIME_SRC_UNKNOWN_V02 = 13,
   QMILOCTIMESOURCEENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
 }qmiLocTimeSourceEnumT_v02;
@@ -473,7 +534,7 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -490,7 +551,7 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; This message is used to send the position report to the
@@ -498,6 +559,7 @@ typedef enum {
 typedef struct {
 
   /* Mandatory */
+  /*   Session Status */
   qmiLocSessionStatusEnumT_v02 sessionStatus;
   /**<   Session status.
 
@@ -513,16 +575,18 @@ typedef struct {
        */
 
   /* Mandatory */
+  /*   Session ID */
   uint8_t sessionId;
-  /**<    ID of the session that was specified in the start request
+  /**<    ID of the session that was specified in the Start request
         QMI_LOC_START_REQ. \n
         - Type: Unsigned integer \n
         - Range: 0 to 255  */
 
   /* Optional */
+  /*  Latitude */
   uint8_t latitude_valid;  /**< Must be set to true if latitude is being passed */
   double latitude;
-  /**<   Latitude. \n
+  /**<   Latitude (specified in WGS84 datum). \n
        - Type: Floating point \n
        - Units: Degrees \n
        - Range: -90.0 to 90.0 \n
@@ -530,6 +594,7 @@ typedef struct {
        - Negative values indicate southern latitude  */
 
   /* Optional */
+  /*   Longitude */
   uint8_t longitude_valid;  /**< Must be set to true if longitude is being passed */
   double longitude;
   /**<   Longitude (specified in WGS84 datum).\n
@@ -540,6 +605,7 @@ typedef struct {
        - Negative values indicate western longitude  */
 
   /* Optional */
+  /*   Circular Horizontal Position Uncertainty */
   uint8_t horUncCircular_valid;  /**< Must be set to true if horUncCircular is being passed */
   float horUncCircular;
   /**<   Horizontal position uncertainty (circular).\n
@@ -547,6 +613,7 @@ typedef struct {
        - Units: Meters  */
 
   /* Optional */
+  /*  Horizontal Elliptical Uncertainty (Semi-Minor Axis) */
   uint8_t horUncEllipseSemiMinor_valid;  /**< Must be set to true if horUncEllipseSemiMinor is being passed */
   float horUncEllipseSemiMinor;
   /**<   Semi-minor axis of horizontal elliptical uncertainty.\n
@@ -554,6 +621,7 @@ typedef struct {
        - Units: Meters  */
 
   /* Optional */
+  /*  Horizontal Elliptical Uncertainty (Semi-Major Axis) */
   uint8_t horUncEllipseSemiMajor_valid;  /**< Must be set to true if horUncEllipseSemiMajor is being passed */
   float horUncEllipseSemiMajor;
   /**<   Semi-major axis of horizontal elliptical uncertainty.\n
@@ -561,6 +629,7 @@ typedef struct {
        - Units: Meters  */
 
   /* Optional */
+  /*  Elliptical Horizontal Uncertainty Azimuth */
   uint8_t horUncEllipseOrientAzimuth_valid;  /**< Must be set to true if horUncEllipseOrientAzimuth is being passed */
   float horUncEllipseOrientAzimuth;
   /**<   Elliptical horizontal uncertainty azimuth of orientation.\n
@@ -569,6 +638,7 @@ typedef struct {
        - Range: 0 to 180  */
 
   /* Optional */
+  /*  Horizontal Confidence */
   uint8_t horConfidence_valid;  /**< Must be set to true if horConfidence is being passed */
   uint8_t horConfidence;
   /**<   Horizontal uncertainty confidence.\n
@@ -577,6 +647,7 @@ typedef struct {
        - Range: 0 to 99  */
 
   /* Optional */
+  /*  Horizontal Reliability */
   uint8_t horReliability_valid;  /**< Must be set to true if horReliability is being passed */
   qmiLocReliabilityEnumT_v02 horReliability;
   /**<   Specifies the reliability of the horizontal position.
@@ -590,6 +661,7 @@ typedef struct {
     */
 
   /* Optional */
+  /*  Horizontal Speed */
   uint8_t speedHorizontal_valid;  /**< Must be set to true if speedHorizontal is being passed */
   float speedHorizontal;
   /**<   Horizontal speed.\n
@@ -597,6 +669,7 @@ typedef struct {
        - Units: Meters/second  */
 
   /* Optional */
+  /*  Speed Uncertainty */
   uint8_t speedUnc_valid;  /**< Must be set to true if speedUnc is being passed */
   float speedUnc;
   /**<   Speed uncertainty.\n
@@ -604,6 +677,7 @@ typedef struct {
        - Units: Meters/second  */
 
   /* Optional */
+  /*  Altitude With Respect to Ellipsoid */
   uint8_t altitudeWrtEllipsoid_valid;  /**< Must be set to true if altitudeWrtEllipsoid is being passed */
   float altitudeWrtEllipsoid;
   /**<   Altitude with respect to the WGS84 ellipsoid.\n
@@ -612,6 +686,7 @@ typedef struct {
        - Range: -500 to 15883  */
 
   /* Optional */
+  /*  Altitude With Respect to Sea Level */
   uint8_t altitudeWrtMeanSeaLevel_valid;  /**< Must be set to true if altitudeWrtMeanSeaLevel is being passed */
   float altitudeWrtMeanSeaLevel;
   /**<   Altitude with respect to mean sea level.\n
@@ -619,6 +694,7 @@ typedef struct {
        - Units: Meters  */
 
   /* Optional */
+  /*  Vertical Uncertainty */
   uint8_t vertUnc_valid;  /**< Must be set to true if vertUnc is being passed */
   float vertUnc;
   /**<   Vertical uncertainty.\n
@@ -626,6 +702,7 @@ typedef struct {
        - Units: Meters  */
 
   /* Optional */
+  /*  Vertical Confidence */
   uint8_t vertConfidence_valid;  /**< Must be set to true if vertConfidence is being passed */
   uint8_t vertConfidence;
   /**<   Vertical uncertainty confidence.\n
@@ -634,6 +711,7 @@ typedef struct {
        - Range: 0 to 99  */
 
   /* Optional */
+  /*  Vertical Reliability */
   uint8_t vertReliability_valid;  /**< Must be set to true if vertReliability is being passed */
   qmiLocReliabilityEnumT_v02 vertReliability;
   /**<   Specifies the reliability of the vertical position.
@@ -643,10 +721,10 @@ typedef struct {
           - 0x00000001 -- RELIABILITY_VERY_LOW \n
           - 0x00000002 -- RELIABILITY_LOW \n
           - 0x00000003 -- RELIABILITY_MEDIUM \n
-          - 0x00000004 -- RELIABILITY_HIGH
-  */
+          - 0x00000004 -- RELIABILITY_HIGH  */
 
   /* Optional */
+  /*  Vertical Speed */
   uint8_t speedVertical_valid;  /**< Must be set to true if speedVertical is being passed */
   float speedVertical;
   /**<   Vertical speed.\n
@@ -654,6 +732,7 @@ typedef struct {
          - Units: Meters/second  */
 
   /* Optional */
+  /*  Heading */
   uint8_t heading_valid;  /**< Must be set to true if heading is being passed */
   float heading;
   /**<   Heading.\n
@@ -662,6 +741,7 @@ typedef struct {
          - Range: 0 to 359.999   */
 
   /* Optional */
+  /*  Heading Uncertainty */
   uint8_t headingUnc_valid;  /**< Must be set to true if headingUnc is being passed */
   float headingUnc;
   /**<   Heading uncertainty.\n
@@ -670,6 +750,7 @@ typedef struct {
        - Range: 0 to 359.999  */
 
   /* Optional */
+  /*  Magnetic Deviation */
   uint8_t magneticDeviation_valid;  /**< Must be set to true if magneticDeviation is being passed */
   float magneticDeviation;
   /**<   Difference between the bearing to true north and the bearing shown
@@ -678,51 +759,57 @@ typedef struct {
       - Type: Floating point  */
 
   /* Optional */
+  /*  Technology Used */
   uint8_t technologyMask_valid;  /**< Must be set to true if technologyMask is being passed */
   qmiLocPosTechMaskT_v02 technologyMask;
-  /**<   Technologies used in computing this fix.
+  /**<   Technology used in computing this fix.
 
        Valid bitmasks: \n
          - 0x00000001 -- SATELLITE \n
          - 0x00000002 -- CELLID    \n
-         - 0x00000004 -- WIFI
-   */
+         - 0x00000004 -- WIFI  */
 
   /* Optional */
+  /*  Dilution of Precision */
   uint8_t DOP_valid;  /**< Must be set to true if DOP is being passed */
   qmiLocDOPStructT_v02 DOP;
-  /**<   Dilution of precision associated with this position.  */
+  /**<   \n Dilution of precision associated with this position.  */
 
   /* Optional */
+  /*  UTC Timestamp */
   uint8_t timestampUtc_valid;  /**< Must be set to true if timestampUtc is being passed */
   uint64_t timestampUtc;
-  /**<   ETC timeshare. \n
+  /**<   UTC timestamp. \n
        - Type: Unsigned integer \n
        - Units: Milliseconds since Jan. 1, 1970  */
 
   /* Optional */
+  /*  Leap Seconds */
   uint8_t leapSeconds_valid;  /**< Must be set to true if leapSeconds is being passed */
   uint8_t leapSeconds;
   /**<   Leap second information. If leapSeconds is not available,
-         timestamp_utc is calculated based on a hard-coded value
+         timestampUtc is calculated based on a hard-coded value
          for leap seconds. \n
          - Type: Unsigned integer \n
          - Units: Seconds  */
 
   /* Optional */
+  /*  GPS Time \n */
   uint8_t gpsTime_valid;  /**< Must be set to true if gpsTime is being passed */
   qmiLocGPSTimeStructT_v02 gpsTime;
-  /**<   GPS time, i.e., the number of weeks since Jan. 5, 1980, and
+  /**<   \n The number of weeks since Jan. 5, 1980, and
        milliseconds into the current week.  */
 
   /* Optional */
+  /*  Time Uncertainty */
   uint8_t timeUnc_valid;  /**< Must be set to true if timeUnc is being passed */
   float timeUnc;
-  /**<   Time uncertainty.\n
+  /**<   Time uncertainty. \n
        - Type: Floating point \n
        - Units: Milliseconds   */
 
   /* Optional */
+  /*  Time Source */
   uint8_t timeSrc_valid;  /**< Must be set to true if timeSrc is being passed */
   qmiLocTimeSourceEnumT_v02 timeSrc;
   /**<   Time source.
@@ -736,16 +823,17 @@ typedef struct {
           - 0x00000005 -- TIME_SRC_TOW_CONFIRMED \n
           - 0x00000006 -- TIME_SRC_TOW_AND_WEEK_CONFIRMED \n
           - 0x00000007 -- TIME_SRC_NAV_SOLUTION \n
-          - 0x00000008 -- TIME_SRC_SOLVE_FOR_TIME
-   */
+          - 0x00000008 -- TIME_SRC_SOLVE_FOR_TIME  */
 
   /* Optional */
+  /*  Sensor Data Usage */
   uint8_t sensorDataUsage_valid;  /**< Must be set to true if sensorDataUsage is being passed */
   qmiLocSensorUsageIndicatorStructT_v02 sensorDataUsage;
-  /**<   Whether sensor data was used in computing the position in this
+  /**<   \n Whether sensor data was used in computing the position in this
        position report.  */
 
   /* Optional */
+  /*  Fix Count for This Session */
   uint8_t fixId_valid;  /**< Must be set to true if fixId is being passed */
   uint32_t fixId;
   /**<   Fix count for the session. Starts with 0 and increments by one
@@ -755,7 +843,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -772,7 +860,7 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -788,18 +876,18 @@ typedef enum {
   */
 
 typedef uint32_t qmiLocSvInfoValidMaskT_v02;
-#define QMI_LOC_SV_INFO_MASK_VALID_SYSTEM_V02 ((qmiLocSvInfoValidMaskT_v02)0x00000001)
-#define QMI_LOC_SV_INFO_MASK_VALID_GNSS_SVID_V02 ((qmiLocSvInfoValidMaskT_v02)0x00000002)
-#define QMI_LOC_SV_INFO_MASK_VALID_HEALTH_STATUS_V02 ((qmiLocSvInfoValidMaskT_v02)0x00000004)
-#define QMI_LOC_SV_INFO_MASK_VALID_PROCESS_STATUS_V02 ((qmiLocSvInfoValidMaskT_v02)0x00000008)
-#define QMI_LOC_SV_INFO_MASK_VALID_SVINFO_MASK_V02 ((qmiLocSvInfoValidMaskT_v02)0x00000010)
-#define QMI_LOC_SV_INFO_MASK_VALID_ELEVATION_V02 ((qmiLocSvInfoValidMaskT_v02)0x00000020)
-#define QMI_LOC_SV_INFO_MASK_VALID_AZIMUTH_V02 ((qmiLocSvInfoValidMaskT_v02)0x00000040)
-#define QMI_LOC_SV_INFO_MASK_VALID_SNR_V02 ((qmiLocSvInfoValidMaskT_v02)0x00000080)
+#define QMI_LOC_SV_INFO_MASK_VALID_SYSTEM_V02 ((qmiLocSvInfoValidMaskT_v02)0x00000001) /**<  System field is valid in SV information.  */
+#define QMI_LOC_SV_INFO_MASK_VALID_GNSS_SVID_V02 ((qmiLocSvInfoValidMaskT_v02)0x00000002) /**<  gnssSvId field is valid in SV information.  */
+#define QMI_LOC_SV_INFO_MASK_VALID_HEALTH_STATUS_V02 ((qmiLocSvInfoValidMaskT_v02)0x00000004) /**<  healthStatus field is valid in SV information.  */
+#define QMI_LOC_SV_INFO_MASK_VALID_PROCESS_STATUS_V02 ((qmiLocSvInfoValidMaskT_v02)0x00000008) /**<  processStatus field is valid in SV information.  */
+#define QMI_LOC_SV_INFO_MASK_VALID_SVINFO_MASK_V02 ((qmiLocSvInfoValidMaskT_v02)0x00000010) /**<  svInfoMask field is valid in SV information.  */
+#define QMI_LOC_SV_INFO_MASK_VALID_ELEVATION_V02 ((qmiLocSvInfoValidMaskT_v02)0x00000020) /**<  Elevation field is valid in SV information.  */
+#define QMI_LOC_SV_INFO_MASK_VALID_AZIMUTH_V02 ((qmiLocSvInfoValidMaskT_v02)0x00000040) /**<  Azimuth field is valid in SV information.  */
+#define QMI_LOC_SV_INFO_MASK_VALID_SNR_V02 ((qmiLocSvInfoValidMaskT_v02)0x00000080) /**<  SNR field is valid in SV information.  */
 typedef uint8_t qmiLocSvInfoMaskT_v02;
-#define QMI_LOC_SVINFO_MASK_HAS_EPHEMERIS_V02 ((qmiLocSvInfoMaskT_v02)0x01)
-#define QMI_LOC_SVINFO_MASK_HAS_ALMANAC_V02 ((qmiLocSvInfoMaskT_v02)0x02)
-/** @addtogroup qmiLoc_qmi_aggregates
+#define QMI_LOC_SVINFO_MASK_HAS_EPHEMERIS_V02 ((qmiLocSvInfoMaskT_v02)0x01) /**<  Ephemeris is available for this SV.  */
+#define QMI_LOC_SVINFO_MASK_HAS_ALMANAC_V02 ((qmiLocSvInfoMaskT_v02)0x02) /**<  Almanac is available for this SV.     */
+/** @addtogroup loc_qmi_aggregates
     @{
   */
 typedef struct {
@@ -834,14 +922,15 @@ typedef struct {
   /**<   GNSS SV ID. \n
 
          - Type: Unsigned integer \n
-         - Range: For GPS:     1 to 32
-                  For SBAS:    33 to 64
-                  For GLONASS: 65 to 96   */
+         - Range: \n
+             -- For GPS:     1 to 32 \n
+             -- For SBAS:    33 to 64    \n
+             -- For GLONASS: 65 to 96   */
 
   uint8_t healthStatus;
   /**<   Health status. \n
          - Type: Unsigned integer \n
-         - Range: 0 = Unhealthy; 1 = Healthy  */
+         - Range: 0 = unhealthy; 1 = healthy  */
 
   qmiLocSvStatusEnumT_v02 svStatus;
   /**<   SV processing status. \n
@@ -852,7 +941,7 @@ typedef struct {
      */
 
   qmiLocSvInfoMaskT_v02 svInfoMask;
-  /**<   Whether almanac and ephemeris information are available. \n
+  /**<   Whether almanac and ephemeris information is available. \n
          Valid bitmasks: \n
            - 0x01 -- SVINFO_HAS_EPHEMERIS \n
            - 0x02 -- SVINFO_HAS_ALMANAC
@@ -879,37 +968,39 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Used to send a satellite report to the control point. */
 typedef struct {
 
   /* Mandatory */
+  /*  Altitude Source */
   uint8_t altitudeAssumed;
   /**<   Altitude assumed or calculated:\n
-         - 0x00 (FALSE) -- Valid altitude is calculated. \n
+         - 0x00 (FALSE) -- Valid altitude is calculated \n
          - 0x01 (TRUE) -- Valid altitude is assumed; there may not be enough
-                          satellites to determine precise altitude.
-     */
+                          satellites to determine precise altitude  */
 
   /* Optional */
+  /*  Satellite Info */
   uint8_t svList_valid;  /**< Must be set to true if svList is being passed */
   uint32_t svList_len;  /**< Must be set to # of elements in svList */
   qmiLocSvInfoStructT_v02 svList[QMI_LOC_SV_INFO_LIST_MAX_SIZE_V02];
-  /**<   SV information list.  */
+  /**<   \n SV information list.  */
 }qmiLocEventGnssSvInfoIndMsgT_v02;  /* Message */
 /**
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Used to send NMEA sentences to the control point. */
 typedef struct {
 
   /* Mandatory */
+  /*  NMEA String */
   char nmea[QMI_LOC_NMEA_STRING_MAX_LENGTH_V02 + 1];
   /**<   NMEA string. \n
        - Type: NULL-terminated string \n
@@ -919,7 +1010,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -936,7 +1027,7 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -952,7 +1043,7 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -974,15 +1065,15 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_aggregates
+/** @addtogroup loc_qmi_aggregates
     @{
   */
 typedef struct {
 
   uint8_t posQosIncl;
   /**<   Whether quality of service is included:\n
-         - 0x01 (TRUE) --  QoS is included. \n
-         - 0x00 (FALSE) -- QoS is not included.  */
+         - 0x01 (TRUE) --  QoS is included \n
+         - 0x00 (FALSE) -- QoS is not included  */
 
   uint8_t posQos;
   /**<   Position QoS timeout. \n
@@ -1029,7 +1120,7 @@ typedef struct {
   uint8_t requestorId[QMI_LOC_NI_MAX_REQUESTOR_ID_LENGTH_V02];
   /**<   Requestor ID. \n
        - Type:  Array of bytes \n
-       - Maximum array length : 200
+       - Maximum array length: 200
    */
 
   uint16_t userRespTimerInSeconds;
@@ -1041,7 +1132,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -1063,7 +1154,7 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -1094,7 +1185,7 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -1105,7 +1196,8 @@ typedef enum {
   eQMI_LOC_NI_SUPL_FORMAT_URL_V02 = 3, /**<  SUPL URL format.  */
   eQMI_LOC_NI_SUPL_FORMAT_SIP_URL_V02 = 4, /**<  SUPL SIP URL format.  */
   eQMI_LOC_NI_SUPL_FORMAT_MIN_V02 = 5, /**<  SUPL MIN format.  */
-  eQMI_LOC_NI_SUPL_FORMAT_MDN_V02 = 6, /**<  SUPL MDN format.
+  eQMI_LOC_NI_SUPL_FORMAT_MDN_V02 = 6, /**<  SUPL MDN format.  */
+  eQMI_LOC_NI_SUPL_FORMAT_IMSPUBLIC_IDENTITY_V02 = 7, /**<  SUPL IMS public identity
  SUPL unknown format.  */
   eQMI_LOC_NI_SUPL_FORMAT_OSS_UNKNOWN_V02 = 2147483647,
   QMILOCNISUPLFORMATENUMTYPE_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
@@ -1114,7 +1206,7 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_aggregates
+/** @addtogroup loc_qmi_aggregates
     @{
   */
 typedef struct {
@@ -1130,6 +1222,7 @@ typedef struct {
           - 0x00000004 -- FORMAT_SIP_URL \n
           - 0x00000005 -- FORMAT_MIN \n
           - 0x00000006 -- FORMAT_MDN \n
+          - 0x00000007 -- FORMAT_IMSPUBLIC_IDENTITY \n
           - 0x7FFFFFFF -- FORMAT_OSS_UNKNOWN
     */
 
@@ -1137,7 +1230,7 @@ typedef struct {
   uint8_t formattedString[QMI_LOC_NI_MAX_CLIENT_NAME_LENGTH_V02];
   /**<   Formatted string. \n
         - Type: Byte array \n
-        - Maximum string length : 64
+        - Maximum string length: 64
          */
 }qmiLocNiSuplFormattedStringStructT_v02;  /* Type */
 /**
@@ -1145,11 +1238,11 @@ typedef struct {
   */
 
 typedef uint8_t qmiLocSuplQopValidMaskT_v02;
-#define QMI_LOC_NI_SUPL_MASK_QOP_HORZ_ACC_VALID_V02 ((qmiLocSuplQopValidMaskT_v02)0x01)
-#define QMI_LOC_NI_SUPL_MASK_QOP_VER_ACC_VALID_V02 ((qmiLocSuplQopValidMaskT_v02)0x02)
-#define QMI_LOC_NI_SUPL_MASK_QOP_MAXAGE_VALID_V02 ((qmiLocSuplQopValidMaskT_v02)0x04)
-#define QMI_LOC_NI_SUPL_MASK_QOP_DELAY_VALID_V02 ((qmiLocSuplQopValidMaskT_v02)0x08)
-/** @addtogroup qmiLoc_qmi_aggregates
+#define QMI_LOC_NI_SUPL_MASK_QOP_HORZ_ACC_VALID_V02 ((qmiLocSuplQopValidMaskT_v02)0x01) /**<  Horizontal accuracy is valid in the Quality of Position (QoP).  */
+#define QMI_LOC_NI_SUPL_MASK_QOP_VER_ACC_VALID_V02 ((qmiLocSuplQopValidMaskT_v02)0x02) /**<  Vertical accuracy is valid in the QoP.  */
+#define QMI_LOC_NI_SUPL_MASK_QOP_MAXAGE_VALID_V02 ((qmiLocSuplQopValidMaskT_v02)0x04) /**<  Vertical accuracy is valid in the QoP.  */
+#define QMI_LOC_NI_SUPL_MASK_QOP_DELAY_VALID_V02 ((qmiLocSuplQopValidMaskT_v02)0x08) /**<  Vertical accuracy is valid in the QoP.  */
+/** @addtogroup loc_qmi_aggregates
     @{
   */
 typedef struct {
@@ -1189,10 +1282,10 @@ typedef struct {
   */
 
 typedef uint8_t qmiLocServerAddrTypeMaskT_v02;
-#define QMI_LOC_SERVER_ADDR_TYPE_IPV4_MASK_V02 ((qmiLocServerAddrTypeMaskT_v02)0x01)
-#define QMI_LOC_SERVER_ADDR_TYPE_IPV6_MASK_V02 ((qmiLocServerAddrTypeMaskT_v02)0x02)
-#define QMI_LOC_SERVER_ADDR_TYPE_URL_MASK_V02 ((qmiLocServerAddrTypeMaskT_v02)0x04)
-/** @addtogroup qmiLoc_qmi_aggregates
+#define QMI_LOC_SERVER_ADDR_TYPE_IPV4_MASK_V02 ((qmiLocServerAddrTypeMaskT_v02)0x01) /**<  IPV4 server address type.  */
+#define QMI_LOC_SERVER_ADDR_TYPE_IPV6_MASK_V02 ((qmiLocServerAddrTypeMaskT_v02)0x02) /**<  IPV6 server address type.  */
+#define QMI_LOC_SERVER_ADDR_TYPE_URL_MASK_V02 ((qmiLocServerAddrTypeMaskT_v02)0x04) /**<  URL server address type.  */
+/** @addtogroup loc_qmi_aggregates
     @{
   */
 typedef struct {
@@ -1209,7 +1302,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_aggregates
+/** @addtogroup loc_qmi_aggregates
     @{
   */
 typedef struct {
@@ -1227,7 +1320,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_aggregates
+/** @addtogroup loc_qmi_aggregates
     @{
   */
 typedef struct {
@@ -1250,7 +1343,7 @@ typedef struct {
   char urlAddr[QMI_LOC_MAX_SERVER_ADDR_LENGTH_V02 + 1];
   /**<   URL. \n
        - Type: NULL-terminated string \n
-       - Maximum length of the string (including NULL terminator): 256
+       - Maximum string length (including NULL terminator): 256
          */
 }qmiLocNiSuplServerInfoStructT_v02;  /* Type */
 /**
@@ -1258,16 +1351,42 @@ typedef struct {
   */
 
 typedef uint32_t qmiLocNiSuplNotifyVerifyValidMaskT_v02;
-#define QMI_LOC_SUPL_SERVER_INFO_MASK_V02 ((qmiLocNiSuplNotifyVerifyValidMaskT_v02)0x00000001)
-#define QMI_LOC_SUPL_SESSION_ID_MASK_V02 ((qmiLocNiSuplNotifyVerifyValidMaskT_v02)0x00000002)
-#define QMI_LOC_SUPL_HASH_MASK_V02 ((qmiLocNiSuplNotifyVerifyValidMaskT_v02)0x00000004)
-#define QMI_LOC_SUPL_POS_METHOD_MASK_V02 ((qmiLocNiSuplNotifyVerifyValidMaskT_v02)0x00000008)
-#define QMI_LOC_SUPL_DATA_CODING_SCHEME_MASK_V02 ((qmiLocNiSuplNotifyVerifyValidMaskT_v02)0x00000010)
-#define QMI_LOC_SUPL_REQUESTOR_ID_MASK_V02 ((qmiLocNiSuplNotifyVerifyValidMaskT_v02)0x00000020)
-#define QMI_LOC_SUPL_CLIENT_NAME_MASK_V02 ((qmiLocNiSuplNotifyVerifyValidMaskT_v02)0x00000040)
-#define QMI_LOC_SUPL_QOP_MASK_V02 ((qmiLocNiSuplNotifyVerifyValidMaskT_v02)0x00000080)
-#define QMI_LOC_SUPL_USER_RESP_TIMER_MASK_V02 ((qmiLocNiSuplNotifyVerifyValidMaskT_v02)0x00000100)
-/** @addtogroup qmiLoc_qmi_aggregates
+#define QMI_LOC_SUPL_SERVER_INFO_MASK_V02 ((qmiLocNiSuplNotifyVerifyValidMaskT_v02)0x00000001) /**<  Mask to denote that the server information
+      is present in an NI SUPL notify verify request event. This mask is set in
+     the valid_flags field of a notify verify structure.  */
+#define QMI_LOC_SUPL_SESSION_ID_MASK_V02 ((qmiLocNiSuplNotifyVerifyValidMaskT_v02)0x00000002) /**<  Mask to denote that the SUPL session ID
+       is present in an NI SUPL notify verify request event.
+      This mask is set in the valid_flags field of a
+      notify verify structure.   */
+#define QMI_LOC_SUPL_HASH_MASK_V02 ((qmiLocNiSuplNotifyVerifyValidMaskT_v02)0x00000004) /**<  Mask to denote that the SUPL hash is present
+       in an NI notify verify request event.
+      This mask is set in the valid_flags field of a
+      notify verify structure.   */
+#define QMI_LOC_SUPL_POS_METHOD_MASK_V02 ((qmiLocNiSuplNotifyVerifyValidMaskT_v02)0x00000008) /**<  Mask to denote that the position method is present
+       in an NI SUPL notify verify request event.
+      This mask is set in the valid_flags field of a
+      notify verify structure.  */
+#define QMI_LOC_SUPL_DATA_CODING_SCHEME_MASK_V02 ((qmiLocNiSuplNotifyVerifyValidMaskT_v02)0x00000010) /**<  Mask to denote that the data coding scheme
+       is present in an NI SUPL notify verify request event.
+      This mask is set in the valid_flags field of a
+      notify verify structure.  */
+#define QMI_LOC_SUPL_REQUESTOR_ID_MASK_V02 ((qmiLocNiSuplNotifyVerifyValidMaskT_v02)0x00000020) /**<  Mask to denote that the requestor ID
+       is present in an NI notify verify request event.
+      This mask is set in the valid_flags field of a
+      notify verify structure.  */
+#define QMI_LOC_SUPL_CLIENT_NAME_MASK_V02 ((qmiLocNiSuplNotifyVerifyValidMaskT_v02)0x00000040) /**<  Mask to denote that the requestor ID
+       is present in an NI notify verify request event.
+       This mask is set in the valid_flags field of a
+       notify verify structure.  */
+#define QMI_LOC_SUPL_QOP_MASK_V02 ((qmiLocNiSuplNotifyVerifyValidMaskT_v02)0x00000080) /**<  Mask to denote that the quality of position
+       is present in an NI notify verify request event.
+       This mask is set in the valid_flags field of a
+       notify verify structure.  */
+#define QMI_LOC_SUPL_USER_RESP_TIMER_MASK_V02 ((qmiLocNiSuplNotifyVerifyValidMaskT_v02)0x00000100) /**<  Mask to denote that the user response timer
+       is present in an NI notify verify request event.
+       This mask is set in the valid_flags field of a
+       notify verify structure.  */
+/** @addtogroup loc_qmi_aggregates
     @{
   */
 typedef struct {
@@ -1363,7 +1482,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -1378,7 +1497,7 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_aggregates
+/** @addtogroup loc_qmi_aggregates
     @{
   */
 typedef struct {
@@ -1412,24 +1531,51 @@ typedef struct {
   uint32_t codedString_len;  /**< Must be set to # of elements in codedString */
   uint8_t codedString[QMI_LOC_NI_CODEWORD_MAX_LENGTH_V02];
   /**<   Coded string. \n
-       - Type: array of bytes \n
-       - Maximum string length : 20  */
+       - Type: Array of bytes \n
+       - Maximum string length: 20  */
 }qmiLocNiUmtsCpCodedStringStructT_v02;  /* Type */
 /**
     @}
   */
 
 typedef uint16_t qmiLocNiUmtsCpNotifyVerifyValidMaskT_v02;
-#define QMI_LOC_UMTS_CP_INVOKE_ID_MASK_V02 ((qmiLocNiUmtsCpNotifyVerifyValidMaskT_v02)0x0001)
-#define QMI_LOC_UMTS_CP_DATA_CODING_SCHEME_MASK_V02 ((qmiLocNiUmtsCpNotifyVerifyValidMaskT_v02)0x0002)
-#define QMI_LOC_UMTS_CP_NOTIFICATION_TEXT_MASK_V02 ((qmiLocNiUmtsCpNotifyVerifyValidMaskT_v02)0x0004)
-#define QMI_LOC_UMTS_CP_CLIENT_ADDRESS_MASK_V02 ((qmiLocNiUmtsCpNotifyVerifyValidMaskT_v02)0x0008)
-#define QMI_LOC_UMTS_CP_LOCATION_TYPE_MASK_V02 ((qmiLocNiUmtsCpNotifyVerifyValidMaskT_v02)0x0010)
-#define QMI_LOC_UMTS_CP_REQUESTOR_ID_MASK_V02 ((qmiLocNiUmtsCpNotifyVerifyValidMaskT_v02)0x0020)
-#define QMI_LOC_UMTS_CP_CODEWORD_STRING_MASK_V02 ((qmiLocNiUmtsCpNotifyVerifyValidMaskT_v02)0x0040)
-#define QMI_LOC_UMTS_CP_SERVICE_TYPE_MASK_V02 ((qmiLocNiUmtsCpNotifyVerifyValidMaskT_v02)0x0080)
-#define QMI_LOC_UMTS_CP_USER_RESP_TIMER_MASK_V02 ((qmiLocNiUmtsCpNotifyVerifyValidMaskT_v02)0x0100)
-/** @addtogroup qmiLoc_qmi_aggregates
+#define QMI_LOC_UMTS_CP_INVOKE_ID_MASK_V02 ((qmiLocNiUmtsCpNotifyVerifyValidMaskT_v02)0x0001) /**<  Mask to denote that the invoke ID
+       is present in an NI notify verify request event.
+      This mask is set in the valid flags field of a
+      notify verify structure.  */
+#define QMI_LOC_UMTS_CP_DATA_CODING_SCHEME_MASK_V02 ((qmiLocNiUmtsCpNotifyVerifyValidMaskT_v02)0x0002) /**<  Mask to denote that the data coding scheme
+       is present in an NI notify verify request event.
+       This mask is set in the valid flags field of a
+      notify verify structure.  */
+#define QMI_LOC_UMTS_CP_NOTIFICATION_TEXT_MASK_V02 ((qmiLocNiUmtsCpNotifyVerifyValidMaskT_v02)0x0004) /**<  Mask to denote that the notification text
+       is present in an NI notify verify request event.
+      This mask is set in the valid flags field of a
+      notify verify structure.  */
+#define QMI_LOC_UMTS_CP_CLIENT_ADDRESS_MASK_V02 ((qmiLocNiUmtsCpNotifyVerifyValidMaskT_v02)0x0008) /**<  Mask to denote that the client address
+       is present in an NI notify verify request event.
+      This mask is set in the valid flags field of a
+      notify verify structure.  */
+#define QMI_LOC_UMTS_CP_LOCATION_TYPE_MASK_V02 ((qmiLocNiUmtsCpNotifyVerifyValidMaskT_v02)0x0010) /**<  Mask to denote that the location type
+       is present in an NI notify verify request event.
+       This mask is set in the valid flags field of a
+      notify verify structure.  */
+#define QMI_LOC_UMTS_CP_REQUESTOR_ID_MASK_V02 ((qmiLocNiUmtsCpNotifyVerifyValidMaskT_v02)0x0020) /**<  Mask to denote that the requestor ID
+       is present in an NI notify verify request event.
+       This mask is set in the valid flags field of a
+       notify verify structure.  */
+#define QMI_LOC_UMTS_CP_CODEWORD_STRING_MASK_V02 ((qmiLocNiUmtsCpNotifyVerifyValidMaskT_v02)0x0040) /**<  Mask to denote that the code word string
+       is present in an NI notify verify request event.
+       This mask is set in the valid flags field of a
+       notify verify structure.  */
+#define QMI_LOC_UMTS_CP_SERVICE_TYPE_MASK_V02 ((qmiLocNiUmtsCpNotifyVerifyValidMaskT_v02)0x0080) /**<  Mask to denote that the service type
+       is present in an NI notify verify request event.
+       This mask is set in the valid flags field of a
+       notify verify structure.  */
+#define QMI_LOC_UMTS_CP_USER_RESP_TIMER_MASK_V02 ((qmiLocNiUmtsCpNotifyVerifyValidMaskT_v02)0x0100) /**<  Mask to denote that the user response timer
+       is present in an NI notify verify request event.
+       This mask is set in the valid flags field of a
+       notify verify structure.  */
+/** @addtogroup loc_qmi_aggregates
     @{
   */
 typedef struct {
@@ -1490,7 +1636,7 @@ typedef struct {
   uint8_t clientAddress[QMI_LOC_NI_MAX_EXT_CLIENT_ADDRESS_V02];
   /**<   Client address; the encoding method is specified in
        dataCodingScheme. \n
-       - Maximum array length : 20  */
+       - Maximum array length: 20  */
 
   qmiLocNiLocationTypeEnumT_v02 locationType;
   /**<   Location type.
@@ -1522,7 +1668,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -1534,7 +1680,7 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_aggregates
+/** @addtogroup loc_qmi_aggregates
     @{
   */
 typedef struct {
@@ -1553,15 +1699,16 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Indicates an NI notify/verify request to the control point. */
 typedef struct {
 
   /* Mandatory */
+  /*  Notification Type */
   qmiLocNiNotifyVerifyEnumT_v02 notificationType;
-  /**<   Type of notification/verification to be performed.
+  /**<   Type of notification/verification performed.
 
        Valid values: \n
          - 0x00000001 -- NO_NOTIFY_NO_VERIFY \n
@@ -1572,30 +1719,34 @@ typedef struct {
    */
 
   /* Optional */
+  /*  Network Initiated Vx Request */
   uint8_t NiVxInd_valid;  /**< Must be set to true if NiVxInd is being passed */
   qmiLocNiVxNotifyVerifyStructT_v02 NiVxInd;
-  /**<   Optional NI Vx request payload.  */
+  /**<   \n Optional NI Vx request payload.  */
 
   /* Optional */
+  /*  Network Initiated SUPL Request */
   uint8_t NiSuplInd_valid;  /**< Must be set to true if NiSuplInd is being passed */
   qmiLocNiSuplNotifyVerifyStructT_v02 NiSuplInd;
-  /**<   Optional NI SUPL request payload.  */
+  /**<   \n Optional NI SUPL request payload.  */
 
   /* Optional */
+  /*  Network Initiated UMTS Control Plane Request */
   uint8_t NiUmtsCpInd_valid;  /**< Must be set to true if NiUmtsCpInd is being passed */
   qmiLocNiUmtsCpNotifyVerifyStructT_v02 NiUmtsCpInd;
-  /**<   Optional NI UMTS-CP request payload.  */
+  /**<   \n Optional NI UMTS-CP request payload.  */
 
   /* Optional */
+  /*  Network Initiated Service Interaction Request */
   uint8_t NiVxServiceInteractionInd_valid;  /**< Must be set to true if NiVxServiceInteractionInd is being passed */
   qmiLocNiVxServiceInteractionStructT_v02 NiVxServiceInteractionInd;
-  /**<   Optional NI service interaction payload.  */
+  /**<   \n Optional NI service interaction payload.  */
 }qmiLocEventNiNotifyVerifyReqIndMsgT_v02;  /* Message */
 /**
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_aggregates
+/** @addtogroup loc_qmi_aggregates
     @{
   */
 typedef struct {
@@ -1609,13 +1760,13 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_aggregates
+/** @addtogroup loc_qmi_aggregates
     @{
   */
 typedef struct {
 
   uint32_t delayThreshold;
-  /**<   The Time Server is to be skipped if a one-way delay to the server
+  /**<   The time server is to be skipped if a one-way delay to the server
        exceeds this threshold. \n
        - Type: Unsigned integer \n
        - Units: Milliseconds  */
@@ -1632,23 +1783,24 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Requests the control point to inject time information. */
 typedef struct {
 
   /* Optional */
+  /*  Time Server Info */
   uint8_t timeServerInfo_valid;  /**< Must be set to true if timeServerInfo is being passed */
   qmiLocTimeServerListStructT_v02 timeServerInfo;
-  /**<   Contains information about the time servers recommended by the
+  /**<   \n Contains information about the time servers recommended by the
        location service for NTP time.  */
 }qmiLocEventInjectTimeReqIndMsgT_v02;  /* Message */
 /**
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_aggregates
+/** @addtogroup loc_qmi_aggregates
     @{
   */
 typedef struct {
@@ -1665,7 +1817,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_aggregates
+/** @addtogroup loc_qmi_aggregates
     @{
   */
 typedef struct {
@@ -1682,35 +1834,38 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Requests the control point to inject predicted orbits data. */
 typedef struct {
 
   /* Mandatory */
+  /*  Allowed Sizes */
   qmiLocPredictedOrbitsAllowedSizesStructT_v02 allowedSizes;
-  /**<   Maximum part and file size allowed to be injected in the engine.  */
+  /**<   \n Maximum part and file size allowed to be injected in the engine.  */
 
   /* Optional */
+  /*  Server List */
   uint8_t serverList_valid;  /**< Must be set to true if serverList is being passed */
   qmiLocPredictedOrbitsServerListStructT_v02 serverList;
-  /**<   List of servers that can be used by the client to download
+  /**<   \n List of servers that can be used by the client to download
        predicted orbits data.  */
 }qmiLocEventInjectPredictedOrbitsReqIndMsgT_v02;  /* Message */
 /**
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Requests the control point to inject a position. */
 typedef struct {
 
   /* Mandatory */
+  /*  Latitude */
   double latitude;
-  /**<   Latitude.\n
+  /**<   Latitude (specified in WGS84 datum).\n
        - Type: Floating point \n
        - Units: Degrees \n
        - Range: -90.0 to 90.0 \n
@@ -1718,6 +1873,7 @@ typedef struct {
        - Negative values indicate southern latitude  */
 
   /* Mandatory */
+  /*  Longitude */
   double longitude;
   /**<   Longitude (specified in WGS84 datum).\n
        - Type: Floating point \n
@@ -1727,12 +1883,14 @@ typedef struct {
        - Negative values indicate western longitude  */
 
   /* Mandatory */
+  /*  Circular Horizontal Uncertainty */
   float horUncCircular;
   /**<   Horizontal position uncertainty (circular).\n
        - Type: Floating point \n
        - Units: Meters  */
 
   /* Mandatory */
+  /*  UTC Timestamp */
   uint64_t timestampUtc;
   /**<   UTC timestamp.\n
        - Type: Unsigned integer \n
@@ -1742,7 +1900,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -1756,13 +1914,14 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Sends the engine state to the control point. */
 typedef struct {
 
   /* Mandatory */
+  /*  Engine State */
   qmiLocEngineStateEnumT_v02 engineState;
   /**<   Location engine state.
 
@@ -1775,7 +1934,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -1789,13 +1948,14 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Sends the fix session state to the control point. */
 typedef struct {
 
   /* Mandatory */
+  /*  Session State */
   qmiLocFixSessionStateEnumT_v02 sessionState;
   /**<   LOC fix session state.
 
@@ -1805,9 +1965,10 @@ typedef struct {
      */
 
   /* Optional */
+  /*  Session ID */
   uint8_t sessionId_valid;  /**< Must be set to true if sessionId is being passed */
   uint8_t sessionId;
-  /**<   ID of the session that was specified in the start request.
+  /**<   ID of the session that was specified in the Start request.
     This may not be specified for a fix session corresponding to
     a network-initiated request. \n
     - Type: Unsigned integer \n
@@ -1817,7 +1978,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -1832,13 +1993,14 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Sends a WiFi request to the control point. */
 typedef struct {
 
   /* Mandatory */
+  /*  Request Type */
   qmiLocWifiRequestEnumT_v02 requestType;
   /**<   Request type as specified in qmiWifiRequestEnumT.
 
@@ -1849,6 +2011,7 @@ typedef struct {
     */
 
   /* Optional */
+  /*  Time Between Fixes */
   uint8_t tbfInMs_valid;  /**< Must be set to true if tbfInMs is being passed */
   uint16_t tbfInMs;
   /**<   Time between fixes for a periodic request.\n
@@ -1859,57 +2022,58 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_aggregates
+/** @addtogroup loc_qmi_aggregates
     @{
   */
 typedef struct {
 
   uint16_t samplesPerBatch;
-  /**<   Specifies number of samples per batch the GNSS location engine should
-       receive.\n
-       The sensor sampling frequency can be computed as below: \n
-       samplingFrequency = samplesPerBatch * batchesPerSecond\n
-       \n
-       samplesPerBatch must be a non-zero positive value\n
+  /**<   Specifies the number of samples per batch the GNSS location engine is to
+       receive. The sensor sampling frequency can be computed as follows: \n
+
+       samplingFrequency = samplesPerBatch * batchesPerSecond \n
+
+       samplesPerBatch must be a non-zero positive value.
    */
 
   uint16_t batchesPerSecond;
-  /**<   Number of sensor-data batches GNSS location engine should receive per
-       second.\n
-       The rate is specified in integral number of batches per second (Hz)\n
-       \n
-       batchesPerSecond must be a non-zero positive value\n
+  /**<   Number of sensor-data batches the GNSS location engine is to receive
+       per second. The rate is specified in integral number of batches per
+       second (Hz). \n
+
+       batchesPerSecond must be a non-zero positive value.
    */
 }qmiLocSensorControlConfigSamplingSpecStructT_v02;  /* Type */
 /**
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_aggregates
+/** @addtogroup loc_qmi_aggregates
     @{
   */
 typedef struct {
 
   uint8_t injectEnable;
   /**<   Whether the GNSS location engine is ready to accept data from this
-       sensor:\n
-    Valid values:\n
-    - 0x01 (TRUE)  -- GNSS location engine is ready to accept sensor data.\n
-      - 0x00 (FALSE) -- GNSS location engine is not ready to accept sensor
-                        data.
+       sensor.
+
+       Valid values: \n
+       - 0x01 (TRUE)  -- GNSS location engine is ready to accept sensor data \n
+       - 0x00 (FALSE) -- GNSS location engine is not ready to accept sensor
+                         data
    */
 
   qmiLocSensorControlConfigSamplingSpecStructT_v02 dataFrequency;
-  /**<   Rate at which the GNSS engine would like the sensor to be sampled.\n
+  /**<   Rate at which the GNSS engine would like the sensor to be sampled. \n
        The rate is specified in integral number of samples per second (Hz)\n
-       and batches per second
+       and batches per second.
    */
 }qmiLocSensorReadyStatusStructT_v02;  /* Type */
 /**
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Notifies the control point if the GNSS location engine is
@@ -1917,24 +2081,26 @@ typedef struct {
 typedef struct {
 
   /* Optional */
+  /*  Accelerometer Accept Ready */
   uint8_t accelReady_valid;  /**< Must be set to true if accelReady is being passed */
   qmiLocSensorReadyStatusStructT_v02 accelReady;
-  /**<   Whether the GNSS location engine is ready to accept accelerometer
-         sensor data:\n
+  /**<   \n Whether the GNSS location engine is ready to accept accelerometer
+         sensor data.
     */
 
   /* Optional */
+  /*  Gyrometer Accept Ready */
   uint8_t gyroReady_valid;  /**< Must be set to true if gyroReady is being passed */
   qmiLocSensorReadyStatusStructT_v02 gyroReady;
-  /**<   Whether the GNSS location engine is ready to accept gyrometer sensor
-         data:\n
+  /**<   \n Whether the GNSS location engine is ready to accept gyrometer sensor
+         data.
    */
 }qmiLocEventSensorStreamingReadyStatusIndMsgT_v02;  /* Message */
 /**
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Notifies the control point to inject time synchronization
@@ -1942,39 +2108,42 @@ typedef struct {
 typedef struct {
 
   /* Mandatory */
+  /*  Opaque Time Sync Reference Counter */
   uint32_t refCounter;
-  /**<   This message is sent to registered control points. It is sent by
+  /**<   This TLV is sent to registered control points. It is sent by
         the location engine when it needs to synchronize location engine and
         control point (sensor processor) times.
-        This TLV must be echoed back in the Time Sync Inject message. \n
+        This TLV must be echoed back in the Time Sync Inject request. \n
         - Type: Unsigned integer  */
 }qmiLocEventTimeSyncReqIndMsgT_v02;  /* Message */
 /**
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
-/** Indication Message; Requests the control point to enable SPI streaming reports.  */
+/** Indication Message; Requests the control point to enable Stationary Position
+                    Indicator (SPI) streaming reports.  */
 typedef struct {
 
   /* Mandatory */
+  /*  Enable/Disable SPI Requests */
   uint8_t enable;
   /**<   Whether the client is to start or stop sending an SPI status stream.\n
-       - 0x01 (TRUE)  -- Client is to start sending an SPI status stream.\n
-       - 0x00 (FALSE) -- Client is to stop sending an SPI status stream.  */
+       - 0x01 (TRUE)  -- Client is to start sending an SPI status stream\n
+       - 0x00 (FALSE) -- Client is to stop sending an SPI status stream  */
 }qmiLocEventSetSpiStreamingReportIndMsgT_v02;  /* Message */
 /**
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
   QMILOCWWANTYPEENUMT_MIN_ENUM_VAL_V02 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
-  eQMI_LOC_WWAN_TYPE_INTERNET_V02 = 0, /**<  Bring up the WWAN type used for internet connection.
+  eQMI_LOC_WWAN_TYPE_INTERNET_V02 = 0, /**<  Bring up the WWAN type used for an Internet connection.
  Bring up the WWAN type used for AGNSS connections.  */
   eQMI_LOC_WWAN_TYPE_AGNSS_V02 = 1,
   QMILOCWWANTYPEENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
@@ -1983,7 +2152,7 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -1997,7 +2166,7 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Requests the client to open or close a connection
@@ -2005,11 +2174,13 @@ typedef enum {
 typedef struct {
 
   /* Mandatory */
+  /*  Connection Handle */
   uint32_t connHandle;
-  /**<   Identifies a connection across open and close request events. \n
+  /**<   Identifies a connection across Open and Close request events. \n
        - Type: Unsigned integer  */
 
   /* Mandatory */
+  /*  Request Type */
   qmiLocServerRequestEnumT_v02 requestType;
   /**<   Open or close a connection to the location server.
 
@@ -2019,19 +2190,19 @@ typedef struct {
    */
 
   /* Mandatory */
+  /*  WWAN Type */
   qmiLocWWANTypeEnumT_v02 wwanType;
-  /**<   Identifies the WWAN type for this request.
-
+  /**<   Identifies the WWAN type for this request. \n
        Valid values: \n
          - 0x00000000 -- WWAN_TYPE_INTERNET \n
-         - 0x00000001 -- WWAN_TYPE_AGNSS \n
+         - 0x00000001 -- WWAN_TYPE_AGNSS
     */
 }qmiLocEventLocationServerConnectionReqIndMsgT_v02;  /* Message */
 /**
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -2056,15 +2227,16 @@ typedef enum {
  * }qmiLocGetServiceRevisionReqMsgT_v02;
  */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Client can query the service revision using this message. */
 typedef struct {
 
   /* Mandatory */
+  /*  Get Revision Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the get revision request.
+  /**<   Status of the Get Revision request.
 
         Valid values: \n
           - 0x00000000 -- SUCCESS \n
@@ -2077,6 +2249,7 @@ typedef struct {
    */
 
   /* Mandatory */
+  /*  Interface Definition Minor Revision */
   uint32_t revision;
   /**<   Revision of the service. This is the minor revision of the interface that
        the service implements. Minor revision updates of the service are always
@@ -2093,15 +2266,16 @@ typedef struct {
  * }qmiLocGetFixCriteriaReqMsgT_v02;
  */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Gets the fix criteria from the location engine. */
 typedef struct {
 
   /* Mandatory */
+  /*  Get Fix Criteria Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the get fix criteria request.
+  /**<   Status of the Get Fix Criteria request.
 
         Valid values: \n
           - 0x00000000 -- SUCCESS \n
@@ -2114,6 +2288,7 @@ typedef struct {
    */
 
   /* Optional */
+  /*  Horizontal Accuracy */
   uint8_t horizontalAccuracyLevel_valid;  /**< Must be set to true if horizontalAccuracyLevel is being passed */
   qmiLocAccuracyLevelEnumT_v02 horizontalAccuracyLevel;
   /**<   Horizontal accuracy level.
@@ -2125,22 +2300,23 @@ typedef struct {
     */
 
   /* Optional */
+  /*  Enable/Disable Intermediate Fixes */
   uint8_t intermediateReportState_valid;  /**< Must be set to true if intermediateReportState is being passed */
   qmiLocIntermediateReportStateEnumT_v02 intermediateReportState;
-  /**<   Intermediate Reports State (ON, OFF).\n
-     The client must explicitly set this field to OFF to stop receiving
-     intermediate position reports. Intermediate position reports are
-     generated at 1 Hz and are ON by default. If intermediate reports
-     are turned ON, the client receives position reports even if the
-     accuracy criteria is not met. The status in the position report is
-     set to IN_PROGRESS for intermediate reports
-
+  /**<   Intermediate Report state (ON, OFF).\n
+       The client must explicitly set this field to OFF to stop receiving
+       intermediate position reports. Intermediate position reports are
+       generated at \n 1 Hz and are ON by default. If intermediate reports
+       are turned ON, the client receives position reports even if the
+       accuracy criteria is not met. The status in the position report is
+       set to IN_PROGRESS for intermediate reports. \n
        Valid values: \n
          - 0x00000001 -- ON: Client is interested in receiving intermediate reports \n
          - 0x00000002 -- OFF: Client is not interested in receiving intermediate reports
    */
 
   /* Optional */
+  /*  Mimimum Interval Between Fixes */
   uint8_t minInterval_valid;  /**< Must be set to true if minInterval is being passed */
   uint32_t minInterval;
   /**<   Time that must elapse before alerting the client. \n
@@ -2151,7 +2327,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -2166,7 +2342,7 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Request Message; Sends the NI user response back to the engine; success or
@@ -2174,6 +2350,7 @@ typedef enum {
 typedef struct {
 
   /* Mandatory */
+  /*  User Response */
   qmiLocNiUserRespEnumT_v02 userResp;
   /**<   User accepted or denied.
 
@@ -2184,6 +2361,7 @@ typedef struct {
    */
 
   /* Mandatory */
+  /*  Notification Type */
   qmiLocNiNotifyVerifyEnumT_v02 notificationType;
   /**<   Type of notification/verification performed.
 
@@ -2196,30 +2374,34 @@ typedef struct {
    */
 
   /* Optional */
+  /*  Network Initiated Vx Request */
   uint8_t NiVxPayload_valid;  /**< Must be set to true if NiVxPayload is being passed */
   qmiLocNiVxNotifyVerifyStructT_v02 NiVxPayload;
-  /**<   Optional NI VX request payload.  */
+  /**<   \n Optional NI VX request payload.  */
 
   /* Optional */
+  /*  Network Initiated SUPL Request */
   uint8_t NiSuplPayload_valid;  /**< Must be set to true if NiSuplPayload is being passed */
   qmiLocNiSuplNotifyVerifyStructT_v02 NiSuplPayload;
-  /**<   Optional NI SUPL request payload.  */
+  /**<   \n Optional NI SUPL request payload.  */
 
   /* Optional */
+  /*  Network Initiated UMTS Control Plane Request */
   uint8_t NiUmtsCpPayload_valid;  /**< Must be set to true if NiUmtsCpPayload is being passed */
   qmiLocNiUmtsCpNotifyVerifyStructT_v02 NiUmtsCpPayload;
-  /**<   Optional NI UMTS-CP request payload.  */
+  /**<   \n Optional NI UMTS-CP request payload.  */
 
   /* Optional */
+  /*  Network Initiated Service Interaction Request */
   uint8_t NiVxServiceInteractionPayload_valid;  /**< Must be set to true if NiVxServiceInteractionPayload is being passed */
   qmiLocNiVxServiceInteractionStructT_v02 NiVxServiceInteractionPayload;
-  /**<   Optional NI service interaction payload.          */
+  /**<   \n Optional NI service interaction payload.          */
 }qmiLocNiUserRespReqMsgT_v02;  /* Message */
 /**
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Sends the NI user response back to the engine; success or
@@ -2227,8 +2409,9 @@ typedef struct {
 typedef struct {
 
   /* Mandatory */
+  /*  NI User Response Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the NI user response request.
+  /**<   Status of the NI User Response request.
 
           Valid values: \n
             - 0x00000000 -- SUCCESS \n
@@ -2244,7 +2427,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -2256,30 +2439,34 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Request Message; Injects predicted orbits data.  */
 typedef struct {
 
   /* Mandatory */
+  /*  Total Size */
   uint32_t totalSize;
   /**<   Total size of the predicted orbits data to be injected. \n
         - Type: Unsigned integer \n
         - Units: Bytes  */
 
   /* Mandatory */
+  /*  Total Parts */
   uint16_t totalParts;
   /**<   Total number of parts into which the predicted orbits data is
         divided. \n
         - Type: Unsigned integer  */
 
   /* Mandatory */
+  /*  Part Number */
   uint16_t partNum;
   /**<   Number of the current predicted orbits data part; starts at 1. \n
         - Type: Unsigned integer  */
 
   /* Mandatory */
+  /*  Data */
   uint32_t partData_len;  /**< Must be set to # of elements in partData */
   char partData[QMI_LOC_MAX_PREDICTED_ORBITS_PART_LEN_V02];
   /**<   Predicted orbits data. \n
@@ -2288,6 +2475,7 @@ typedef struct {
      */
 
   /* Optional */
+  /*  Format Type */
   uint8_t formatType_valid;  /**< Must be set to true if formatType is being passed */
   qmiLocPredictedOrbitsDataFormatEnumT_v02 formatType;
   /**<   Predicted orbits data format.
@@ -2300,15 +2488,16 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Injects predicted orbits data.  */
 typedef struct {
 
   /* Mandatory */
+  /*  Data Injection Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the data injection request.
+  /**<   Status of the Data Injection request.
 
        Valid values: \n
          - 0x00000000 -- SUCCESS \n
@@ -2321,6 +2510,7 @@ typedef struct {
    */
 
   /* Optional */
+  /*  Part Number */
   uint8_t partNum_valid;  /**< Must be set to true if partNum is being passed */
   uint16_t partNum;
   /**<   Number of the predicted orbits data part for which this indication
@@ -2337,13 +2527,14 @@ typedef struct {
  * }qmiLocGetPredictedOrbitsDataSourceReqMsgT_v02;
  */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Gets the predicted orbits data source. */
 typedef struct {
 
   /* Mandatory */
+  /*  Predicted Oribits Data Source Status */
   qmiLocStatusEnumT_v02 status;
   /**<   Status of the query request for a predicted orbits data source.
 
@@ -2358,14 +2549,16 @@ typedef struct {
    */
 
   /* Optional */
+  /*  Allowed Sizes */
   uint8_t allowedSizes_valid;  /**< Must be set to true if allowedSizes is being passed */
   qmiLocPredictedOrbitsAllowedSizesStructT_v02 allowedSizes;
-  /**<   Maximum part and file size allowed to be injected in the engine.  */
+  /**<   \n Maximum part and file size allowed to be injected in the engine.  */
 
   /* Optional */
+  /*  Server List */
   uint8_t serverList_valid;  /**< Must be set to true if serverList is being passed */
   qmiLocPredictedOrbitsServerListStructT_v02 serverList;
-  /**<   List of servers that can be used by the client to download
+  /**<   \n List of servers that can be used by the client to download
        predicted orbits data.  */
 }qmiLocGetPredictedOrbitsDataSourceIndMsgT_v02;  /* Message */
 /**
@@ -2378,7 +2571,7 @@ typedef struct {
  * }qmiLocGetPredictedOrbitsDataValidityReqMsgT_v02;
  */
 
-/** @addtogroup qmiLoc_qmi_aggregates
+/** @addtogroup loc_qmi_aggregates
     @{
   */
 typedef struct {
@@ -2399,13 +2592,14 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Gets the predicted orbits data validity. */
 typedef struct {
 
   /* Mandatory */
+  /*  Predicted Orbits Data Validity Status */
   qmiLocStatusEnumT_v02 status;
   /**<   Status of the query request for predicted orbits data validity.
 
@@ -2420,6 +2614,7 @@ typedef struct {
    */
 
   /* Optional */
+  /*  Validity Info */
   uint8_t validityInfo_valid;  /**< Must be set to true if validityInfo is being passed */
   qmiLocPredictedOrbitsDataValidityStructT_v02 validityInfo;
 }qmiLocGetPredictedOrbitsDataValidityIndMsgT_v02;  /* Message */
@@ -2427,20 +2622,22 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Request Message; Injects UTC time in the location engine.  */
 typedef struct {
 
   /* Mandatory */
+  /*  UTC Time */
   uint64_t timeUtc;
-  /**<   UTC time since Jan 1st, 1970.\n
+  /**<   UTC time since Jan. 1, 1970.\n
        - Type: Unsigned integer \n
        - Units: Milliseconds
          */
 
   /* Mandatory */
+  /*  Time Uncertainty */
   uint32_t timeUnc;
   /**<   Time uncertainty.\n
        - Type: Unsigned integer \n
@@ -2451,15 +2648,16 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Injects UTC time in the location engine.  */
 typedef struct {
 
   /* Mandatory */
+  /*  UTC Time Injection Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the UTC time injection request.
+  /**<   Status of the UTC Time Injection request.
 
        Valid values: \n
          - 0x00000000 -- SUCCESS \n
@@ -2475,7 +2673,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -2497,7 +2695,7 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -2513,7 +2711,7 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -2531,7 +2729,7 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_aggregates
+/** @addtogroup loc_qmi_aggregates
     @{
   */
 typedef struct {
@@ -2579,35 +2777,38 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Request Message; Injects a position to the location engine. */
 typedef struct {
 
   /* Optional */
+  /*  Latitude */
   uint8_t latitude_valid;  /**< Must be set to true if latitude is being passed */
   double latitude;
-  /**<   Latitude.\n
+  /**<   Latitude (specified in WGS84 datum).\n
        - Type: Floating point \n
        - Units: Degrees \n
        - Range: -90.0 to 90.0 \n
        - Positive values indicate northern latitude \n
-       - Negative values indicate southern latitude.\n
+       - Negative values indicate southern latitude
      */
 
   /* Optional */
+  /*  Longitude */
   uint8_t longitude_valid;  /**< Must be set to true if longitude is being passed */
   double longitude;
-  /**<   Longitude (specified in WBS84 datum).\n
+  /**<   Longitude (specified in WGS84 datum).\n
        - Type: Floating point \n
        - Units: Degrees \n
        - Range: -180.0 to 180.0 \n
        - Positive values indicate eastern longitude \n
-       - Negative values indicate western longitude.\n
+       - Negative values indicate western longitude
     */
 
   /* Optional */
+  /*  Circular Horizontal Uncertainty */
   uint8_t horUncCircular_valid;  /**< Must be set to true if horUncCircular is being passed */
   float horUncCircular;
   /**<   Horizontal position uncertainty (circular).\n
@@ -2615,11 +2816,12 @@ typedef struct {
         - Units: Meters  */
 
   /* Optional */
+  /*  Horizontal Confidence */
   uint8_t horConfidence_valid;  /**< Must be set to true if horConfidence is being passed */
   uint8_t horConfidence;
   /**<   Horizontal confidence, as defined by  ETSI TS 101 109.\n
         - Type: Unsigned integer \n
-        - Units: Percent (0-99) \n
+        - Units: Percent (0 to 99) \n
         - 0 -- invalid value \n
         - 100 to 256 -- not used \n
         - If 100 is received, reinterpret to 99 \n
@@ -2627,6 +2829,7 @@ typedef struct {
         If not specified, the default value will be 50.  */
 
   /* Optional */
+  /*  Horizontal Reliability */
   uint8_t horReliability_valid;  /**< Must be set to true if horReliability is being passed */
   qmiLocReliabilityEnumT_v02 horReliability;
   /**<   Specifies the reliability of the horizontal position.
@@ -2640,6 +2843,7 @@ typedef struct {
        */
 
   /* Optional */
+  /*  Altitude With Respect to Ellipsoid */
   uint8_t altitudeWrtEllipsoid_valid;  /**< Must be set to true if altitudeWrtEllipsoid is being passed */
   float altitudeWrtEllipsoid;
   /**<   Altitude with respect to the WGS84 ellipsoid.\n
@@ -2647,6 +2851,7 @@ typedef struct {
         - Units: Meters; positive = height, negative = depth   */
 
   /* Optional */
+  /*  Altitude With Respect to Sea Level */
   uint8_t altitudeWrtMeanSeaLevel_valid;  /**< Must be set to true if altitudeWrtMeanSeaLevel is being passed */
   float altitudeWrtMeanSeaLevel;
   /**<   Altitude with respect to mean sea level.\n
@@ -2654,6 +2859,7 @@ typedef struct {
        - Units: Meters  */
 
   /* Optional */
+  /*  Vertical Uncertainty */
   uint8_t vertUnc_valid;  /**< Must be set to true if vertUnc is being passed */
   float vertUnc;
   /**<   Vertical uncertainty. This is mandatory if either altitudeWrtEllipsoid
@@ -2662,6 +2868,7 @@ typedef struct {
         - Units: Meters  */
 
   /* Optional */
+  /*  Vertical Confidence */
   uint8_t vertConfidence_valid;  /**< Must be set to true if vertConfidence is being passed */
   uint8_t vertConfidence;
   /**<   Vertical confidence, as defined by  ETSI TS 101 109.\n
@@ -2670,10 +2877,11 @@ typedef struct {
         - 0 -- invalid value\n
         - 100 to 256 -- not used \n
         - If 100 is received, reinterpret to 99\n
-        This field must be specified together with the field of vertUnc.
+        This field must be specified together with the vertical uncertainty.
         If not specified, the default value will be 50.  */
 
   /* Optional */
+  /*  Vertical Reliability */
   uint8_t vertReliability_valid;  /**< Must be set to true if vertReliability is being passed */
   qmiLocReliabilityEnumT_v02 vertReliability;
   /**<   Specifies the reliability of the vertical position.
@@ -2687,11 +2895,13 @@ typedef struct {
      */
 
   /* Optional */
+  /*  Altitude Source Info */
   uint8_t altSourceInfo_valid;  /**< Must be set to true if altSourceInfo is being passed */
   qmiLocAltitudeSrcInfoStructT_v02 altSourceInfo;
-  /**<   Specifies information regarding the altitude source.  */
+  /**<   \n Specifies information regarding the altitude source.  */
 
   /* Optional */
+  /*  UTC Timestamp */
   uint8_t timestampUtc_valid;  /**< Must be set to true if timestampUtc is being passed */
   uint64_t timestampUtc;
   /**<   UTC timestamp. \n
@@ -2699,6 +2909,7 @@ typedef struct {
         - Units: Milliseconds (since Jan. 1, 1970)  */
 
   /* Optional */
+  /*  Position Age */
   uint8_t timestampAge_valid;  /**< Must be set to true if timestampAge is being passed */
   int32_t timestampAge;
   /**<   Position age, which is an estimate of how long ago this fix was made. \n
@@ -2709,15 +2920,16 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Injects a position to the location engine. */
 typedef struct {
 
   /* Mandatory */
+  /*  UTC Position Injection Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the UTC position injection request.
+  /**<   Status of the UTC Position Injection request.
 
        Valid values: \n
          - 0x00000000 -- SUCCESS \n
@@ -2733,7 +2945,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -2749,13 +2961,14 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Request Message; Sets the location engine lock. */
 typedef struct {
 
   /* Mandatory */
+  /*  Lock Type */
   qmiLocLockEnumT_v02 lockType;
   /**<   Type of lock.
 
@@ -2771,15 +2984,16 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Sets the location engine lock. */
 typedef struct {
 
   /* Mandatory */
+  /*  Set Engine Lock Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the set engine lock request.
+  /**<   Status of the Set Engine Lock request.
 
        Valid values: \n
          - 0x00000000 -- SUCCESS \n
@@ -2801,15 +3015,16 @@ typedef struct {
  * }qmiLocGetEngineLockReqMsgT_v02;
  */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Gets the location engine lock. */
 typedef struct {
 
   /* Mandatory */
+  /*  Get Engine Lock Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the get engine lock request.
+  /**<   Status of the Get Engine Lock request.
 
        Valid values: \n
          - 0x00000000 -- SUCCESS \n
@@ -2822,6 +3037,7 @@ typedef struct {
    */
 
   /* Optional */
+  /*  Lock Type */
   uint8_t lockType_valid;  /**< Must be set to true if lockType is being passed */
   qmiLocLockEnumT_v02 lockType;
   /**<   Type of lock.
@@ -2837,31 +3053,33 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Request Message; Sets the SBAS configuration. */
 typedef struct {
 
   /* Mandatory */
+  /*  SBAS Config */
   uint8_t sbasConfig;
   /**<   Whether SBAS configuration is enabled. \n
-       - 0x01 (TRUE) -- SBAS configuration is enabled. \n
-       - 0x00 (FALSE) -- SBAS configuration is disabled.  */
+       - 0x01 (TRUE) -- SBAS configuration is enabled \n
+       - 0x00 (FALSE) -- SBAS configuration is disabled  */
 }qmiLocSetSbasConfigReqMsgT_v02;  /* Message */
 /**
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Sets the SBAS configuration. */
 typedef struct {
 
   /* Mandatory */
+  /*  Set SBAS Config Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the set SBAS configuration request.
+  /**<   Status of the Set SBAS Configuration request.
 
        Valid values: \n
          - 0x00000000 -- SUCCESS \n
@@ -2883,15 +3101,16 @@ typedef struct {
  * }qmiLocGetSbasConfigReqMsgT_v02;
  */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Gets the SBAS configuration from the location engine. */
 typedef struct {
 
   /* Mandatory */
+  /*  Get SBAS Config Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the get SBAS configuration request.
+  /**<   Status of the Get SBAS Configuration request.
 
        Valid values: \n
          - 0x00000000 -- SUCCESS \n
@@ -2904,31 +3123,33 @@ typedef struct {
    */
 
   /* Optional */
+  /*  SBAS Config */
   uint8_t sbasConfig_valid;  /**< Must be set to true if sbasConfig is being passed */
   uint8_t sbasConfig;
   /**<   Whether SBAS configuration is enabled. \n
-       - 0x01 (TRUE) -- SBAS configuration is enabled. \n
-       - 0x00 (FALSE) -- SBAS configuration is disabled.  */
+       - 0x01 (TRUE) -- SBAS configuration is enabled \n
+       - 0x00 (FALSE) -- SBAS configuration is disabled  */
 }qmiLocGetSbasConfigIndMsgT_v02;  /* Message */
 /**
     @}
   */
 
 typedef uint32_t qmiLocNmeaSentenceMaskT_v02;
-#define QMI_LOC_NMEA_MASK_GGA_V02 ((qmiLocNmeaSentenceMaskT_v02)0x00000001)
-#define QMI_LOC_NMEA_MASK_RMC_V02 ((qmiLocNmeaSentenceMaskT_v02)0x00000002)
-#define QMI_LOC_NMEA_MASK_GSV_V02 ((qmiLocNmeaSentenceMaskT_v02)0x00000004)
-#define QMI_LOC_NMEA_MASK_GSA_V02 ((qmiLocNmeaSentenceMaskT_v02)0x00000008)
-#define QMI_LOC_NMEA_MASK_VTG_V02 ((qmiLocNmeaSentenceMaskT_v02)0x00000010)
-/** @addtogroup qmiLoc_qmi_messages
+#define QMI_LOC_NMEA_MASK_GGA_V02 ((qmiLocNmeaSentenceMaskT_v02)0x00000001) /**<  Enable GGA type.  */
+#define QMI_LOC_NMEA_MASK_RMC_V02 ((qmiLocNmeaSentenceMaskT_v02)0x00000002) /**<  Enable RMC type.  */
+#define QMI_LOC_NMEA_MASK_GSV_V02 ((qmiLocNmeaSentenceMaskT_v02)0x00000004) /**<  Enable GSV type.  */
+#define QMI_LOC_NMEA_MASK_GSA_V02 ((qmiLocNmeaSentenceMaskT_v02)0x00000008) /**<  Enable GSA type.  */
+#define QMI_LOC_NMEA_MASK_VTG_V02 ((qmiLocNmeaSentenceMaskT_v02)0x00000010) /**<  Enable VTG type.  */
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Request Message; Sets the NMEA types. */
 typedef struct {
 
   /* Mandatory */
+  /*  NMEA Sentence Types */
   qmiLocNmeaSentenceMaskT_v02 nmeaSentenceType;
-  /**<   Bit masks of NMEA types to enable.
+  /**<   Bitmasks of NMEA types to enable.
 
        Valid bitmasks: \n
          - 0x00000001 -- NMEA_MASK_GGA \n
@@ -2942,15 +3163,16 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Sets the NMEA types. */
 typedef struct {
 
   /* Mandatory */
+  /*  Set NMEA Types Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of set NMEA types operation.
+  /**<   Status of Set NMEA Types request.
 
        Valid values: \n
          - 0x00000000 -- SUCCESS \n
@@ -2972,15 +3194,16 @@ typedef struct {
  * }qmiLocGetNmeaTypesReqMsgT_v02;
  */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Gets the NMEA types from the location engine. */
 typedef struct {
 
   /* Mandatory */
+  /*  Get NMEA Types Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the get NMEA types operation.
+  /**<   Status of the Get NMEA Types request.
 
        Valid values: \n
          - 0x00000000 -- SUCCESS \n
@@ -2993,6 +3216,7 @@ typedef struct {
    */
 
   /* Optional */
+  /*  NMEA Sentence Types */
   uint8_t nmeaSentenceType_valid;  /**< Must be set to true if nmeaSentenceType is being passed */
   qmiLocNmeaSentenceMaskT_v02 nmeaSentenceType;
   /**<   NMEA types to enable.
@@ -3010,15 +3234,16 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
-/** Request Message; Enables/disables low power mode configuration. */
+/** Request Message; Enables/disables Low Power Mode (LPM) configuration. */
 typedef struct {
 
   /* Mandatory */
+  /*  Enable Low Power Mode */
   uint8_t lowPowerMode;
-  /**<   Whether to enable low power mode:\n
+  /**<   Whether to enable Low Power mode:\n
        - 0x01 (TRUE) -- Enable LPM \n
        - 0x00 (FALSE) -- Disable LPM  */
 }qmiLocSetLowPowerModeReqMsgT_v02;  /* Message */
@@ -3026,15 +3251,16 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
-/** Indication Message; Enables/disables low power mode configuration. */
+/** Indication Message; Enables/disables Low Power Mode (LPM) configuration. */
 typedef struct {
 
   /* Mandatory */
+  /*  Set LPM Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the set low power mode request.
+  /**<   Status of the Set Low Power Mode request.
 
        Valid values: \n
          - 0x00000000 -- SUCCESS \n
@@ -3056,15 +3282,16 @@ typedef struct {
  * }qmiLocGetLowPowerModeReqMsgT_v02;
  */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
-/** Indication Message; Gets the low power mode from the location engine. */
+/** Indication Message; Gets the LPM status from the location engine. */
 typedef struct {
 
   /* Mandatory */
+  /*  Get LPM Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the get LPM operation.
+  /**<   Status of the Get LPM request.
 
        Valid values: \n
          - 0x00000000 -- SUCCESS \n
@@ -3077,9 +3304,10 @@ typedef struct {
    */
 
   /* Optional */
+  /*  Enable/Disable LPM */
   uint8_t lowPowerMode_valid;  /**< Must be set to true if lowPowerMode is being passed */
   uint8_t lowPowerMode;
-  /**<   Whether to enable low power mode:\n
+  /**<   Whether to enable Low Power mode:\n
        - 0x01 (TRUE) -- Enable LPM \n
        - 0x00 (FALSE) -- Disable LPM  */
 }qmiLocGetLowPowerModeIndMsgT_v02;  /* Message */
@@ -3087,7 +3315,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -3103,13 +3331,14 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Request Message; Specifies the A-GPS server type and address. */
 typedef struct {
 
   /* Mandatory */
+  /*  Server Type */
   qmiLocServerTypeEnumT_v02 serverType;
   /**<   Type of server.
 
@@ -3121,16 +3350,19 @@ typedef struct {
    */
 
   /* Optional */
+  /*  IPV4 Address */
   uint8_t ipv4Addr_valid;  /**< Must be set to true if ipv4Addr is being passed */
   qmiLocIpV4AddrStructType_v02 ipv4Addr;
-  /**<   IPV4 address and port.  */
+  /**<   \n IPV4 address and port.  */
 
   /* Optional */
+  /*  IPV6 Address */
   uint8_t ipv6Addr_valid;  /**< Must be set to true if ipv6Addr is being passed */
   qmiLocIpV6AddrStructType_v02 ipv6Addr;
-  /**<   IPV6 address and port.  */
+  /**<   \n IPV6 address and port.  */
 
   /* Optional */
+  /*  Uniform Resource Locator */
   uint8_t urlAddr_valid;  /**< Must be set to true if urlAddr is being passed */
   char urlAddr[QMI_LOC_MAX_SERVER_ADDR_LENGTH_V02 + 1];
   /**<   URL address. \n
@@ -3142,15 +3374,16 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Specifies the A-GPS server type and address. */
 typedef struct {
 
   /* Mandatory */
+  /*  Set Server Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the set server request.
+  /**<   Status of the Set Server request.
 
        Valid values: \n
          - 0x00000000 -- SUCCESS \n
@@ -3166,13 +3399,14 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Request Message; Gets the location server from the location engine. */
 typedef struct {
 
   /* Mandatory */
+  /*  Server Type */
   qmiLocServerTypeEnumT_v02 serverType;
   /**<   Type of server, as defined in qmiLocServerTypeEnumT.
 
@@ -3184,9 +3418,10 @@ typedef struct {
    */
 
   /* Optional */
+  /*  Server Address Type */
   uint8_t serverAddrTypeMask_valid;  /**< Must be set to true if serverAddrTypeMask is being passed */
   qmiLocServerAddrTypeMaskT_v02 serverAddrTypeMask;
-  /**<   Type of address the client wants, if unspecified. The
+  /**<   Type of address the client wants. If unspecified, the
        indication will contain all the types of addresses
        it has for the specified server type.
 
@@ -3200,15 +3435,16 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Gets the location server from the location engine. */
 typedef struct {
 
   /* Mandatory */
+  /*  Get Server Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the get server request.
+  /**<   Status of the Get Server request.
 
        Valid values: \n
          - 0x00000000 -- SUCCESS \n
@@ -3221,6 +3457,7 @@ typedef struct {
    */
 
   /* Mandatory */
+  /*  Server Type */
   qmiLocServerTypeEnumT_v02 serverType;
   /**<   Type of server, as defined in qmiLocServerTypeEnumT.
 
@@ -3232,16 +3469,19 @@ typedef struct {
    */
 
   /* Optional */
+  /*  IPV4 Address */
   uint8_t ipv4Addr_valid;  /**< Must be set to true if ipv4Addr is being passed */
   qmiLocIpV4AddrStructType_v02 ipv4Addr;
-  /**<   IPV4 address and port.  */
+  /**<   \n IPV4 address and port.  */
 
   /* Optional */
+  /*  IPV6 Address */
   uint8_t ipv6Addr_valid;  /**< Must be set to true if ipv6Addr is being passed */
   qmiLocIpV6AddrStructType_v02 ipv6Addr;
-  /**<   IPV6 address and port.  */
+  /**<   \n IPV6 address and port.  */
 
   /* Optional */
+  /*  Uniform Resource Locator */
   uint8_t urlAddr_valid;  /**< Must be set to true if urlAddr is being passed */
   char urlAddr[QMI_LOC_MAX_SERVER_ADDR_LENGTH_V02 + 1];
   /**<   URL. \n
@@ -3254,62 +3494,63 @@ typedef struct {
   */
 
 typedef uint64_t qmiLocDeleteGnssDataMaskT_v02;
-#define QMI_LOC_MASK_DELETE_GPS_SVDIR_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00000001)
-#define QMI_LOC_MASK_DELETE_GPS_SVSTEER_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00000002)
-#define QMI_LOC_MASK_DELETE_GPS_TIME_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00000004)
-#define QMI_LOC_MASK_DELETE_GPS_ALM_CORR_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00000008)
-#define QMI_LOC_MASK_DELETE_GLO_SVDIR_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00000010)
-#define QMI_LOC_MASK_DELETE_GLO_SVSTEER_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00000020)
-#define QMI_LOC_MASK_DELETE_GLO_TIME_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00000040)
-#define QMI_LOC_MASK_DELETE_GLO_ALM_CORR_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00000080)
-#define QMI_LOC_MASK_DELETE_SBAS_SVDIR_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00000100)
-#define QMI_LOC_MASK_DELETE_SBAS_SVSTEER_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00000200)
-#define QMI_LOC_MASK_DELETE_POSITION_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00000400)
-#define QMI_LOC_MASK_DELETE_TIME_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00000800)
-#define QMI_LOC_MASK_DELETE_IONO_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00001000)
-#define QMI_LOC_MASK_DELETE_UTC_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00002000)
-#define QMI_LOC_MASK_DELETE_HEALTH_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00004000)
-#define QMI_LOC_MASK_DELETE_SADATA_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00008000)
-#define QMI_LOC_MASK_DELETE_RTI_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00010000)
-#define QMI_LOC_MASK_DELETE_SV_NO_EXIST_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00020000)
-#define QMI_LOC_MASK_DELETE_FREQ_BIAS_EST_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00040000)
+#define QMI_LOC_MASK_DELETE_GPS_SVDIR_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00000001) /**<  Mask to delete GPS SVDIR.   */
+#define QMI_LOC_MASK_DELETE_GPS_SVSTEER_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00000002) /**<  Mask to delete GPS SVSTEER.   */
+#define QMI_LOC_MASK_DELETE_GPS_TIME_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00000004) /**<  Mask to delete GPS time.  */
+#define QMI_LOC_MASK_DELETE_GPS_ALM_CORR_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00000008) /**<  Mask to delete almanac correlation.  */
+#define QMI_LOC_MASK_DELETE_GLO_SVDIR_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00000010) /**<  Mask to delete GLONASS SVDIR.   */
+#define QMI_LOC_MASK_DELETE_GLO_SVSTEER_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00000020) /**<  Mask to delete GLONASS SVSTEER.   */
+#define QMI_LOC_MASK_DELETE_GLO_TIME_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00000040) /**<  Mask to delete GLONASS time.  */
+#define QMI_LOC_MASK_DELETE_GLO_ALM_CORR_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00000080) /**<  Mask to delete GLONASS almanac correlation */
+#define QMI_LOC_MASK_DELETE_SBAS_SVDIR_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00000100) /**<  Mask to delete SBAS SVDIR  */
+#define QMI_LOC_MASK_DELETE_SBAS_SVSTEER_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00000200) /**<  Mask to delete SBAS SVSTEER  */
+#define QMI_LOC_MASK_DELETE_POSITION_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00000400) /**<  Mask to delete position estimate  */
+#define QMI_LOC_MASK_DELETE_TIME_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00000800) /**<  Mask to delete time estimate  */
+#define QMI_LOC_MASK_DELETE_IONO_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00001000) /**<  Mask to delete IONO  */
+#define QMI_LOC_MASK_DELETE_UTC_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00002000) /**<  Mask to delete UTC estimate  */
+#define QMI_LOC_MASK_DELETE_HEALTH_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00004000) /**<  Mask to delete SV health record  */
+#define QMI_LOC_MASK_DELETE_SADATA_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00008000) /**<  Mask to delete SADATA  */
+#define QMI_LOC_MASK_DELETE_RTI_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00010000) /**<  Mask to delete RTI  */
+#define QMI_LOC_MASK_DELETE_SV_NO_EXIST_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00020000) /**<  Mask to delete SV_NO_EXIST  */
+#define QMI_LOC_MASK_DELETE_FREQ_BIAS_EST_V02 ((qmiLocDeleteGnssDataMaskT_v02)0x00040000) /**<  Mask to delete frequency bias estimate  */
 typedef uint32_t qmiLocDeleteCelldbDataMaskT_v02;
-#define QMI_LOC_MASK_DELETE_CELLDB_POS_V02 ((qmiLocDeleteCelldbDataMaskT_v02)0x00000001)
-#define QMI_LOC_MASK_DELETE_CELLDB_LATEST_GPS_POS_V02 ((qmiLocDeleteCelldbDataMaskT_v02)0x00000002)
-#define QMI_LOC_MASK_DELETE_CELLDB_OTA_POS_V02 ((qmiLocDeleteCelldbDataMaskT_v02)0x00000004)
-#define QMI_LOC_MASK_DELETE_CELLDB_EXT_REF_POS_V02 ((qmiLocDeleteCelldbDataMaskT_v02)0x00000008)
-#define QMI_LOC_MASK_DELETE_CELLDB_TIMETAG_V02 ((qmiLocDeleteCelldbDataMaskT_v02)0x00000010)
-#define QMI_LOC_MASK_DELETE_CELLDB_CELLID_V02 ((qmiLocDeleteCelldbDataMaskT_v02)0x00000020)
-#define QMI_LOC_MASK_DELETE_CELLDB_CACHED_CELLID_V02 ((qmiLocDeleteCelldbDataMaskT_v02)0x00000040)
-#define QMI_LOC_MASK_DELETE_CELLDB_LAST_SRV_CELL_V02 ((qmiLocDeleteCelldbDataMaskT_v02)0x00000080)
-#define QMI_LOC_MASK_DELETE_CELLDB_CUR_SRV_CELL_V02 ((qmiLocDeleteCelldbDataMaskT_v02)0x00000100)
-#define QMI_LOC_MASK_DELETE_CELLDB_NEIGHBOR_INFO_V02 ((qmiLocDeleteCelldbDataMaskT_v02)0x00000200)
+#define QMI_LOC_MASK_DELETE_CELLDB_POS_V02 ((qmiLocDeleteCelldbDataMaskT_v02)0x00000001) /**<  Mask to delete cell database position  */
+#define QMI_LOC_MASK_DELETE_CELLDB_LATEST_GPS_POS_V02 ((qmiLocDeleteCelldbDataMaskT_v02)0x00000002) /**<  Mask to delete cell database latest GPS position  */
+#define QMI_LOC_MASK_DELETE_CELLDB_OTA_POS_V02 ((qmiLocDeleteCelldbDataMaskT_v02)0x00000004) /**<  Mask to delete cell database OTA position  */
+#define QMI_LOC_MASK_DELETE_CELLDB_EXT_REF_POS_V02 ((qmiLocDeleteCelldbDataMaskT_v02)0x00000008) /**<  Mask to delete cell database external reference position  */
+#define QMI_LOC_MASK_DELETE_CELLDB_TIMETAG_V02 ((qmiLocDeleteCelldbDataMaskT_v02)0x00000010) /**<  Mask to delete cell database time tag  */
+#define QMI_LOC_MASK_DELETE_CELLDB_CELLID_V02 ((qmiLocDeleteCelldbDataMaskT_v02)0x00000020) /**<  Mask to delete cell database cell ID  */
+#define QMI_LOC_MASK_DELETE_CELLDB_CACHED_CELLID_V02 ((qmiLocDeleteCelldbDataMaskT_v02)0x00000040) /**<  Mask to delete cell database cached cell ID  */
+#define QMI_LOC_MASK_DELETE_CELLDB_LAST_SRV_CELL_V02 ((qmiLocDeleteCelldbDataMaskT_v02)0x00000080) /**<  Mask to delete cell database last service cell  */
+#define QMI_LOC_MASK_DELETE_CELLDB_CUR_SRV_CELL_V02 ((qmiLocDeleteCelldbDataMaskT_v02)0x00000100) /**<  Mask to delete cell database current service cell  */
+#define QMI_LOC_MASK_DELETE_CELLDB_NEIGHBOR_INFO_V02 ((qmiLocDeleteCelldbDataMaskT_v02)0x00000200) /**<  Mask to delete cell database neighbor information  */
 typedef uint32_t qmiLocDeleteClockInfoMaskT_v02;
-#define QMI_LOC_MASK_DELETE_CLOCK_INFO_TIME_EST_V02 ((qmiLocDeleteClockInfoMaskT_v02)0x00000001)
-#define QMI_LOC_MASK_DELETE_CLOCK_INFO_FREQ_EST_V02 ((qmiLocDeleteClockInfoMaskT_v02)0x00000002)
-#define QMI_LOC_MASK_DELETE_CLOCK_INFO_WEEK_NUMBER_V02 ((qmiLocDeleteClockInfoMaskT_v02)0x00000004)
-#define QMI_LOC_MASK_DELETE_CLOCK_INFO_RTC_TIME_V02 ((qmiLocDeleteClockInfoMaskT_v02)0x00000008)
-#define QMI_LOC_MASK_DELETE_CLOCK_INFO_TIME_TRANSFER_V02 ((qmiLocDeleteClockInfoMaskT_v02)0x00000010)
-#define QMI_LOC_MASK_DELETE_CLOCK_INFO_GPSTIME_EST_V02 ((qmiLocDeleteClockInfoMaskT_v02)0x00000020)
-#define QMI_LOC_MASK_DELETE_CLOCK_INFO_GLOTIME_EST_V02 ((qmiLocDeleteClockInfoMaskT_v02)0x00000040)
-#define QMI_LOC_MASK_DELETE_CLOCK_INFO_GLODAY_NUMBER_V02 ((qmiLocDeleteClockInfoMaskT_v02)0x00000080)
-#define QMI_LOC_MASK_DELETE_CLOCK_INFO_GLO4YEAR_NUMBER_V02 ((qmiLocDeleteClockInfoMaskT_v02)0x00000100)
-#define QMI_LOC_MASK_DELETE_CLOCK_INFO_GLO_RF_GRP_DELAY_V02 ((qmiLocDeleteClockInfoMaskT_v02)0x00000200)
-#define QMI_LOC_MASK_DELETE_CLOCK_INFO_DISABLE_TT_V02 ((qmiLocDeleteClockInfoMaskT_v02)0x00000400)
+#define QMI_LOC_MASK_DELETE_CLOCK_INFO_TIME_EST_V02 ((qmiLocDeleteClockInfoMaskT_v02)0x00000001) /**<  Mask to delete time estimate from clock information                 */
+#define QMI_LOC_MASK_DELETE_CLOCK_INFO_FREQ_EST_V02 ((qmiLocDeleteClockInfoMaskT_v02)0x00000002) /**<  Mask to delete frequency estimate from clock information                */
+#define QMI_LOC_MASK_DELETE_CLOCK_INFO_WEEK_NUMBER_V02 ((qmiLocDeleteClockInfoMaskT_v02)0x00000004) /**<  Mask to delete week number from clock information            */
+#define QMI_LOC_MASK_DELETE_CLOCK_INFO_RTC_TIME_V02 ((qmiLocDeleteClockInfoMaskT_v02)0x00000008) /**<  Mask to delete RTC time from clock information               */
+#define QMI_LOC_MASK_DELETE_CLOCK_INFO_TIME_TRANSFER_V02 ((qmiLocDeleteClockInfoMaskT_v02)0x00000010) /**<  Mask to delete time transfer from clock information        */
+#define QMI_LOC_MASK_DELETE_CLOCK_INFO_GPSTIME_EST_V02 ((qmiLocDeleteClockInfoMaskT_v02)0x00000020) /**<  Mask to delete GPS time estimate from clock information         */
+#define QMI_LOC_MASK_DELETE_CLOCK_INFO_GLOTIME_EST_V02 ((qmiLocDeleteClockInfoMaskT_v02)0x00000040) /**<  Mask to delete GLONASS time estimate from clock information   */
+#define QMI_LOC_MASK_DELETE_CLOCK_INFO_GLODAY_NUMBER_V02 ((qmiLocDeleteClockInfoMaskT_v02)0x00000080) /**<  Mask to delete GLONASS day number from clock information          */
+#define QMI_LOC_MASK_DELETE_CLOCK_INFO_GLO4YEAR_NUMBER_V02 ((qmiLocDeleteClockInfoMaskT_v02)0x00000100) /**<  Mask to delete GLONASS four year number from clock information   */
+#define QMI_LOC_MASK_DELETE_CLOCK_INFO_GLO_RF_GRP_DELAY_V02 ((qmiLocDeleteClockInfoMaskT_v02)0x00000200) /**<  Mask to delete GLONASS RF GRP delay from clock information     */
+#define QMI_LOC_MASK_DELETE_CLOCK_INFO_DISABLE_TT_V02 ((qmiLocDeleteClockInfoMaskT_v02)0x00000400) /**<  Mask to delete disable TT from clock information   */
 typedef uint8_t qmiLocDeleteSvInfoMaskT_v02;
-#define QMI_LOC_MASK_DELETE_EPHEMERIS_V02 ((qmiLocDeleteSvInfoMaskT_v02)0x01)
-#define QMI_LOC_MASK_DELETE_ALMANAC_V02 ((qmiLocDeleteSvInfoMaskT_v02)0x02)
-/** @addtogroup qmiLoc_qmi_aggregates
+#define QMI_LOC_MASK_DELETE_EPHEMERIS_V02 ((qmiLocDeleteSvInfoMaskT_v02)0x01) /**<  Delete ephemeris for the satellite  */
+#define QMI_LOC_MASK_DELETE_ALMANAC_V02 ((qmiLocDeleteSvInfoMaskT_v02)0x02) /**<  Delete almanac for the satellite  */
+/** @addtogroup loc_qmi_aggregates
     @{
   */
 typedef struct {
 
   uint16_t gnssSvId;
-  /**<   SV ID of the satellite whose data should be deleted.\n
+  /**<   SV ID of the satellite whose data is to be deleted. \n
       - Type: Unsigned integer \n
-      - Range: For GPS:     1 to 32.
-               For SBAS:    33 to 64.
-               For GLONASS: 65 to 96.    */
+      - Range: \n
+          - For GPS:     1 to 32 \n
+          - For SBAS:    33 to 64 \n
+          - For GLONASS: 65 to 96    */
 
   qmiLocSvSystemEnumT_v02 system;
   /**<   Indicates to which constellation this SV belongs.
@@ -3323,9 +3564,9 @@ typedef struct {
 
   qmiLocDeleteSvInfoMaskT_v02 deleteSvInfoMask;
   /**<   Indicates if the ephemeris or almanac for a satellite
-       should be deleted
-       Valid Value:\n
-       - 0x01 -- DELETE_EPHEMERIS
+       is to be deleted. \n
+       Valid values: \n
+       - 0x01 -- DELETE_EPHEMERIS \n
        - 0x02 -- DELETE_ALMANAC
              */
 }qmiLocDeleteSvInfoStructT_v02;  /* Type */
@@ -3333,7 +3574,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Request Message; This command is used to delete the location engine
@@ -3341,89 +3582,94 @@ typedef struct {
 typedef struct {
 
   /* Mandatory */
+  /*  Delete All */
   uint8_t deleteAllFlag;
-  /**<   Whether all assistance data is to be deleted
+  /**<   Whether all assistance data is to be deleted.
        Valid values: \n
-       - 0x01 (TRUE)  -- All assistance data should be deleted.
-                         If this flag is set, all the other information
+       - 0x01 (TRUE)  -- All assistance data is to be deleted;
+                         if this flag is set, all the other information
                          contained in the optional fields for this
-                         message will be ignored. \n
-       - 0x00 (FALSE) -- The optional fields in the message should be used
-                         to determine which data should be deleted.  */
+                         message are ignored \n
+       - 0x00 (FALSE) -- The optional fields in the message are to be used
+                         to determine which data is to be deleted  */
 
   /* Optional */
+  /*  Delete SV Info */
   uint8_t deleteSvInfoList_valid;  /**< Must be set to true if deleteSvInfoList is being passed */
   uint32_t deleteSvInfoList_len;  /**< Must be set to # of elements in deleteSvInfoList */
   qmiLocDeleteSvInfoStructT_v02 deleteSvInfoList[QMI_LOC_DELETE_MAX_SV_INFO_LENGTH_V02];
-  /**<   List of satellites for which the assitance data has to be deleted.
+  /**<   \n List of satellites for which the assitance data is to be deleted.
     */
 
   /* Optional */
+  /*  Delete GNSS Data */
   uint8_t deleteGnssDataMask_valid;  /**< Must be set to true if deleteGnssDataMask is being passed */
   qmiLocDeleteGnssDataMaskT_v02 deleteGnssDataMask;
-  /**<   Mask for the GNSS data that should be deleted.
+  /**<   Mask for the GNSS data that is to be deleted.
        Valid values: \n
-       0x00000001 -- DELETE_GPS_SVDIR
-       0x00000002 -- DELETE_GPS_SVSTEER
-       0x00000004 -- DELETE_GPS_TIME
-       0x00000008 -- DELETE_GPS_ALM_CORR
-       0x00000010 -- DELETE_GLO_SVDIR
-       0x00000020 -- DELETE_GLO_SVSTEER
-       0x00000040 -- DELETE_GLO_TIME
-       0x00000080 -- DELETE_GLO_ALM_CORR
-       0x00000100 -- DELETE_SBAS_SVDIR
-       0x00000200 -- DELETE_SBAS_SVSTEER
-       0x00000400 -- DELETE_POSITION
-       0x00000800 -- DELETE_TIME
-       0x00001000 -- DELETE_IONO
-       0x00002000 -- DELETE_UTC
-       0x00004000 -- DELETE_HEALTH
-       0x00008000 -- DELETE_SADATA
-       0x00010000 -- DELETE_RTI
-       0x00020000 -- DELETE_SV_NO_EXIST
-       0x00040000 -- DELETE_FREQ_BIAS_EST
+       - 0x00000001 -- DELETE_GPS_SVDIR \n
+       - 0x00000002 -- DELETE_GPS_SVSTEER \n
+       - 0x00000004 -- DELETE_GPS_TIME\n
+       - 0x00000008 -- DELETE_GPS_ALM_CORR \n
+       - 0x00000010 -- DELETE_GLO_SVDIR \n
+       - 0x00000020 -- DELETE_GLO_SVSTEER \n
+       - 0x00000040 -- DELETE_GLO_TIME \n
+       - 0x00000080 -- DELETE_GLO_ALM_CORR \n
+       - 0x00000100 -- DELETE_SBAS_SVDIR \n
+       - 0x00000200 -- DELETE_SBAS_SVSTEER \n
+       - 0x00000400 -- DELETE_POSITION \n
+       - 0x00000800 -- DELETE_TIME \n
+       - 0x00001000 -- DELETE_IONO \n
+       - 0x00002000 -- DELETE_UTC \n
+       - 0x00004000 -- DELETE_HEALTH \n
+       - 0x00008000 -- DELETE_SADATA \n
+       - 0x00010000 -- DELETE_RTI \n
+       - 0x00020000 -- DELETE_SV_NO_EXIST \n
+       - 0x00040000 -- DELETE_FREQ_BIAS_EST
    */
 
   /* Optional */
+  /*  Delete Cell Database */
   uint8_t deleteCellDbDataMask_valid;  /**< Must be set to true if deleteCellDbDataMask is being passed */
   qmiLocDeleteCelldbDataMaskT_v02 deleteCellDbDataMask;
-  /**<   Mask for the Cell database assistance data that should be deleted.
+  /**<   Mask for the cell database assistance data that is to be deleted. \n
        Valid values: \n
-       0x00000001 -- DELETE_CELLDB_POS
-       0x00000002 -- DELETE_CELLDB_LATEST_GPS_POS
-       0x00000004 -- DELETE_CELLDB_OTA_POS
-       0x00000008 -- DELETE_CELLDB_EXT_REF_POS
-       0x00000010 -- DELETE_CELLDB_TIMETAG
-       0x00000020 -- DELETE_CELLDB_CELLID
-       0x00000040 -- DELETE_CELLDB_CACHED_CELLID
-       0x00000080 -- DELETE_CELLDB_LAST_SRV_CELL
-       0x00000100 -- DELETE_CELLDB_CUR_SRV_CELL
-       0x00000200 -- DELETE_CELLDB_NEIGHBOR_INFO
+       - 0x00000001 -- DELETE_CELLDB_POS \n
+       - 0x00000002 -- DELETE_CELLDB_LATEST_GPS_POS \n
+       - 0x00000004 -- DELETE_CELLDB_OTA_POS \n
+       - 0x00000008 -- DELETE_CELLDB_EXT_REF_POS \n
+       - 0x00000010 -- DELETE_CELLDB_TIMETAG \n
+       - 0x00000020 -- DELETE_CELLDB_CELLID \n
+       - 0x00000040 -- DELETE_CELLDB_CACHED_CELLID \n
+       - 0x00000080 -- DELETE_CELLDB_LAST_SRV_CELL \n
+       - 0x00000100 -- DELETE_CELLDB_CUR_SRV_CELL \n
+       - 0x00000200 -- DELETE_CELLDB_NEIGHBOR_INFO
    */
 
   /* Optional */
+  /*  Delete Clock Info */
   uint8_t deleteClockInfoMask_valid;  /**< Must be set to true if deleteClockInfoMask is being passed */
   qmiLocDeleteClockInfoMaskT_v02 deleteClockInfoMask;
-  /**<   Mask for the Clock Information assistance data that should be deleted.
+  /**<   Mask for the clock information assistance data that is to be deleted. \n
        Valid values: \n
-       0x00000001 -- DELETE_CLOCK_INFO_TIME_EST
-       0x00000002 -- DELETE_CLOCK_INFO_FREQ_EST
-       0x00000004 -- DELETE_CLOCK_INFO_WEEK_NUMBER
-       0x00000008 -- DELETE_CLOCK_INFO_RTC_TIME
-       0x00000010 -- DELETE_CLOCK_INFO_TIME_TRANSFER
-       0x00000020 -- DELETE_CLOCK_INFO_GPSTIME_EST
-       0x00000040 -- DELETE_CLOCK_INFO_GLOTIME_EST
-       0x00000080 -- DELETE_CLOCK_INFO_GLODAY_NUMBER
-       0x00000100 -- DELETE_CLOCK_INFO_GLO4YEAR_NUMBER
-       0x00000200 -- DELETE_CLOCK_INFO_GLO_RF_GRP_DELAY
-       0x00000400 -- DELETE_CLOCK_INFO_DISABLE_TT
+       - 0x00000001 -- DELETE_CLOCK_INFO_TIME_EST \n
+       - 0x00000002 -- DELETE_CLOCK_INFO_FREQ_EST \n
+       - 0x00000004 -- DELETE_CLOCK_INFO_WEEK_NUMBER \n
+       - 0x00000008 -- DELETE_CLOCK_INFO_RTC_TIME \n
+       - 0x00000010 -- DELETE_CLOCK_INFO_TIME_TRANSFER \n
+       - 0x00000020 -- DELETE_CLOCK_INFO_GPSTIME_EST \n
+       - 0x00000040 -- DELETE_CLOCK_INFO_GLOTIME_EST \n
+       - 0x00000080 -- DELETE_CLOCK_INFO_GLODAY_NUMBER \n
+       - 0x00000100 -- DELETE_CLOCK_INFO_GLO4YEAR_NUMBER \n
+       - 0x00000200 -- DELETE_CLOCK_INFO_GLO_RF_GRP_DELAY \n
+       - 0x00000400 -- DELETE_CLOCK_INFO_DISABLE_TT
    */
 }qmiLocDeleteAssistDataReqMsgT_v02;  /* Message */
 /**
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; This command is used to delete the location engine
@@ -3431,8 +3677,9 @@ typedef struct {
 typedef struct {
 
   /* Mandatory */
+  /*  Delete Assist Data Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the delete assist data request.
+  /**<   Status of the Delete Assist Data request.
 
        Valid values: \n
          - 0x00000000 -- SUCCESS \n
@@ -3448,13 +3695,14 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Request Message; Enables/disables XTRA-T session control. */
 typedef struct {
 
   /* Mandatory */
+  /*  Enable XTRA-T */
   uint8_t xtraTSessionControl;
   /**<   Whether to enable XTRA-T:\n
        - 0x01 (TRUE) -- Enable XTRA-T \n
@@ -3464,15 +3712,16 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Enables/disables XTRA-T session control. */
 typedef struct {
 
   /* Mandatory */
+  /*  Set XTRA-T Session Control Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the set XTRA-T session control request.
+  /**<   Status of the Set XTRA-T Session Control request.
 
        Valid values: \n
          - 0x00000000 -- SUCCESS \n
@@ -3494,7 +3743,7 @@ typedef struct {
  * }qmiLocGetXtraTSessionControlReqMsgT_v02;
  */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Gets the XTRA-T session control value from the location
@@ -3502,8 +3751,9 @@ typedef struct {
 typedef struct {
 
   /* Mandatory */
+  /*  Get XTRA-T Session Control Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the get XTRA-T session control request.
+  /**<   Status of the Get XTRA-T Session Control request.
 
        Valid values: \n
          - 0x00000000 -- SUCCESS \n
@@ -3516,6 +3766,7 @@ typedef struct {
    */
 
   /* Optional */
+  /*  Enable/Disable XTRA-T */
   uint8_t xtraTSessionControl_valid;  /**< Must be set to true if xtraTSessionControl is being passed */
   uint8_t xtraTSessionControl;
   /**<   Whether to enable XTRA-T:\n
@@ -3526,7 +3777,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_aggregates
+/** @addtogroup loc_qmi_aggregates
     @{
   */
 typedef struct {
@@ -3541,7 +3792,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -3562,7 +3813,7 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_aggregates
+/** @addtogroup loc_qmi_aggregates
     @{
   */
 typedef struct {
@@ -3587,9 +3838,9 @@ typedef struct {
         - Type: Unsigned integer  */
 
   qmiLocWifiFixErrorCodeEnumT_v02 fixErrorCode;
-  /**<   WiFi position error code; set to 0 if fix succeeds. This position is
-        only used by a module if the value is 0. If there was a failure, the
-        error code provided by the WiFi positioning system can be provided
+  /**<   WiFi position error code; set to 0 if the fix succeeds. This position
+        is only used by a module if the value is 0. If there was a failure,
+        the error code provided by the WiFi positioning system can be provided
         here.
 
         Valid values: \n
@@ -3607,11 +3858,11 @@ typedef struct {
   */
 
 typedef uint8_t qmiLocWifiApQualifierMaskT_v02;
-#define QMI_LOC_WIFI_AP_QUALIFIER_BEING_USED_V02 ((qmiLocWifiApQualifierMaskT_v02)0x01)
-#define QMI_LOC_WIFI_AP_QUALIFIER_HIDDEN_SSID_V02 ((qmiLocWifiApQualifierMaskT_v02)0x02)
-#define QMI_LOC_WIFI_AP_QUALIFIER_PRIVATE_V02 ((qmiLocWifiApQualifierMaskT_v02)0x04)
-#define QMI_LOC_WIFI_AP_QUALIFIER_INFRASTRUCTURE_MODE_V02 ((qmiLocWifiApQualifierMaskT_v02)0x08)
-/** @addtogroup qmiLoc_qmi_aggregates
+#define QMI_LOC_WIFI_AP_QUALIFIER_BEING_USED_V02 ((qmiLocWifiApQualifierMaskT_v02)0x01) /**<  Access point is being used by the WPS.  */
+#define QMI_LOC_WIFI_AP_QUALIFIER_HIDDEN_SSID_V02 ((qmiLocWifiApQualifierMaskT_v02)0x02) /**<  AP does not broadcast SSID.  */
+#define QMI_LOC_WIFI_AP_QUALIFIER_PRIVATE_V02 ((qmiLocWifiApQualifierMaskT_v02)0x04) /**<  AP has encryption turned on.  */
+#define QMI_LOC_WIFI_AP_QUALIFIER_INFRASTRUCTURE_MODE_V02 ((qmiLocWifiApQualifierMaskT_v02)0x08) /**<  AP is in infrastructure mode and not in ad-hoc/unknown mode.  */
+/** @addtogroup loc_qmi_aggregates
     @{
   */
 typedef struct {
@@ -3645,29 +3896,33 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Request Message; Injects the WiFi position. */
 typedef struct {
 
   /* Optional */
+  /*  WiFi Fix Time */
   uint8_t wifiFixTime_valid;  /**< Must be set to true if wifiFixTime is being passed */
   qmiLocWifiFixTimeStructT_v02 wifiFixTime;
-  /**<   Time of WiFi position fix.  */
+  /**<   \n Time of WiFi position fix.  */
 
   /* Optional */
+  /*  WiFi Position */
   uint8_t wifiFixPosition_valid;  /**< Must be set to true if wifiFixPosition is being passed */
   qmiLocWifiFixPosStructT_v02 wifiFixPosition;
-  /**<   WiFi position fix.  */
+  /**<   \n WiFi position fix.  */
 
   /* Optional */
+  /*  WiFi Access Point Information */
   uint8_t apInfo_valid;  /**< Must be set to true if apInfo is being passed */
   uint32_t apInfo_len;  /**< Must be set to # of elements in apInfo */
   qmiLocWifiApInfoStructT_v02 apInfo[QMI_LOC_WIFI_MAX_REPORTED_APS_PER_MSG_V02];
-  /**<   AP scan list.  */
+  /**<   \n AP scan list.  */
 
   /* Optional */
+  /*  Horizontal Reliability */
   uint8_t horizontalReliability_valid;  /**< Must be set to true if horizontalReliability is being passed */
   qmiLocReliabilityEnumT_v02 horizontalReliability;
   /**<   Specifies the reliability of the horizontal position.
@@ -3678,21 +3933,22 @@ typedef struct {
           - 0x00000002 -- eQMI_LOC_RELIABILITY_LOW \n
           - 0x00000003 -- eQMI_LOC_RELIABILITY_MEDIUM \n
           - 0x00000004 -- eQMI_LOC_RELIABILITY_HIGH
-    */
+       */
 }qmiLocInjectWifiPositionReqMsgT_v02;  /* Message */
 /**
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Injects the WiFi position. */
 typedef struct {
 
   /* Mandatory */
+  /*  Inject WiFi Position Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the inject WiFi position request.
+  /**<   Status of the Inject WiFi Position request.
 
        Valid values: \n
          - 0x00000000 -- SUCCESS \n
@@ -3708,7 +3964,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -3722,13 +3978,14 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
-/** Request Message; Notify the location engine about the Wifi status. */
+/** Request Message; Notifies the location engine of the WiFi status. */
 typedef struct {
 
   /* Mandatory */
+  /*  Availablility of WiFi */
   qmiLocWifiStatusEnumT_v02 wifiStatus;
   /**<   WiFi status information.
 
@@ -3741,15 +3998,16 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
-/** Indication Message; Notify the location engine about the Wifi status. */
+/** Indication Message; Notifies the location engine of the WiFi status. */
 typedef struct {
 
   /* Mandatory */
+  /*  Status of Notify WiFi Status Request */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the notify WiFi status request.
+  /**<   Status of the Notify WiFi Status request.
 
        Valid values: \n
          - 0x00000000 -- SUCCESS \n
@@ -3771,7 +4029,7 @@ typedef struct {
  * }qmiLocGetRegisteredEventsReqMsgT_v02;
  */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Gets the mask of the events for which a client has
@@ -3779,8 +4037,9 @@ typedef struct {
 typedef struct {
 
   /* Mandatory */
+  /*  Get Registered Events Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the get registered events request.
+  /**<   Status of the Get Registered Events request.
 
        Valid values: \n
          - 0x00000000 -- SUCCESS \n
@@ -3793,6 +4052,7 @@ typedef struct {
    */
 
   /* Optional */
+  /*  Event Registration Mask */
   uint8_t eventRegMask_valid;  /**< Must be set to true if eventRegMask is being passed */
   qmiLocEventRegMaskT_v02 eventRegMask;
   /**<   Event registration mask.
@@ -3818,7 +4078,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -3836,7 +4096,7 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Request Message; Tells the engine to use the specified operation mode while
@@ -3845,6 +4105,7 @@ typedef enum {
 typedef struct {
 
   /* Mandatory */
+  /*  Operation Mode */
   qmiLocOperationModeEnumT_v02 operationMode;
   /**<   Preferred operation mode.
 
@@ -3860,7 +4121,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Tells the engine to use the specified operation mode while
@@ -3869,8 +4130,9 @@ typedef struct {
 typedef struct {
 
   /* Mandatory */
+  /*  Set Operation Mode Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the set operation mode request.
+  /**<   Status of the Set Operation Mode request.
 
        Valid values: \n
          - 0x00000000 -- SUCCESS \n
@@ -3892,15 +4154,16 @@ typedef struct {
  * }qmiLocGetOperationModeReqMsgT_v02;
  */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Gets the current operation mode from the engine. */
 typedef struct {
 
   /* Mandatory */
+  /*  Get Operation Mode Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the get operation mode request.
+  /**<   Status of the Get Operation Mode request.
 
        Valid values: \n
          - 0x00000000 -- SUCCESS \n
@@ -3913,6 +4176,7 @@ typedef struct {
    */
 
   /* Optional */
+  /*  Operation Mode */
   uint8_t operationMode_valid;  /**< Must be set to true if operationMode is being passed */
   qmiLocOperationModeEnumT_v02 operationMode;
   /**<   Current operation mode.
@@ -3929,43 +4193,43 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
-/** Request Message; Used by the control point to set the Stationary Position
-                      Indicator (SPI) status, which indicates whether the
-                    device is stationary. */
+/** Request Message; Used by the control point to set the SPI status, which
+                    indicates whether the device is stationary. */
 typedef struct {
 
   /* Mandatory */
+  /*  Stationary Status */
   uint8_t stationary;
   /**<   Whether the device is stationary:\n
        - 0x00 (FALSE) -- Device is not stationary \n
        - 0x01 (TRUE)  -- Device is stationary  */
 
   /* Optional */
+  /*  Confidence */
   uint8_t confidenceStationary_valid;  /**< Must be set to true if confidenceStationary is being passed */
   uint8_t confidenceStationary;
-  /**<   Confidence of stationary state expressed as a percentage.\n
+  /**<   Confidence in the Stationary state expressed as a percentage.\n
        - Type: Unsigned integer \n
-       - Range: 0 to 100
- Specifies the status of SPI.  */
+       - Range: 0 to 100  */
 }qmiLocSetSpiStatusReqMsgT_v02;  /* Message */
 /**
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
-/** Indication Message; Used by the control point to set the Stationary Position
-                      Indicator (SPI) status, which indicates whether the
-                    device is stationary. */
+/** Indication Message; Used by the control point to set the SPI status, which
+                    indicates whether the device is stationary. */
 typedef struct {
 
   /* Mandatory */
+  /*  Status of SPI Status Request */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the SPI status request.
+  /**<   Status of the SPI Status request. \n
        Valid values: \n
          - 0x00000000 -- SUCCESS \n
          - 0x00000001 -- GENERAL_FAILURE \n
@@ -3981,8 +4245,9 @@ typedef struct {
   */
 
 typedef uint8_t qmiLocSensorDataFlagMaskT_v02;
-#define QMI_LOC_SENSOR_DATA_FLAG_SIGN_REVERSAL_V02 ((qmiLocSensorDataFlagMaskT_v02)0x01)
-/** @addtogroup qmiLoc_qmi_aggregates
+#define QMI_LOC_SENSOR_DATA_FLAG_SIGN_REVERSAL_V02 ((qmiLocSensorDataFlagMaskT_v02)0x01) /**<  Bitmask to specify that a sign reversal is required while interpreting
+     the sensor data.  */
+/** @addtogroup loc_qmi_aggregates
     @{
   */
 typedef struct {
@@ -3997,25 +4262,25 @@ typedef struct {
   /**<   Sensor x-axis sample. \n
        - Type: Floating point \n
        - Units Accelerometer: ( (meters)/(seconds^2) ) \n
-       - Units Gyrometer:     ( (rads) / (seconds^2) )  */
+       - Units Gyrometer:     ( (rads)/(seconds^2) )  */
 
   float yAxis;
   /**<   Sensor y-axis sample. \n
        - Type: Floating point \n
        - Units Accelerometer: ( (meters)/(seconds^2) ) \n
-       - Units Gyrometer:     ( (rads) / (seconds^2) )  */
+       - Units Gyrometer:     ( (rads)/(seconds^2) )  */
 
   float zAxis;
   /**<   Sensor z-axis sample. \n
        - Type: Floating point \n
        - Units Accelerometer: ( (meters)/(seconds^2) ) \n
-       - Units Gyrometer:     ( (rads) / (seconds^2) )  */
+       - Units Gyrometer:     ( (rads)/(seconds^2) )  */
 }qmiLoc3AxisSensorSampleStructT_v02;  /* Type */
 /**
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_aggregates
+/** @addtogroup loc_qmi_aggregates
     @{
   */
 typedef struct {
@@ -4043,14 +4308,15 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Request Message; Used by the control point to inject sensor data into the
-                      GNSS location engine. */
+                    GNSS location engine. */
 typedef struct {
 
   /* Optional */
+  /*  Opaque Identifier */
   uint8_t opaqueIdentifier_valid;  /**< Must be set to true if opaqueIdentifier is being passed */
   uint32_t opaqueIdentifier;
   /**<   An opaque identifier that is sent in by the client that will be echoed
@@ -4059,29 +4325,32 @@ typedef struct {
        - Type: Unsigned integer  */
 
   /* Optional */
+  /*  3-Axis Accelerometer Data */
   uint8_t threeAxisAccelData_valid;  /**< Must be set to true if threeAxisAccelData is being passed */
   qmiLoc3AxisSensorSampleListStructT_v02 threeAxisAccelData;
-  /**<   Accelerometer sensor samples.  */
+  /**<   \n Accelerometer sensor samples.  */
 
   /* Optional */
+  /*  3-Axis Gyrometer Data */
   uint8_t threeAxisGyroData_valid;  /**< Must be set to true if threeAxisGyroData is being passed */
   qmiLoc3AxisSensorSampleListStructT_v02 threeAxisGyroData;
-  /**<   Gyrometer sensor samples.  */
+  /**<   \n Gyrometer sensor samples.  */
 }qmiLocInjectSensorDataReqMsgT_v02;  /* Message */
 /**
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Used by the control point to inject sensor data into the
-                      GNSS location engine. */
+                    GNSS location engine. */
 typedef struct {
 
   /* Mandatory */
+  /*  Inject Sensor Data Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the inject sensor data request.
+  /**<   Status of the Inject Sensor Data request.
 
        Valid values: \n
          - 0x00000000 -- SUCCESS \n
@@ -4094,6 +4363,7 @@ typedef struct {
    */
 
   /* Optional */
+  /*  Opaque Identifier */
   uint8_t opaqueIdentifier_valid;  /**< Must be set to true if opaqueIdentifier is being passed */
   uint32_t opaqueIdentifier;
   /**<   An opaque identifier that was sent in by the client echoed
@@ -4101,12 +4371,14 @@ typedef struct {
        - Type: Unsigned integer  */
 
   /* Optional */
+  /*  Accelerometer Samples Accepted */
   uint8_t threeAxisAccelSamplesAccepted_valid;  /**< Must be set to true if threeAxisAccelSamplesAccepted is being passed */
   uint8_t threeAxisAccelSamplesAccepted;
   /**<   This field lets the client know how many 3-axis accelerometer samples
        were accepted.  */
 
   /* Optional */
+  /*  Gyrometer Samples Accepted */
   uint8_t threeAxisGyroSamplesAccepted_valid;  /**< Must be set to true if threeAxisGyroSamplesAccepted is being passed */
   uint8_t threeAxisGyroSamplesAccepted;
   /**<   This field lets the client know how many 3-axis gyrometer samples were
@@ -4116,22 +4388,24 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Request Message; Used by the control point to inject time sync data. */
 typedef struct {
 
   /* Mandatory */
+  /*  Reference Time Sync Counter */
   uint32_t refCounter;
   /**<   Must be set to the value that was sent to the control point when the
        GNSS location engine requested time sync injection. \n
        - Type: Unsigned integer  */
 
   /* Mandatory */
+  /*  Sensor Receive Time */
   uint32_t sensorProcRxTime;
   /**<   The value of the sensor time when the control point received the
-       time sync injection request from the GNSS location engine.
+       Time Sync Inject request from the GNSS location engine.
 
        Must be monotonically increasing, jitter @latexonly $\leq$ @endlatexonly 1
        millisecond, never stopping until the process is rebooted.\n
@@ -4139,6 +4413,7 @@ typedef struct {
        - Units: Milliseconds  */
 
   /* Mandatory */
+  /*  Sensor Transmit Time */
   uint32_t sensorProcTxTime;
   /**<   The value of the sensor time when the control point injects this message
        for use by the GNSS location engine.
@@ -4152,15 +4427,16 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Used by the control point to inject time sync data. */
 typedef struct {
 
   /* Mandatory */
+  /*  Inject Time Sync Data Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the inject time sync data request.
+  /**<   Status of the Inject Time Sync Data request.
 
        Valid values: \n
          - 0x00000000 -- SUCCESS \n
@@ -4176,7 +4452,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -4197,7 +4473,7 @@ typedef enum {
  * }qmiLocGetCradleMountConfigReqMsgT_v02;
  */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Used by the control point to get the current
@@ -4205,8 +4481,9 @@ typedef enum {
 typedef struct {
 
   /* Mandatory */
+  /*  Get Cradle Mount Config Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the get cradle mount configuration request.
+  /**<   Status of the Get Cradle Mount Configuration request.
 
        Valid values: \n
          - 0x00000000 -- SUCCESS \n
@@ -4219,9 +4496,10 @@ typedef struct {
    */
 
   /* Optional */
+  /*  Cradle Mount State */
   uint8_t cradleMountState_valid;  /**< Must be set to true if cradleMountState is being passed */
   qmiLocCradleMountStateEnumT_v02 cradleMountState;
-  /**<   Cradle mount state set by the control point. \n
+  /**<   Cradle Mount state set by the control point.
 
        Valid values: \n
          - 0x00000000 -- CRADLE_STATE_NOT_MOUNTED \n
@@ -4230,9 +4508,10 @@ typedef struct {
           */
 
   /* Optional */
+  /*  Cradle Mount Confidence */
   uint8_t confidenceCradleMountState_valid;  /**< Must be set to true if confidenceCradleMountState is being passed */
   uint8_t confidenceCradleMountState;
-  /**<   Confidence of Cradle Mount state expressed in percent.\n
+  /**<   Confidence of the Cradle Mount state expressed as a percentage.\n
        - Type: Unsigned integer \n
        - Range: 0 to 100  */
 }qmiLocGetCradleMountConfigIndMsgT_v02;  /* Message */
@@ -4240,7 +4519,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Request Message; Used by the control point to set the current
@@ -4248,8 +4527,9 @@ typedef struct {
 typedef struct {
 
   /* Mandatory */
+  /*  Cradle Mount State */
   qmiLocCradleMountStateEnumT_v02 cradleMountState;
-  /**<   Cradle mount state set by the control point. \n
+  /**<   Cradle Mount state set by the control point.
 
        Valid values: \n
          - 0x00000000 -- CRADLE_STATE_NOT_MOUNTED \n
@@ -4257,9 +4537,10 @@ typedef struct {
          - 0x00000002 -- CRADLE_STATE_UNKNOWN          */
 
   /* Optional */
+  /*  Cradle Mount Confidence */
   uint8_t confidenceCradleMountState_valid;  /**< Must be set to true if confidenceCradleMountState is being passed */
   uint8_t confidenceCradleMountState;
-  /**<   Confidence of Cradle Mount state expressed in percent.\n
+  /**<   Confidence in the Cradle Mount state expressed as a percentage.\n
        - Type: Unsigned integer \n
        - Range: 0 to 100  */
 }qmiLocSetCradleMountConfigReqMsgT_v02;  /* Message */
@@ -4267,7 +4548,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Used by the control point to set the current
@@ -4275,8 +4556,9 @@ typedef struct {
 typedef struct {
 
   /* Mandatory */
+  /*  Set Cradle Mount Config Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the set cradle mount configuration request.
+  /**<   Status of the Set Cradle Mount Configuration request.
 
        Valid values: \n
          - 0x00000000 -- SUCCESS \n
@@ -4292,13 +4574,13 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
   QMILOCEXTERNALPOWERCONFIGENUMT_MIN_ENUM_VAL_V02 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
-  eQMI_LOC_EXTERNAL_POWER_NOT_CONNECTED_V02 = 0, /**<  Device is not connected to external power source.  */
-  eQMI_LOC_EXTERNAL_POWER_CONNECTED_V02 = 1, /**<  Device is connected to external power source.
+  eQMI_LOC_EXTERNAL_POWER_NOT_CONNECTED_V02 = 0, /**<  Device is not connected to an external power source.  */
+  eQMI_LOC_EXTERNAL_POWER_CONNECTED_V02 = 1, /**<  Device is connected to an external power source.
  Unknown external power state.  */
   eQMI_LOC_EXTERNAL_POWER_UNKNOWN_V02 = 2,
   QMILOCEXTERNALPOWERCONFIGENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
@@ -4313,7 +4595,7 @@ typedef enum {
  * }qmiLocGetExternalPowerConfigReqMsgT_v02;
  */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Used by the control point to get the current
@@ -4321,8 +4603,9 @@ typedef enum {
 typedef struct {
 
   /* Mandatory */
+  /*  Get Ext Power Config Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the get external power configuration request.
+  /**<   Status of the Get External Power Configuration request.
 
        Valid values: \n
          - 0x00000000 -- SUCCESS \n
@@ -4335,6 +4618,7 @@ typedef struct {
    */
 
   /* Optional */
+  /*  External Power State */
   uint8_t externalPowerState_valid;  /**< Must be set to true if externalPowerState is being passed */
   qmiLocExternalPowerConfigEnumT_v02 externalPowerState;
   /**<   Power state; injected by the control point.
@@ -4349,7 +4633,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Request Message; Used by the control point to set the current
@@ -4357,8 +4641,9 @@ typedef struct {
 typedef struct {
 
   /* Mandatory */
+  /*  External Power State */
   qmiLocExternalPowerConfigEnumT_v02 externalPowerState;
-  /**<   Power state; injected by the control point. \n
+  /**<   Power state; injected by the control point.
 
        Valid values: \n
          - 0x00000000 -- EXTERNAL_POWER_NOT_CONNECTED \n
@@ -4370,7 +4655,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Used by the control point to set the current
@@ -4378,8 +4663,9 @@ typedef struct {
 typedef struct {
 
   /* Mandatory */
+  /*  Set Ext Power Config Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the set external power configuration request.
+  /**<   Status of the Set External Power Configuration request.
 
        Valid values: \n
          - 0x00000000 -- SUCCESS \n
@@ -4395,7 +4681,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -4411,13 +4697,13 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_aggregates
+/** @addtogroup loc_qmi_aggregates
     @{
   */
 typedef struct {
 
   qmiLocServerPDNEnumT_v02 pdnType;
-  /**<   PDP type of the APN profile.
+  /**<   PDN type of the Access Point Name (APN) profile.
 
        Valid values: \n
          - 0x00000001 -- PDN_TYPE_IPV4 \n
@@ -4429,14 +4715,14 @@ typedef struct {
   char apnName[QMI_LOC_MAX_APN_NAME_LENGTH_V02 + 1];
   /**<   APN name. \n
        - Type: NULL-terminated string \n
-       - Maximum length of the string (including NULL terminator): 101
+       - Maximum string length (including NULL terminator): 101
    */
 }qmiLocApnProfilesStructT_v02;  /* Type */
 /**
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -4450,7 +4736,7 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Request Message; Used by the control point to inform the service about the
@@ -4460,15 +4746,17 @@ typedef enum {
 typedef struct {
 
   /* Mandatory */
+  /*  Connection Handle */
   uint32_t connHandle;
-  /**<   connHandle that the service had specified in the
-       location server connection request event. \n
+  /**<   Connection handle that the service specified in the
+       Location Server Connection request event. \n
        - Type: Unsigned integer  */
 
   /* Mandatory */
+  /*  Request Type */
   qmiLocServerRequestEnumT_v02 requestType;
   /**<   Type of connection request service that was specified in the
-       location server connection request event.
+       Location Server Connection Request event.
 
        Valid values: \n
          - 0x00000001 -- OPEN \n
@@ -4476,8 +4764,9 @@ typedef struct {
    */
 
   /* Mandatory */
+  /*  Connection Status */
   qmiLocServerReqStatusEnumT_v02 statusType;
-  /**<   Status of the connection request.
+  /**<   Status of the Connection request.
 
        Valid values: \n
          - 0x00000001 -- STATUS_SUCCESS = 1 \n
@@ -4486,16 +4775,17 @@ typedef struct {
    */
 
   /* Optional */
+  /*  APN Profile */
   uint8_t apnProfile_valid;  /**< Must be set to true if apnProfile is being passed */
   qmiLocApnProfilesStructT_v02 apnProfile;
-  /**<   APN profile information; will be present only when requestType
+  /**<   \n APN profile information is present only when requestType
        is OPEN and statusType is SUCCESS.  */
 }qmiLocInformLocationServerConnStatusReqMsgT_v02;  /* Message */
 /**
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Used by the control point to inform the service about the
@@ -4505,8 +4795,9 @@ typedef struct {
 typedef struct {
 
   /* Mandatory */
+  /*  Status of Inform Loc Server Conn Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the inform location server connection status request.
+  /**<   Status of the Inform Location Server Connection Status request.
 
        Valid values: \n
          - 0x00000000 -- SUCCESS \n
@@ -4522,7 +4813,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
@@ -4536,13 +4827,13 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
   QMILOCSUPLVERSIONENUMT_MIN_ENUM_VAL_V02 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
-  eQMI_LOC_SUPL_VERSION_1_0_V02 = 1, /**<  SUPL version 1.0
- SUPL version 2.0  */
+  eQMI_LOC_SUPL_VERSION_1_0_V02 = 1, /**<  SUPL version 1.0.
+ SUPL version 2.0.  */
   eQMI_LOC_SUPL_VERSION_2_0_V02 = 2,
   QMILOCSUPLVERSIONENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
 }qmiLocSuplVersionEnumT_v02;
@@ -4550,7 +4841,7 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Request Message; Used by the control point to configure parameters stored
@@ -4558,13 +4849,15 @@ typedef enum {
 typedef struct {
 
   /* Optional */
+  /*  SUPL Security */
   uint8_t suplSecurity_valid;  /**< Must be set to true if suplSecurity is being passed */
   uint8_t suplSecurity;
   /**<   Indicates whether SUPL security is enabled. \n
-       - 0x01 (TRUE) -- SUPL security is enabled. \n
-       - 0x00 (FALSE) -- SUPL security is disabled.  */
+       - 0x01 (TRUE) -- SUPL security is enabled \n
+       - 0x00 (FALSE) -- SUPL security is disabled  */
 
   /* Optional */
+  /*  VX Version */
   uint8_t vxVersion_valid;  /**< Must be set to true if vxVersion is being passed */
   qmiLocVxVersionEnumT_v02 vxVersion;
   /**<   VX version.
@@ -4575,11 +4868,12 @@ typedef struct {
    */
 
   /* Optional */
+  /*  SUPL Version */
   uint8_t suplVersion_valid;  /**< Must be set to true if suplVersion is being passed */
   qmiLocSuplVersionEnumT_v02 suplVersion;
   /**<   SUPL version.
 
-       Valid values: \n
+        Valid values: \n
          - 0x00000001 -- SUPL_VERSION_1_0 \n
          - 0x00000002 -- SUPL_VERSION_2_0
    */
@@ -4589,10 +4883,10 @@ typedef struct {
   */
 
 typedef uint64_t qmiLocProtocolConfigParamMaskT_v02;
-#define QMI_LOC_PROTOCOL_CONFIG_PARAM_MASK_SUPL_SECURITY_V02 ((qmiLocProtocolConfigParamMaskT_v02)0x00000001)
-#define QMI_LOC_PROTOCOL_CONFIG_PARAM_MASK_VX_VERSION_V02 ((qmiLocProtocolConfigParamMaskT_v02)0x00000002)
-#define QMI_LOC_PROTOCOL_CONFIG_PARAM_MASK_SUPL_VERSION_V02 ((qmiLocProtocolConfigParamMaskT_v02)0x00000004)
-/** @addtogroup qmiLoc_qmi_messages
+#define QMI_LOC_PROTOCOL_CONFIG_PARAM_MASK_SUPL_SECURITY_V02 ((qmiLocProtocolConfigParamMaskT_v02)0x00000001) /**<  Mask for the SUPL security configuration parameter.  */
+#define QMI_LOC_PROTOCOL_CONFIG_PARAM_MASK_VX_VERSION_V02 ((qmiLocProtocolConfigParamMaskT_v02)0x00000002) /**<  Mask for the VX version configuration parameter.  */
+#define QMI_LOC_PROTOCOL_CONFIG_PARAM_MASK_SUPL_VERSION_V02 ((qmiLocProtocolConfigParamMaskT_v02)0x00000004) /**<  Mask for the SUPL version configuration parameter.       */
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Used by the control point to configure parameters stored
@@ -4600,8 +4894,9 @@ typedef uint64_t qmiLocProtocolConfigParamMaskT_v02;
 typedef struct {
 
   /* Mandatory */
+  /*  Set Config Params Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the set configuration parameters request.
+  /**<   Status of the Set Configuration Parameters request.
 
        Valid values: \n
          - 0x00000000 -- SUCCESS \n
@@ -4614,9 +4909,10 @@ typedef struct {
    */
 
   /* Optional */
+  /*  Failed Parameters */
   uint8_t failedProtocolConfigParamMask_valid;  /**< Must be set to true if failedProtocolConfigParamMask is being passed */
   qmiLocProtocolConfigParamMaskT_v02 failedProtocolConfigParamMask;
-  /**<   This field will be sent only if the status is not a success. And if it is
+  /**<   This field is sent only if the status is not a success. And if it is
        not successful, this field will identify the parameters that were not
        set successfully.
 
@@ -4630,7 +4926,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Request Message; Used by the control point to get the configuration
@@ -4638,6 +4934,7 @@ typedef struct {
 typedef struct {
 
   /* Mandatory */
+  /*  Config Parameters */
   qmiLocProtocolConfigParamMaskT_v02 getProtocolConfigParamMask;
   /**<   Mask denoting the configuration parameters to be retrieved.
 
@@ -4651,7 +4948,7 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Used by the control point to get the configuration
@@ -4659,8 +4956,9 @@ typedef struct {
 typedef struct {
 
   /* Mandatory */
+  /*  Get Config Params Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the get configuration parameters request.
+  /**<   Status of the Get Configuration Parameters request.
 
        Valid values: \n
          - 0x00000000 -- SUCCESS \n
@@ -4673,13 +4971,15 @@ typedef struct {
      */
 
   /* Optional */
+  /*  SUPL Security */
   uint8_t suplSecurity_valid;  /**< Must be set to true if suplSecurity is being passed */
   uint8_t suplSecurity;
   /**<   Indicates whether SUPL security is enabled. \n
-       - 0x01 (TRUE) -- SUPL security is enabled. \n
-       - 0x00 (FALSE) -- SUPL security is disabled.  */
+       - 0x01 (TRUE) -- SUPL security is enabled \n
+       - 0x00 (FALSE) -- SUPL security is disabled  */
 
   /* Optional */
+  /*  VX Version */
   uint8_t vxVersion_valid;  /**< Must be set to true if vxVersion is being passed */
   qmiLocVxVersionEnumT_v02 vxVersion;
   /**<   VX version.
@@ -4690,11 +4990,12 @@ typedef struct {
    */
 
   /* Optional */
+  /*  SUPL Version */
   uint8_t suplVersion_valid;  /**< Must be set to true if suplVersion is being passed */
   qmiLocSuplVersionEnumT_v02 suplVersion;
   /**<   SUPL version.
 
-       Valid values: \n
+        Valid values: \n
          - 0x00000001 -- SUPL_VERSION_1_0 \n
          - 0x00000002 -- SUPL_VERSION_2_0
    */
@@ -4703,17 +5004,17 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
   QMILOCSENSORSCONTROLCONFIGSENSORUSEENUMT_MIN_ENUM_VAL_V02 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
-  eQMI_LOC_SENSOR_CONFIG_SENSOR_USE_ENABLE_V02 = 0, /**<  Sensors data should be requested whenever a position request is \n
-       received. If sensor data are injected, positioning engine will \n
-       attempt to improve heading and positioning performance using sensors.\n
+  eQMI_LOC_SENSOR_CONFIG_SENSOR_USE_ENABLE_V02 = 0, /**<  Sensors data should be requested whenever a position request is
+       received. If sensor data are injected, the positioning engine
+       attempts to improve the heading and positioning performance using sensors.
        This is the default.
 
- inertial sensors should not be used to aid heading and position \n
+ Inertial sensors are not to be used to aid heading and position
        improvement.  */
   eQMI_LOC_SENSOR_CONFIG_SENSOR_USE_DISABLE_V02 = 1,
   QMILOCSENSORSCONTROLCONFIGSENSORUSEENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
@@ -4722,54 +5023,53 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Request Message; Sets the sensor control configuration. */
 typedef struct {
 
   /* Optional */
+  /*  Sensors Usage */
   uint8_t sensorsUsage_valid;  /**< Must be set to true if sensorsUsage is being passed */
   qmiLocSensorsControlConfigSensorUseEnumT_v02 sensorsUsage;
   /**<   Controls how sensors are used to aid heading and positioning
-       performance.\n
-   \n
-    Valid Values:\n
-        - 0x00000000 -- SENSORS USE ENABLED \n
-            Sensors data should be requested whenever a position request is
-            received. If sensor data are injected, GNSS location engine will
-            attempt to improve heading and positioning performance using
-            sensors.
+       performance.
 
-        This is the default.
-
-        - 0x00000001 -- SENSORS USE DISABLED \n
-            inertial sensors should not be used to aiding in heading and
-            position improvement. \n
+       Valid values:\n
+        - 0x00000000 -- SENSORS USE ENABLED: \n
+            Sensors data is to be requested whenever a position request is
+            received. If sensors data is injected, the GNSS location engine
+            attempts to improve the heading and positioning performance using
+            sensors. This is the default. \n
+        - 0x00000001 -- SENSORS USE DISABLED: \n
+            Inertial sensors are not to be used to aid in heading and
+            position improvement.
    */
 }qmiLocSetSensorControlConfigReqMsgT_v02;  /* Message */
 /**
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Sets the sensor control configuration. */
 typedef struct {
 
   /* Mandatory */
+  /*  Set Sensor Control Config Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the sensor control config request. \n
+  /**<   Status of the Set Sensor Control Configuration request.
 
-       Valid Values:
-          - 0x00000000 -- SUCCESS\n
-          - 0x00000001 -- GENERAL_FAILURE\n
-          - 0x00000002 -- UNSUPPORTED\n
-          - 0x00000003 -- INVALID_PARAMETER\n
-          - 0x00000004 -- ENGINE_BUSY\n
-          - 0x00000005 -- PHONE_OFFLINE\n
-          - 0x00000006 -- LOC_TIMEOUT\n
+       Valid values: \n
+          - 0x00000000 -- SUCCESS \n
+          - 0x00000001 -- GENERAL_FAILURE \n
+          - 0x00000002 -- UNSUPPORTED \n
+          - 0x00000003 -- INVALID_PARAMETER \n
+          - 0x00000004 -- ENGINE_BUSY \n
+          - 0x00000005 -- PHONE_OFFLINE \n
+          - 0x00000006 -- LOC_TIMEOUT
    */
 }qmiLocSetSensorControlConfigIndMsgT_v02;  /* Message */
 /**
@@ -4782,67 +5082,67 @@ typedef struct {
  * }qmiLocGetSensorControlConfigReqMsgT_v02;
  */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Retrieves the current sensor control configuration. */
 typedef struct {
 
   /* Mandatory */
+  /*  Get Sensor Control Config Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the set Sensors Control configuration request. \n
+  /**<   Status of the Get Sensors Control Configuration request.
 
-       Valid Values:
-          - 0x00000000 -- SUCCESS\n
-          - 0x00000001 -- GENERAL_FAILURE\n
-          - 0x00000002 -- UNSUPPORTED\n
-          - 0x00000003 -- INVALID_PARAMETER\n
-          - 0x00000004 -- ENGINE_BUSY\n
-          - 0x00000005 -- PHONE_OFFLINE\n
-          - 0x00000006 -- LOC_TIMEOUT\n
+       Valid values: \n
+          - 0x00000000 -- SUCCESS \n
+          - 0x00000001 -- GENERAL_FAILURE \n
+          - 0x00000002 -- UNSUPPORTED \n
+          - 0x00000003 -- INVALID_PARAMETER \n
+          - 0x00000004 -- ENGINE_BUSY \n
+          - 0x00000005 -- PHONE_OFFLINE \n
+          - 0x00000006 -- LOC_TIMEOUT
    */
 
   /* Optional */
+  /*  Sensors Usage */
   uint8_t sensorsUsage_valid;  /**< Must be set to true if sensorsUsage is being passed */
   qmiLocSensorsControlConfigSensorUseEnumT_v02 sensorsUsage;
-  /**<   Controls how sensors are used to aid heading and positioning
-       performance.\n
-   \n
-    Valid Values:\n
-        - 0x00000000 -- SENSORS USE ENABLED \n
-            Sensors data should be requested whenever a position request is
-            received. If sensor data are injected, GNSS location engine will
-            attempt to improve heading and positioning performance using
-            sensors.\n
+  /**<   Controls how sensors are used to aid the heading and positioning
+       performance.
 
-        This is the default.
-
-        - 0x00000001 -- SENSORS USE DISABLED \n
-            inertial sensors should not be used to aiding in heading and
-            position improvement. \n
+       Valid values:\n
+        - 0x00000000 -- SENSORS USE ENABLED: \n
+            Sensors data is to be requested whenever a position request is
+            received. If sensors data is injected, the GNSS location engine
+            attempts to improve the heading and positioning performance using
+            sensors. This is the default. \n
+        - 0x00000001 -- SENSORS USE DISABLED: \n
+            Inertial sensors are not to be used to aid in the heading and
+            position improvement.
    */
 }qmiLocGetSensorControlConfigIndMsgT_v02;  /* Message */
 /**
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Request Message; Sets the properties specific to the type of sensor used.
-                    Control point must set sensor properties before they can be
+                    The control point must set sensor properties before they can be
                     used to aid in heading and positioning performance improvement.
    */
 typedef struct {
 
   /* Optional */
+  /*  Gyro Bias Variance */
   uint8_t gyroBiasVarianceRandomWalk_valid;  /**< Must be set to true if gyroBiasVarianceRandomWalk is being passed */
   float gyroBiasVarianceRandomWalk;
-  /**<   Specifies the gyro bias random walk parameter, as a positive\n
-       floating-point value. This value does not have any internal defaults\n.
-       Gyro bias variance random walk parameter is derived from either the\n
-       sensors data-sheet or a sensors conformance test\n.
-       Units: radians^2/second^4
+  /**<   Specifies the gyro bias random walk parameter as a positive
+       floating-point value. This value does not have any internal defaults.
+       The gyro bias variance random walk parameter is derived from either the
+       sensors data sheet or a sensors conformance test. \n
+       - Units: radians^2/second^4
 
    */
 }qmiLocSetSensorPropertiesReqMsgT_v02;  /* Message */
@@ -4850,27 +5150,28 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Sets the properties specific to the type of sensor used.
-                    Control point must set sensor properties before they can be
+                    The control point must set sensor properties before they can be
                     used to aid in heading and positioning performance improvement.
    */
 typedef struct {
 
   /* Mandatory */
+  /*  Set Sensor Properties Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the set SBAS configuration request. \n
+  /**<   Status of the Set Sensor Properties request.
 
-       Valid Values:
-          - 0x00000000 -- SUCCESS\n
-          - 0x00000001 -- GENERAL_FAILURE\n
-          - 0x00000002 -- UNSUPPORTED\n
-          - 0x00000003 -- INVALID_PARAMETER\n
-          - 0x00000004 -- ENGINE_BUSY\n
-          - 0x00000005 -- PHONE_OFFLINE\n
-          - 0x00000006 -- LOC_TIMEOUT\n
+       Valid values: \n
+          - 0x00000000 -- SUCCESS \n
+          - 0x00000001 -- GENERAL_FAILURE \n
+          - 0x00000002 -- UNSUPPORTED \n
+          - 0x00000003 -- INVALID_PARAMETER \n
+          - 0x00000004 -- ENGINE_BUSY \n
+          - 0x00000005 -- PHONE_OFFLINE \n
+          - 0x00000006 -- LOC_TIMEOUT
    */
 }qmiLocSetSensorPropertiesIndMsgT_v02;  /* Message */
 /**
@@ -4883,34 +5184,36 @@ typedef struct {
  * }qmiLocGetSensorPropertiesReqMsgT_v02;
  */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Retrieves the current sensor properties. */
 typedef struct {
 
   /* Mandatory */
+  /*  Get Sensor Properties Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the set Sensors Control configuration request. \n
+  /**<   Status of the Get Sensors Properties request.
 
-       Valid Values:
-          - 0x00000000 -- SUCCESS\n
-          - 0x00000001 -- GENERAL_FAILURE\n
-          - 0x00000002 -- UNSUPPORTED\n
-          - 0x00000003 -- INVALID_PARAMETER\n
-          - 0x00000004 -- ENGINE_BUSY\n
-          - 0x00000005 -- PHONE_OFFLINE\n
-          - 0x00000006 -- LOC_TIMEOUT\n
+       Valid values: \n
+          - 0x00000000 -- SUCCESS \n
+          - 0x00000001 -- GENERAL_FAILURE \n
+          - 0x00000002 -- UNSUPPORTED \n
+          - 0x00000003 -- INVALID_PARAMETER \n
+          - 0x00000004 -- ENGINE_BUSY \n
+          - 0x00000005 -- PHONE_OFFLINE \n
+          - 0x00000006 -- LOC_TIMEOUT
    */
 
   /* Optional */
+  /*  Gyro Bias Variance */
   uint8_t gyroBiasVarianceRandomWalk_valid;  /**< Must be set to true if gyroBiasVarianceRandomWalk is being passed */
   float gyroBiasVarianceRandomWalk;
-  /**<   Specifies the gyro bias random walk parameter, as a positive\n
-       floating-point value. This value does not have any internal defaults\n.
-       Gyro bias variance random walk parameter is derived from either the\n
-       sensors data-sheet or a sensors conformance test\n.
-       Units: radians^2/second^4
+  /**<   Specifies the gyro bias random walk parameter as a positive
+       floating-point value. This value does not have any internal defaults.
+       The gyro bias variance random walk parameter is derived from either the
+       sensors data sheet or a sensors conformance test. \n
+       - Units: radians^2/seconds^4
 
    */
 }qmiLocGetSensorPropertiesIndMsgT_v02;  /* Message */
@@ -4918,19 +5221,19 @@ typedef struct {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_enums
+/** @addtogroup loc_qmi_enums
     @{
   */
 typedef enum {
   QMILOCSENSORPERFORMANCECONTROLMODEENUMT_MIN_ENUM_VAL_V02 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
-  eQMI_LOC_SENSOR_PERFORMANCE_CONTROL_MODE_AUTO_V02 = 0, /**<  Sensors usage should be determined by the GNSS location engine. \n
-       This mode can optimize power consumption and give a \n
-       "power-balanced" positioning and heading enhancement using \n
+  eQMI_LOC_SENSOR_PERFORMANCE_CONTROL_MODE_AUTO_V02 = 0, /**<  Sensors usage is to be determined by the GNSS location engine.
+       This mode can optimize power consumption and give a
+       power-balanced positioning and heading enhancement using
        inertial sensors
- Sensors usage should be forced on. \n
-       This mode can be requested by the control point when\n
-       power consumption is not a restriction to the use of\n
-       inertial sensors       */
+ Sensors usage is to be forced ON.
+       This mode can be requested by the control point when
+       power consumption is not a restriction to the use of
+       inertial sensors.       */
   eQMI_LOC_SENSOR_PERFORMANCE_CONTROL_MODE_FORCED_V02 = 1,
   QMILOCSENSORPERFORMANCECONTROLMODEENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
 }qmiLocSensorPerformanceControlModeEnumT_v02;
@@ -4938,7 +5241,7 @@ typedef enum {
     @}
   */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Request Message; Provides fine-grained control of sensor based positioning
@@ -4946,42 +5249,42 @@ typedef enum {
 typedef struct {
 
   /* Optional */
+  /*  Sensor Performance Control Mode */
   uint8_t performanceControlMode_valid;  /**< Must be set to true if performanceControlMode is being passed */
   qmiLocSensorPerformanceControlModeEnumT_v02 performanceControlMode;
-  /**<   Controls when sensors data is requested during GNSS fix processing\n
-       This field is relevant only when sensors have been enabled using the\n
-       sensors control configuration.\n
-       \n
-       Valid values:\n
-       - 0x00000000 -- AUTO\n
-         GNSS location engine can decide when to request sensor data injection
-         based on internal criteria. This is the default\n
+  /**<   Controls when sensors data is requested during GNSS fix processing.
+       This field is relevant only when sensors have been enabled using the
+       sensors control configuration.
 
-       - 0x00000001 -- FORCED\n
-         GNSS location engine must request use of sensors everytime the GNSS
+       Valid values: \n
+       - 0x00000000 -- AUTO: \n
+         The GNSS location engine can decide when to request sensor data injection
+         based on internal criteria. This is the default. \n
+       - 0x00000001 -- FORCED: \n
+         The GNSS location engine must request use of sensors every time the GNSS
          location engine turns on.
    */
 
   /* Optional */
+  /*  Accelerometer Sampling Specification */
   uint8_t accelSamplingSpec_valid;  /**< Must be set to true if accelSamplingSpec is being passed */
   qmiLocSensorControlConfigSamplingSpecStructT_v02 accelSamplingSpec;
-  /**<   Sets the nominal rate at which the GNSS location engine should request
-       accel data. Sensors data-rate is specified in terms of nominal number
-       of samples per batch and number of batches per second.
-
+  /**<   \n Sets the nominal rate at which the GNSS location engine is to request
+       acceleration data. The sensor data rate is specified in terms of the nominal
+       number of samples per batch and the number of batches per second.
        However, the final control of the actual requested rate resides with
-       the Sensors Manager Module / GNSS location engine.
+       the Sensors Manager Module/GNSS location engine.
    */
 
   /* Optional */
+  /*  Gyrometer Sampling Specification */
   uint8_t gyroSamplingSpec_valid;  /**< Must be set to true if gyroSamplingSpec is being passed */
   qmiLocSensorControlConfigSamplingSpecStructT_v02 gyroSamplingSpec;
-  /**<   Sets the nominal rate at which the GNSS location engine should request
-       gyro data. Sensors data-rate is specified in terms of nominal number of
-       samples per batch and number of batches per second.
-
+  /**<   \n Sets the nominal rate at which the GNSS location engine is to request
+       gyro data. The sensor data rate is specified in terms of the nominal number of
+       samples per batch and the number of batches per second.
        However, the final control of the actual requested rate resides with
-       the Sensors Manager Module / GNSS location engine.
+       the Sensors Manager Module/GNSS location engine.
    */
 }qmiLocSetSensorPerformanceControlConfigReqMsgT_v02;  /* Message */
 /**
@@ -4989,10 +5292,10 @@ typedef struct {
   */
 
 typedef uint32_t qmiLocSensorPerformanceControlConfigFailureMaskT_v02;
-#define QMI_LOC_SENSOR_PERFORMANCE_CONTROL_CONFIG_PARAM_MASK_PERFORMANCE_MODE_V02 ((qmiLocSensorPerformanceControlConfigFailureMaskT_v02)0x00000001)
-#define QMI_LOC_SENSOR_PERFORMANCE_CONTROL_CONFIG_PARAM_MASK_ACCEL_SAMPLING_SPEC_V02 ((qmiLocSensorPerformanceControlConfigFailureMaskT_v02)0x00000002)
-#define QMI_LOC_SENSOR_PERFORMANCE_CONTROL_CONFIG_PARAM_MASK_GYRO_SAMPLING_SPEC_V02 ((qmiLocSensorPerformanceControlConfigFailureMaskT_v02)0x00000004)
-/** @addtogroup qmiLoc_qmi_messages
+#define QMI_LOC_SENSOR_PERFORMANCE_CONTROL_CONFIG_PARAM_MASK_PERFORMANCE_MODE_V02 ((qmiLocSensorPerformanceControlConfigFailureMaskT_v02)0x00000001) /**<  Failed to set the performance mode.  */
+#define QMI_LOC_SENSOR_PERFORMANCE_CONTROL_CONFIG_PARAM_MASK_ACCEL_SAMPLING_SPEC_V02 ((qmiLocSensorPerformanceControlConfigFailureMaskT_v02)0x00000002) /**<  Failed to set the accelerometer sampling specification.  */
+#define QMI_LOC_SENSOR_PERFORMANCE_CONTROL_CONFIG_PARAM_MASK_GYRO_SAMPLING_SPEC_V02 ((qmiLocSensorPerformanceControlConfigFailureMaskT_v02)0x00000004) /**<  Failed to set the gyroscope sampling specification.  */
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Provides fine-grained control of sensor based positioning
@@ -5000,28 +5303,29 @@ typedef uint32_t qmiLocSensorPerformanceControlConfigFailureMaskT_v02;
 typedef struct {
 
   /* Mandatory */
+  /*  Set Sensor Perf Control Config Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the sensors performance control config request. \n
-
-       Valid Values:
-          - 0x00000000 -- SUCCESS\n
-          - 0x00000001 -- GENERAL_FAILURE\n
-          - 0x00000002 -- UNSUPPORTED\n
-          - 0x00000003 -- INVALID_PARAMETER\n
-          - 0x00000004 -- ENGINE_BUSY\n
-          - 0x00000005 -- PHONE_OFFLINE\n
-          - 0x00000006 -- LOC_TIMEOUT\n
+  /**<   Status of the Set Sensor Performance Control Configuration request. \n
+       Valid values: \n
+          - 0x00000000 -- SUCCESS \n
+          - 0x00000001 -- GENERAL_FAILURE \n
+          - 0x00000002 -- UNSUPPORTED \n
+          - 0x00000003 -- INVALID_PARAMETER \n
+          - 0x00000004 -- ENGINE_BUSY \n
+          - 0x00000005 -- PHONE_OFFLINE \n
+          - 0x00000006 -- LOC_TIMEOUT
    */
 
   /* Optional */
+  /*  Failed Configuration */
   uint8_t failedConfiguration_valid;  /**< Must be set to true if failedConfiguration is being passed */
   qmiLocSensorPerformanceControlConfigFailureMaskT_v02 failedConfiguration;
-  /**<   This field will be sent only if the status is not a success.\n
-       When sent, this field will identify which configuration failed\n
-       Valid bitmasks:\n
-       - 0x0000000000000001 -- PERFORMANCE_MODE\n
-       - 0x0000000000000002 -- ACCEL_SAMPLING_SPEC\n
-       - 0x0000000000000004 -- GYRO_SAMPLING_SPEC\n
+  /**<   This field is sent only if the status is not a success.
+       When sent, this field identifies which configuration failed. \n
+       Valid bitmasks: \n
+       - 0x0000000000000001 -- PERFORMANCE_MODE \n
+       - 0x0000000000000002 -- ACCEL_SAMPLING_SPEC \n
+       - 0x0000000000000004 -- GYRO_SAMPLING_SPEC
    */
 }qmiLocSetSensorPerformanceControlConfigIndMsgT_v02;  /* Message */
 /**
@@ -5034,7 +5338,7 @@ typedef struct {
  * }qmiLocGetSensorPerformanceControlConfigReqMsgT_v02;
  */
 
-/** @addtogroup qmiLoc_qmi_messages
+/** @addtogroup loc_qmi_messages
     @{
   */
 /** Indication Message; Retrieves the current sensor performance control
@@ -5042,8 +5346,98 @@ typedef struct {
 typedef struct {
 
   /* Mandatory */
+  /*  Get Sensor Perf Control Config Status */
   qmiLocStatusEnumT_v02 status;
-  /**<   Status of the sensors performance control config request. \n
+  /**<   Status of the Get Sensor Performance Control Configuration request. \n
+       Valid values: \n
+          - 0x00000000 -- SUCCESS \n
+          - 0x00000001 -- GENERAL_FAILURE \n
+          - 0x00000002 -- UNSUPPORTED \n
+          - 0x00000003 -- INVALID_PARAMETER \n
+          - 0x00000004 -- ENGINE_BUSY \n
+          - 0x00000005 -- PHONE_OFFLINE \n
+          - 0x00000006 -- LOC_TIMEOUT
+   */
+
+  /* Optional */
+  /*  Performance Control Mode */
+  uint8_t performanceControlMode_valid;  /**< Must be set to true if performanceControlMode is being passed */
+  qmiLocSensorPerformanceControlModeEnumT_v02 performanceControlMode;
+  /**<   Controls when sensor data is requested during GNSS fix processing.
+       This field is relevant only when sensors have been enabled using the
+       sensor control configuration.
+
+       Valid values: \n
+       - 0x00000000 -- AUTO: \n
+         The GNSS location engine can decide when to request sensor data injection
+         based on internal criteria. This is the default. \n
+       - 0x0000001 -- FORCED: \n
+         The GNSS location engine must request use of the sensors every time the GNSS
+         location engine turns on.
+   */
+
+  /* Optional */
+  /*  Accelerometer Sampling Specification */
+  uint8_t accelSamplingSpec_valid;  /**< Must be set to true if accelSamplingSpec is being passed */
+  qmiLocSensorControlConfigSamplingSpecStructT_v02 accelSamplingSpec;
+  /**<   \n Sets the nominal rate at which the GNSS location engine is to request
+       acceleration data. The sensor data rate is specified in terms of the nominal number of
+       samples per batch and the number of batches per second.
+       However, the final control of the actual requested rate resides with
+       the Sensors Manager Module/GNSS location engine.
+   */
+
+  /* Optional */
+  /*  Gyrometer Sampling Specification */
+  uint8_t gyroSamplingSpec_valid;  /**< Must be set to true if gyroSamplingSpec is being passed */
+  qmiLocSensorControlConfigSamplingSpecStructT_v02 gyroSamplingSpec;
+  /**<   \n Sets the nominal rate at which the GNSS location engine is to request
+       gyro data. The sensor data rate is specified in terms of the nominal number of
+       samples per batch and the number of batches per second.
+       However, the final control of the actual requested rate resides with
+       the Sensors Manager Module/GNSS location engine.
+   */
+}qmiLocGetSensorPerformanceControlConfigIndMsgT_v02;  /* Message */
+/**
+    @}
+  */
+
+/** @addtogroup loc_qmi_messages
+    @{
+  */
+/** Request Message; Inject a SUPL certificate to be used in AGNSS sessions. */
+typedef struct {
+
+  /* Mandatory */
+  /*  SUPL Certificate Id */
+  uint8_t suplCertId;
+  /**<   Certificate Id of the Supl Certificate
+       Type: Unsigned Integer
+       Units: Bytes
+       Range: 0-9   */
+
+  /* Mandatory */
+  /*  SUPL certificate Data */
+  uint32_t suplCertData_len;  /**< Must be set to # of elements in suplCertData */
+  uint8_t suplCertData[QMI_LOC_MAX_SUPL_CERT_LENGTH_V02];
+  /**<   The supl Certificate contents
+       Type: Array of bytes.
+        - Maximum certificate size : 2000 bytes  */
+}qmiLocInjectSuplCertificateReqMsgT_v02;  /* Message */
+/**
+    @}
+  */
+
+/** @addtogroup loc_qmi_messages
+    @{
+  */
+/** Indication Message; Inject a SUPL certificate to be used in AGNSS sessions. */
+typedef struct {
+
+  /* Mandatory */
+  /*  Supl Certificate Injection Status */
+  qmiLocStatusEnumT_v02 status;
+  /**<   Status of the inject SUPL certificate request. \n
 
        Valid Values:
           - 0x00000000 -- SUCCESS\n
@@ -5054,52 +5448,241 @@ typedef struct {
           - 0x00000005 -- PHONE_OFFLINE\n
           - 0x00000006 -- LOC_TIMEOUT\n
    */
+}qmiLocInjectSuplCertificateIndMsgT_v02;  /* Message */
+/**
+    @}
+  */
+
+/** @addtogroup loc_qmi_messages
+    @{
+  */
+/** Request Message; Delete a SUPL certificate.  */
+typedef struct {
 
   /* Optional */
-  uint8_t performanceControlMode_valid;  /**< Must be set to true if performanceControlMode is being passed */
-  qmiLocSensorPerformanceControlModeEnumT_v02 performanceControlMode;
-  /**<   Controls when sensors data is requested during GNSS fix processing
-       This field is relevant only when sensors have been enabled using the
-       sensors control configuration.
+  /*  SUPL Certificate Id */
+  uint8_t suplCertId_valid;  /**< Must be set to true if suplCertId is being passed */
+  uint8_t suplCertId;
+  /**<   Certificate Id of the Supl Certificate to be deleted
+       Type: Unsigned Integer \n
+       Units: Bytes \n
+       Range: 0-9 \n
+       If suplCertId is not specified then
+       "all" supl certificates will be deleted.  */
+}qmiLocDeleteSuplCertificateReqMsgT_v02;  /* Message */
+/**
+    @}
+  */
 
-       Valid values:
-       - 0x00000000 -- AUTO\n
-         GNSS location engine can decide when to request sensor data injection
-         based on internal criteria. This is the default\n
+/** @addtogroup loc_qmi_messages
+    @{
+  */
+/** Indication Message; Delete a SUPL certificate.  */
+typedef struct {
 
-       - 0x0000001 -- FORCED\n
-         GNSS location engine must request use of sensors everytime the GNSS
-         location engine turns on.
+  /* Mandatory */
+  /*  SUPL certifcate Deletion Status */
+  qmiLocStatusEnumT_v02 status;
+  /**<   Status of the delete SUPL certificate request. \n
+
+       Valid Values:
+          - 0x00000000 -- SUCCESS\n
+          - 0x00000001 -- GENERAL_FAILURE\n
+          - 0x00000002 -- UNSUPPORTED\n
+          - 0x00000003 -- INVALID_PARAMETER\n
+          - 0x00000004 -- ENGINE_BUSY\n
+          - 0x00000005 -- PHONE_OFFLINE\n
+          - 0x00000006 -- LOC_TIMEOUT\n
+   */
+}qmiLocDeleteSuplCertificateIndMsgT_v02;  /* Message */
+/**
+    @}
+  */
+
+typedef uint32_t qmiLocPositionEngineConfigParamMaskT_v02;
+#define QMI_LOC_POSITION_ENGINE_CONFIG_PARAM_MASK_INJECTED_POSITION_CONTROL_V02 ((qmiLocPositionEngineConfigParamMaskT_v02)0x00000001) /**<  This field denotes if the position engine uses the
+       injected position in direct position calculation.  */
+#define QMI_LOC_POSITION_ENGINE_CONFIG_PARAM_MASK_FILTER_SV_USAGE_V02 ((qmiLocPositionEngineConfigParamMaskT_v02)0x00000002) /**<  This field denotes if the position engine filters the
+       SV usage in the fix.  */
+#define QMI_LOC_POSITION_ENGINE_CONFIG_PARAM_MASK_STORE_ASSIST_DATA_V02 ((qmiLocPositionEngineConfigParamMaskT_v02)0x00000004) /**<  This field denotes if the position engine stores assistance data
+       in the persistent memory.       */
+/** @addtogroup loc_qmi_messages
+    @{
+  */
+/** Request Message; Used by the control point to configure position engine
+                    functionality. */
+typedef struct {
+
+  /* Optional */
+  /*  Injected Position Control */
+  uint8_t injectedPositionControl_valid;  /**< Must be set to true if injectedPositionControl is being passed */
+  uint8_t injectedPositionControl;
+  /**<   Controls how the injected position will be used in position engine.\n
+       Valid values: \n
+         - 0x01 (TRUE) -- Use the injected position in direct position
+                          calculation. \n
+         - 0x00 (FALSE) -- Do not use the injected position in direct position
+                           calculation. \n
+       The default value is TRUE, the injected position is used in direct
+       position calculation by default.
    */
 
   /* Optional */
-  uint8_t accelSamplingSpec_valid;  /**< Must be set to true if accelSamplingSpec is being passed */
-  qmiLocSensorControlConfigSamplingSpecStructT_v02 accelSamplingSpec;
-  /**<   Sets the nominal rate at which the GNSS location engine should request
-       accel data. Sensors data-rate is specified in terms of nominal number of
-       samples per batch and number of batches per second.
-
-       However, the final control of the actual requested rate resides with
-       the Sensors Manager Module / GNSS location engine.
+  /*  Filter SV Usage */
+  uint8_t filterSvUsage_valid;  /**< Must be set to true if filterSvUsage is being passed */
+  uint8_t filterSvUsage;
+  /**<   Controls if SV usage will be filtered in a position fix.
+       Valid values:\n
+         - 0x01 (TRUE) -- Filter the usage of SV's in the fix. \n
+         - 0x00 (FALSE) -- Do not filter the usage of SV's in the fix. \n
+       The default value is FALSE, the SV usage is not filtered in the
+       fix by default.
    */
 
   /* Optional */
-  uint8_t gyroSamplingSpec_valid;  /**< Must be set to true if gyroSamplingSpec is being passed */
-  qmiLocSensorControlConfigSamplingSpecStructT_v02 gyroSamplingSpec;
-  /**<   Sets the nominal rate at which the GNSS location engine should request
-       gyro data. Sensors data-rate is specified in terms of nominal number of
-       samples per batch and number of batches per second.\n
-
-       However, the final control of the actual requested rate resides with
-       the Sensors Manager Module / GNSS location engine.
+  /*  Store Assist Data */
+  uint8_t storeAssistData_valid;  /**< Must be set to true if storeAssistData is being passed */
+  uint8_t storeAssistData;
+  /**<   Controls whether assistance data should be stored in
+       the persistent memory. \n
+       Valid values:\n
+         - 0x01 (TRUE) -- Store assistance data in persistent memory. \n
+         - 0x00 (FALSE) -- Do not store assistance data in persistent memory. \n
+       The default value is TRUE, the  assistance data  is stored in
+       persistent memory by default.
    */
-}qmiLocGetSensorPerformanceControlConfigIndMsgT_v02;  /* Message */
+}qmiLocSetPositionEngineConfigParametersReqMsgT_v02;  /* Message */
+/**
+    @}
+  */
+
+/** @addtogroup loc_qmi_messages
+    @{
+  */
+/** Indication Message; Used by the control point to configure position engine
+                    functionality. */
+typedef struct {
+
+  /* Mandatory */
+  /*  Set Position Engine Configuration Status */
+  qmiLocStatusEnumT_v02 status;
+  /**<   Status of the Set Configuration Parameters request.
+
+       Valid values: \n
+         - 0x00000000 -- SUCCESS \n
+         - 0x00000001 -- GENERAL_FAILURE \n
+         - 0x00000002 -- UNSUPPORTED \n
+         - 0x00000003 -- INVALID_PARAMETER \n
+         - 0x00000004 -- ENGINE_BUSY \n
+         - 0x00000005 -- PHONE_OFFLINE \n
+         - 0x00000006 -- LOC_TIMEOUT
+   */
+
+  /* Optional */
+  /*  Failed Parameters */
+  uint8_t failedPositionEngineConfigParamMask_valid;  /**< Must be set to true if failedPositionEngineConfigParamMask is being passed */
+  qmiLocPositionEngineConfigParamMaskT_v02 failedPositionEngineConfigParamMask;
+  /**<   This field will be sent only if the status is not a success.
+       Identifies the parameters that were not set successfully.
+
+       Valid bitmasks: \n
+         - 0x00000001 -- INJECTED_POSITION_CONTROL \n
+         - 0x00000002 -- FILTER_SV_USAGE \n
+         - 0x00000004 -- STORE_ASSIST_DATA
+   */
+}qmiLocSetPositionEngineConfigParametersIndMsgT_v02;  /* Message */
+/**
+    @}
+  */
+
+/** @addtogroup loc_qmi_messages
+    @{
+  */
+/** Request Message; Used by the control point to get the position engine
+                    configuration parameters. */
+typedef struct {
+
+  /* Mandatory */
+  /*  Config Parameters */
+  qmiLocPositionEngineConfigParamMaskT_v02 getPositionEngineConfigParamMask;
+  /**<   Mask denoting the configuration parameters to be retrieved.
+       Valid bitmasks: \n
+        - 0x00000001 -- INJECTED_POSITION_CONTROL \n
+        - 0x00000002 -- FILTER_SV_USAGE \n
+        - 0x00000004 -- STORE_ASSIST_DATA
+   */
+}qmiLocGetPositionEngineConfigParametersReqMsgT_v02;  /* Message */
+/**
+    @}
+  */
+
+/** @addtogroup loc_qmi_messages
+    @{
+  */
+/** Indication Message; Used by the control point to get the position engine
+                    configuration parameters. */
+typedef struct {
+
+  /* Mandatory */
+  /*  Get Position Engine Configuration Status */
+  qmiLocStatusEnumT_v02 status;
+  /**<   Status of the Get Configuration Parameters request.
+
+       Valid values: \n
+         - 0x00000000 -- SUCCESS \n
+         - 0x00000001 -- GENERAL_FAILURE \n
+         - 0x00000002 -- UNSUPPORTED \n
+         - 0x00000003 -- INVALID_PARAMETER \n
+         - 0x00000004 -- ENGINE_BUSY \n
+         - 0x00000005 -- PHONE_OFFLINE \n
+         - 0x00000006 -- LOC_TIMEOUT
+     */
+
+  /* Optional */
+  /*  Injected Position Control */
+  uint8_t injectedPositionControl_valid;  /**< Must be set to true if injectedPositionControl is being passed */
+  uint8_t injectedPositionControl;
+  /**<   Specifies if the injected position is used for direct calculation
+       in the position engine.\n
+       Valid values: \n
+         - 0x01 (TRUE) -- The injected position is used in direct position
+                          calculation. \n
+         - 0x00 (FALSE) -- The injected position is not used direct position
+                           calculation. \n
+       The default value is TRUE, the injected position is used in direct
+       position calculation by default.
+   */
+
+  /* Optional */
+  /*  Filter SV Usage */
+  uint8_t filterSvUsage_valid;  /**< Must be set to true if filterSvUsage is being passed */
+  uint8_t filterSvUsage;
+  /**<   Specifies if SV usage is filtered in a position fix.
+       Valid values: \n
+         - 0x01 (TRUE) -- SV usage is filtered in the fix. \n
+         - 0x00 (FALSE) -- SV usage is not filtered in the fix. \n
+       The default value is FALSE, the SV usage is not filtered in the
+       fix by default.
+   */
+
+  /* Optional */
+  /*  Store Assist Data */
+  uint8_t storeAssistData_valid;  /**< Must be set to true if storeAssistData is being passed */
+  uint8_t storeAssistData;
+  /**<   Specifies if assistance data  is stored in the persistent memory. \n
+       Valid values: \n
+       0x01 (TRUE) -- Assistance data is stored in persistent memory. \n
+       0x00 (FALSE) -- Assistance data is not stored in persistent memory. \n
+       The default value is TRUE, the  assistance data  is stored in
+       persistent memory by default.
+   */
+}qmiLocGetPositionEngineConfigParametersIndMsgT_v02;  /* Message */
 /**
     @}
   */
 
 /*Service Message Definition*/
-/** @addtogroup qmiLoc_qmi_msg_ids
+/** @addtogroup loc_qmi_msg_ids
     @{
   */
 #define QMI_LOC_INFORM_CLIENT_REVISION_REQ_V02 0x0020
@@ -5250,6 +5833,18 @@ typedef struct {
 #define QMI_LOC_GET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_REQ_V02 0x005B
 #define QMI_LOC_GET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_RESP_V02 0x005B
 #define QMI_LOC_GET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_IND_V02 0x005B
+#define QMI_LOC_INJECT_SUPL_CERTIFICATE_REQ_V02 0x005C
+#define QMI_LOC_INJECT_SUPL_CERTIFICATE_RESP_V02 0x005C
+#define QMI_LOC_INJECT_SUPL_CERTIFICATE_IND_V02 0x005C
+#define QMI_LOC_DELETE_SUPL_CERTIFICATE_REQ_V02 0x005D
+#define QMI_LOC_DELETE_SUPL_CERTIFICATE_RESP_V02 0x005D
+#define QMI_LOC_DELETE_SUPL_CERTIFICATE_IND_V02 0x005D
+#define QMI_LOC_SET_POSITION_ENGINE_CONFIG_PARAMETERS_REQ_V02 0x005E
+#define QMI_LOC_SET_POSITION_ENGINE_CONFIG_PARAMETERS_RESP_V02 0x005E
+#define QMI_LOC_SET_POSITION_ENGINE_CONFIG_PARAMETERS_IND_V02 0x005E
+#define QMI_LOC_GET_POSITION_ENGINE_CONFIG_PARAMETERS_REQ_V02 0x005F
+#define QMI_LOC_GET_POSITION_ENGINE_CONFIG_PARAMETERS_RESP_V02 0x005F
+#define QMI_LOC_GET_POSITION_ENGINE_CONFIG_PARAMETERS_IND_V02 0x005F
 /**
     @}
   */
@@ -5259,15 +5854,15 @@ typedef struct {
     @{
   */
 /** This function is used internally by the autogenerated code.  Clients should use the
-   macro qmiLoc_get_service_object_v02( ) that takes in no arguments. */
-qmi_idl_service_object_type qmiLoc_get_service_object_internal_v02
+   macro loc_get_service_object_v02( ) that takes in no arguments. */
+qmi_idl_service_object_type loc_get_service_object_internal_v02
  ( int32_t idl_maj_version, int32_t idl_min_version, int32_t library_version );
 
 /** This macro should be used to get the service object */
-#define qmiLoc_get_service_object_v02( ) \
-          qmiLoc_get_service_object_internal_v02( \
-            QMILOC_V02_IDL_MAJOR_VERS, QMILOC_V02_IDL_MINOR_VERS, \
-            QMILOC_V02_IDL_TOOL_VERS )
+#define loc_get_service_object_v02( ) \
+          loc_get_service_object_internal_v02( \
+            LOC_V02_IDL_MAJOR_VERS, LOC_V02_IDL_MINOR_VERS, \
+            LOC_V02_IDL_TOOL_VERS )
 /**
     @}
   */
