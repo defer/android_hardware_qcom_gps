@@ -27,7 +27,7 @@
  *
  */
 #define LOG_NDDEBUG 0
-#define LOG_TAG "libloc_adapter"
+#define LOG_TAG "LocSvc_adapter"
 
 #include <unistd.h>
 #include <math.h>
@@ -67,8 +67,7 @@ static int32 loc_event_cb
     const rpc_loc_event_payload_u_type*  loc_event_payload
 )
 {
-    MODEM_LOG_CALLFLOW();
-    loc_callback_log_header(client_handle, loc_event, loc_event_payload);
+    MODEM_LOG_CALLFLOW(%s, loc_get_event_name(loc_event));
     loc_callback_log(loc_event, loc_event_payload);
     int32 ret_val = ((LocApiRpcAdapter*)user)->locEventCB(client_handle, loc_event, loc_event_payload);
     EXIT_LOG(%d, ret_val);
@@ -93,7 +92,7 @@ SIDE EFFECTS
 ===========================================================================*/
 static void loc_rpc_global_cb(void* user, CLIENT* clnt, enum rpc_reset_event event)
 {
-    MODEM_LOG_CALLFLOW();
+    MODEM_LOG_CALLFLOW(%s, loc_get_rpc_reset_event_name(event));
     ((LocApiRpcAdapter*)user)->locRpcGlobalCB(clnt, event);
     EXIT_LOG(%p, VOID_RET);
 }

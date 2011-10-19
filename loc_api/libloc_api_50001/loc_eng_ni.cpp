@@ -28,7 +28,7 @@
  */
 
 #define LOG_NDDEBUG 0
-#define LOG_TAG "libloc_eng"
+#define LOG_TAG "LocSvc_eng"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -131,7 +131,7 @@ void loc_eng_ni_request_handler(loc_eng_data_s_type &loc_eng_data,
             LOC_LOGE("Loc NI thread is not detached.\n");
         }
 
-        CALLBACK_LOG_CALLFLOW("ni_notify_cb");
+        CALLBACK_LOG_CALLFLOW("ni_notify_cb - id", %d, notif->notification_id);
         loc_eng_data.ni_notify_cb((GpsNiNotification*)notif);
     }
     EXIT_LOG(%s, VOID_RET);

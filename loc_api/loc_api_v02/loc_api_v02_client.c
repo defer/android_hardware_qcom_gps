@@ -43,9 +43,10 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include "loc_api_v02_client.h"
+#include "loc_api_v02_log.h"
 
 #define LOG_NDEBUG 0
-#define LOG_TAG "loc_api_v02"
+#define LOG_TAG "LocSvc_api_v02"
 
 #include "loc_util_log.h"
 
@@ -402,8 +403,8 @@ static void locClientDefEventIndCbFunc(
       uint32_t eventIndId,
       const locClientEventIndUnionType eventIndPayload )
 {
-  LOC_UTIL_LOGD ("%s:%d]: Got event ind =%u when client hasn't initialized\n",
-                 __func__, __LINE__, eventIndId);
+  LOC_LOGD ("%s:%d]: Got event ind =%s when client hasn't initialized\n",
+            __func__, __LINE__, loc_get_v02_event_name(eventIndId));
 }
 
 /** locClientDefRespIndCbFunc
@@ -417,15 +418,15 @@ static void locClientDefRespIndCbFunc(
       uint32_t respIndId,
       const locClientRespIndUnionType respIndPayload )
 {
-    LOC_UTIL_LOGD ("%s:%d]: Got resp ind =%u in default indication callback\n",
-                 __func__, __LINE__, respIndId);
+    LOC_LOGD ("%s:%d]: Got resp ind =%s in default indication callback\n",
+              __func__, __LINE__, loc_get_v02_event_name(respIndId));
 
     // Get service revision may occur even before the client is
     // initialized
     if(QMI_LOC_GET_SERVICE_REVISION_IND_V02 == respIndId)
     {
 
-      LOC_UTIL_LOGV("%s:%d]: got service rev ind\n", __func__, __LINE__);
+      LOC_LOGV("%s:%d]: got service rev ind\n", __func__, __LINE__);
 
       loc_sync_process_ind(LOC_CLIENT_VALID_HANDLE,
                              respIndId,
@@ -453,7 +454,7 @@ bool locClientGetSizeByRespIndId(uint32_t respIndId, size_t *pRespIndSize)
       // found
       *pRespIndSize = locClientRespIndTable[idx].respIndSize;
 
-      LOC_UTIL_LOGV("%s:%d]: resp ind Id %d size = %d\n", __func__, __LINE__,
+      LOC_LOGV("%s:%d]: resp ind Id %d size = %d\n", __func__, __LINE__,
                     respIndId, (uint32_t)*pRespIndSize);
       return true;
     }
@@ -485,7 +486,7 @@ bool locClientGetSizeByEventIndId(uint32_t eventIndId, size_t *pEventIndSize)
       // found
       *pEventIndSize = locClientEventIndTable[idx].eventSize;
 
-      LOC_UTIL_LOGV("%s:%d]: event ind Id %d size = %d\n", __func__, __LINE__,
+      LOC_LOGV("%s:%d]: event ind Id %d size = %d\n", __func__, __LINE__,
                     eventIndId, (uint32_t)*pEventIndSize);
       return true;
     }
@@ -513,7 +514,7 @@ static bool locClientGetSizeAndTypeByIndId (uint32_t indId, size_t *pIndSize,
   {
     *pIndType = eventIndType;
 
-    LOC_UTIL_LOGV("%s:%d]: indId %d is an event size = %d\n", __func__, __LINE__,
+    LOC_LOGV("%s:%d]: indId %d is an event size = %d\n", __func__, __LINE__,
                   indId, (uint32_t)*pIndSize);
     return true;
   }
@@ -523,13 +524,13 @@ static bool locClientGetSizeAndTypeByIndId (uint32_t indId, size_t *pIndSize,
   {
     *pIndType = respIndType;
 
-    LOC_UTIL_LOGV("%s:%d]: indId %d is a resp size = %d\n", __func__, __LINE__,
+    LOC_LOGV("%s:%d]: indId %d is a resp size = %d\n", __func__, __LINE__,
                   indId, (uint32_t)*pIndSize);
     return true;
   }
 
   // Id not found
-  LOC_UTIL_LOGW("%s:%d]: indId %d not found\n", __func__, __LINE__, indId);
+  LOC_LOGW("%s:%d]: indId %d not found\n", __func__, __LINE__, indId);
   return false;
 }
 
@@ -551,7 +552,7 @@ static bool isClientRegisteredForEvent(uint32_t eventIndId)
   {
     if(eventIndId == locClientEventIndTable[idx].eventId)
     {
-      LOC_UTIL_LOGV("%s:%d]: eventId %d registered mask = %llu, "
+      LOC_LOGV("%s:%d]: eventId %d registered mask = %llu, "
                     "eventMask = %llu\n", __func__, __LINE__,
                      eventIndId, gLocClientState.eventRegMask,
                      locClientEventIndTable[idx].eventMask);
@@ -561,7 +562,7 @@ static bool isClientRegisteredForEvent(uint32_t eventIndId)
     }
 
   }
-  LOC_UTIL_LOGW("%s:%d]: eventId %d not found\n", __func__, __LINE__,
+  LOC_LOGW("%s:%d]: eventId %d not found\n", __func__, __LINE__,
                  eventIndId);
   return false;
 }
@@ -586,7 +587,7 @@ static bool locClientHandlePosReportInd
   qmiLocEventPositionReportIndMsgT_v02 *posReport =
     (qmiLocEventPositionReportIndMsgT_v02 *)ind_buf;
 
-  LOC_UTIL_LOGV ("%s:%d]: len = %d lat = %f, lon = %f, alt = %f\n",
+  LOC_LOGV ("%s:%d]: len = %d lat = %f, lon = %f, alt = %f\n",
                  __func__, __LINE__, ind_buf_len,
                  posReport->latitude, posReport->longitude,
                  posReport->altitudeWrtEllipsoid);
@@ -616,14 +617,14 @@ static bool locClientHandleSatReportInd
   qmiLocEventGnssSvInfoIndMsgT_v02 *satReport =
     (qmiLocEventGnssSvInfoIndMsgT_v02 *)ind_buf;
 
-  LOC_UTIL_LOGV ("%s:%d]: len = %u , altitude assumed = %u, num SV's = %u"
+  LOC_LOGV ("%s:%d]: len = %u , altitude assumed = %u, num SV's = %u"
                  " validity = %d \n ", __func__, __LINE__,
                  ind_buf_len, satReport->altitudeAssumed,
                  satReport->svList_len, satReport->svList_valid);
   //Log SV report
   for( idx = 0; idx <satReport->svList_len; idx++ )
   {
-    LOC_UTIL_LOGV("%s:%d]: valid_mask = %x, prn = %u, system = %d, "
+    LOC_LOGV("%s:%d]: valid_mask = %x, prn = %u, system = %d, "
                   "status = %d \n", __func__, __LINE__,
                   satReport->svList[idx].validMask, satReport->svList[idx].gnssSvId,
                   satReport->svList[idx].system, satReport->svList[idx].svStatus);
@@ -672,7 +673,7 @@ static bool locClientHandleGetServiceRevisionRespInd
  uint32_t        ind_buf_len
 )
 {
-  LOC_UTIL_LOGV("%s:%d] :\n", __func__, __LINE__);
+  LOC_LOGV("%s:%d] :\n", __func__, __LINE__);
   return true;
 }
 
@@ -929,7 +930,7 @@ static bool locClientHandleIndication(
       break;
     }
     default:
-      LOC_UTIL_LOGW("%s:%d]: unknown ind id %d\n", __func__, __LINE__,
+      LOC_LOGW("%s:%d]: unknown ind id %d\n", __func__, __LINE__,
                    (uint32_t)indId);
       status = false;
       break;
@@ -961,7 +962,7 @@ static void locClientIndCb
   size_t indSize = 0;
   qmi_client_error_type rc ;
 
-  LOC_UTIL_LOGV("%s:%d]: Indication: msg_id=%d buf_len=%d\n",
+  LOC_LOGV("%s:%d]: Indication: msg_id=%d buf_len=%d\n",
                 __func__, __LINE__, (uint32_t)msg_id, ind_buf_len);
 
   // if user handle is different from the
@@ -970,7 +971,7 @@ static void locClientIndCb
   if (0 != memcmp(&(gLocClientState.userHandle),&user_handle,
             sizeof(qmi_client_type)))
   {
-    LOC_UTIL_LOGE("%s:%d]: handle doesn't match for ind ID %d\n",
+    LOC_LOGE("%s:%d]: handle doesn't match for ind ID %d\n",
                   __func__, __LINE__, (uint32_t)msg_id);
     return;
   }
@@ -979,7 +980,7 @@ static void locClientIndCb
 
   if(false == gLocClientState.isInitialized)
   {
-    LOC_UTIL_LOGE("%s:%d]: client not initialized ind ID %d\n",
+    LOC_LOGE("%s:%d]: client not initialized ind ID %d\n",
                    __func__, __LINE__,(uint32_t)msg_id);
 
     return;
@@ -995,7 +996,7 @@ static void locClientIndCb
         ( (NULL == gLocClientState.eventCallback) ||
           (false == isClientRegisteredForEvent(msg_id)) ) )
     {
-       LOC_UTIL_LOGW("%s:%d]: client is not registered for event %d\n",
+       LOC_LOGW("%s:%d]: client is not registered for event %d\n",
                      __func__, __LINE__, (uint32_t)msg_id);
        return;
     }
@@ -1005,7 +1006,7 @@ static void locClientIndCb
 
     if(NULL == indBuffer)
     {
-      LOC_UTIL_LOGE("%s:%d]: memory allocation failed\n", __func__, __LINE__);
+      LOC_LOGE("%s:%d]: memory allocation failed\n", __func__, __LINE__);
       return;
     }
 
@@ -1043,13 +1044,13 @@ static void locClientIndCb
       }
       else // error handling idication
       {
-        LOC_UTIL_LOGE("%s:%d]: Error handling the indication %d\n",
+        LOC_LOGE("%s:%d]: Error handling the indication %d\n",
                       __func__, __LINE__, (uint32_t)msg_id);
       }
     }
     else
     {
-      LOC_UTIL_LOGE("%s:%d]: Error decoding indication %d\n",
+      LOC_LOGE("%s:%d]: Error decoding indication %d\n",
                     __func__, __LINE__, rc);
     }
     if(indBuffer)
@@ -1059,7 +1060,7 @@ static void locClientIndCb
   }
   else // Id not found
   {
-    LOC_UTIL_LOGE("%s:%d]: Error indication not found %d\n",
+    LOC_LOGE("%s:%d]: Error indication not found %d\n",
                   __func__, __LINE__,(uint32_t)msg_id);
   }
   return;
@@ -1092,8 +1093,8 @@ static bool locClientExchangeRevision()
                             reqUnion);
   if(eLOC_CLIENT_SUCCESS != status)
   {
-    LOC_UTIL_LOGE("%s:%d] inform client revision request error = %d\n",
-                  __func__, __LINE__, status);
+    LOC_LOGE("%s:%d] inform client revision request error = %s\n",
+             __func__, __LINE__, loc_get_v02_client_satus_name(status));
     return false;
   }
 
@@ -1113,14 +1114,16 @@ static bool locClientExchangeRevision()
   if (status != eLOC_CLIENT_SUCCESS ||
       eQMI_LOC_SUCCESS_V02 != getServiceRevInd.status)
   {
-    LOC_UTIL_LOGW ("%s:%d] Error status = %d, ind.status = %d\n",
-                   __func__, __LINE__, status, getServiceRevInd.status);
+    LOC_LOGW ("%s:%d] Error status = %s, ind.status = %s\n",
+                   __func__, __LINE__,
+              loc_get_v02_client_satus_name(status),
+              loc_get_v02_qmi_satus_name(getServiceRevInd.status));
     // return false; // error
   }
   else
   {
     // got service revision
-    LOC_UTIL_LOGD ("%s:%d] Revision Client = %d, Service = %d\n",
+    LOC_LOGD ("%s:%d] Revision Client = %d, Service = %d\n",
                 __func__, __LINE__, 0, getServiceRevInd.revision );
   }
 
@@ -1144,7 +1147,8 @@ static bool locClientRegisterEventMask(locClientEventMaskType eventRegMask)
 
   if(eLOC_CLIENT_SUCCESS != status )
   {
-    LOC_UTIL_LOGE("%s:%d] status %d\n", __func__, __LINE__, status );
+    LOC_LOGE("%s:%d] status %s\n", __func__, __LINE__,
+             loc_get_v02_client_satus_name(status) );
     return false;
   }
 
@@ -1186,9 +1190,10 @@ static locClientStatusEnumType convertResponseToStatus(
         break;
     }
   }
-  LOC_UTIL_LOGV("%s:%d]: result = %d, error = %d, status = %d\n",
+  LOC_LOGV("%s:%d]: result = %d, error = %d, status = %s\n",
                 __func__, __LINE__, pResponse->resp.result,
-                pResponse->resp.error, status);
+                pResponse->resp.error,
+                loc_get_v02_client_satus_name(status));
   return status;
 }
 
@@ -1211,7 +1216,7 @@ static bool validateRequest(
 {
   bool noPayloadFlag = false;
 
-  LOC_UTIL_LOGV("%s:%d]: reqId = %d\n", __func__, __LINE__, reqId);
+  LOC_LOGV("%s:%d]: reqId = %d\n", __func__, __LINE__, reqId);
   switch(reqId)
   {
     case QMI_LOC_INFORM_CLIENT_REVISION_REQ_V02:
@@ -1432,7 +1437,7 @@ static bool validateRequest(
     }
 
     default:
-      LOC_UTIL_LOGW("%s:%d]: Error unknown reqId=%d\n", __func__, __LINE__,
+      LOC_LOGW("%s:%d]: Error unknown reqId=%d\n", __func__, __LINE__,
                     reqId);
       return false;
   }
@@ -1446,7 +1451,7 @@ static bool validateRequest(
     //set dummy pointer for request union
     *ppOutData = (void*) reqPayload.pInformClientRevisionReq;
   }
-  LOC_UTIL_LOGV("%s:%d]: reqId=%d, len = %d\n", __func__, __LINE__,
+  LOC_LOGV("%s:%d]: reqId=%d, len = %d\n", __func__, __LINE__,
                 reqId, *pOutLen);
   return true;
 }
@@ -1468,7 +1473,7 @@ static bool locClientInit( qmi_client_type clnt,
   locClientEventIndCbType eventIndCb,
   locClientRespIndCbType  respIndCb)
 {
-  LOC_UTIL_LOGV("%s:%d]: eventMask = %llu\n", __func__, __LINE__,
+  LOC_LOGV("%s:%d]: eventMask = %llu\n", __func__, __LINE__,
                 eventRegMask);
   gLocClientState.isInitialized = true;
   memcpy(&(gLocClientState.userHandle),&clnt, sizeof(qmi_client_type));
@@ -1486,14 +1491,14 @@ static bool locClientInit( qmi_client_type clnt,
 static bool locClientDeInit()
 {
   qmi_client_error_type rc = QMI_NO_ERR; //No error
-  LOC_UTIL_LOGV("%s:%d]: \n", __func__, __LINE__);
+  LOC_LOGV("%s:%d]: \n", __func__, __LINE__);
   if(gLocClientState.userHandle)
   {
     // release the handle
     rc = qmi_client_release(gLocClientState.userHandle);
     if( rc != QMI_NO_ERR)
     {
-      LOC_UTIL_LOGW("%s:%d]: qmi_client_release error %d\n",
+      LOC_LOGW("%s:%d]: qmi_client_release error %d\n",
                     __func__, __LINE__, rc);
     }
   }
@@ -1529,19 +1534,19 @@ static locClientStatusEnumType locClientQmiCtrlPointInit(qmi_client_type *pQmiCl
   // Verify that qmiLoc_get_service_object did not return NULL
   if (NULL == locClientServiceObject)
   {
-      LOC_UTIL_LOGE("%s:%d]: qmiLoc_get_service_object_v02 failed\n" ,
+      LOC_LOGE("%s:%d]: qmiLoc_get_service_object_v02 failed\n" ,
                   __func__, __LINE__ );
     return(eLOC_CLIENT_FAILURE_INTERNAL);
   }
 
 //TBD : qmi_cci stuff, need to remove
-  LOC_UTIL_LOGV("%s:%d]: starting transport\n", __func__, __LINE__);
+  LOC_LOGV("%s:%d]: starting transport\n", __func__, __LINE__);
 
   // register for service notifications
   rc = qmi_client_notifier_init(locClientServiceObject, &os_params, &notifier);
   if(rc != QMI_NO_ERR)
   {
-    LOC_UTIL_LOGE("%s:%d]: qmi_client_notifier_init failed\n",
+    LOC_LOGE("%s:%d]: qmi_client_notifier_init failed\n",
                   __func__, __LINE__ );
     return(eLOC_CLIENT_FAILURE_INTERNAL);
   }
@@ -1554,7 +1559,7 @@ static locClientStatusEnumType locClientQmiCtrlPointInit(qmi_client_type *pQmiCl
   if(QMI_CCI_OS_SIGNAL_TIMED_OUT(&os_params))
   {
     // timed out, return with error
-    LOC_UTIL_LOGE("%s:%d]: timed out waiting for service\n",
+    LOC_LOGE("%s:%d]: timed out waiting for service\n",
                     __func__, __LINE__);
 
     return(eLOC_CLIENT_FAILURE_TIMEOUT);
@@ -1564,13 +1569,13 @@ static locClientStatusEnumType locClientQmiCtrlPointInit(qmi_client_type *pQmiCl
     // get the service addressing information
     rc = qmi_client_get_service_list( locClientServiceObject, NULL, NULL,
                                       &num_services);
-    LOC_UTIL_LOGV("%s:%d]: qmi_client_get_service_list() returned %d "
+    LOC_LOGV("%s:%d]: qmi_client_get_service_list() returned %d "
                   "num_services = %d\n", __func__, __LINE__, rc,
                   num_services);
 
     if(rc != QMI_NO_ERR)
     {
-      LOC_UTIL_LOGE("%s:%d]: qmi_client_get_service_list failed even though"
+      LOC_LOGE("%s:%d]: qmi_client_get_service_list failed even though"
                     "service is up !!!\n", __func__, __LINE__);
       return(eLOC_CLIENT_FAILURE_INTERNAL);
     }
@@ -1581,14 +1586,14 @@ static locClientStatusEnumType locClientQmiCtrlPointInit(qmi_client_type *pQmiCl
   rc = qmi_client_get_service_list( locClientServiceObject, serviceInfo,
                                     &num_entries, &num_services);
 
-  LOC_UTIL_LOGV("%s:%d]: qmi_client_get_service_list()"
+  LOC_LOGV("%s:%d]: qmi_client_get_service_list()"
                 " returned %d num_entries = %d num_services = %d\n",
                 __func__, __LINE__,
                  rc, num_entries, num_services);
 
   if(rc != QMI_NO_ERR)
   {
-    LOC_UTIL_LOGE("%s:%d]: qmi_client_get_service_list Error %d \n",
+    LOC_LOGE("%s:%d]: qmi_client_get_service_list Error %d \n",
                   __func__, __LINE__, rc);
     return(eLOC_CLIENT_FAILURE_INTERNAL);
   }
@@ -1599,7 +1604,7 @@ static locClientStatusEnumType locClientQmiCtrlPointInit(qmi_client_type *pQmiCl
 
   if(rc != QMI_NO_ERR)
   {
-    LOC_UTIL_LOGE("%s:%d]: qmi_client_init error %d\n",
+    LOC_LOGE("%s:%d]: qmi_client_init error %d\n",
                   __func__, __LINE__, rc);
     return(eLOC_CLIENT_FAILURE_INTERNAL);
   }
@@ -1639,7 +1644,7 @@ locClientStatusEnumType locClientOpen (
   locClientStatusEnumType status = eLOC_CLIENT_SUCCESS;
   qmi_client_type clnt;
 
-  LOC_UTIL_LOGV("%s:%d] \n", __func__, __LINE__);
+  LOC_LOGV("%s:%d] \n", __func__, __LINE__);
 
   do
   {
@@ -1658,7 +1663,7 @@ locClientStatusEnumType locClientOpen (
     // Wait for the service or timeout,
     // when service comes up initialize the QMI control point
     status = locClientQmiCtrlPointInit(&clnt);
-    LOC_UTIL_LOGV ("%s:%d] locClientQmiCtrlPointInit returned %d\n",
+    LOC_LOGV ("%s:%d] locClientQmiCtrlPointInit returned %d\n",
                     __func__, __LINE__, status);
 
     if(status != eLOC_CLIENT_SUCCESS)
@@ -1676,7 +1681,7 @@ locClientStatusEnumType locClientOpen (
     if( true != locClientExchangeRevision() ||
        true != locClientRegisterEventMask(eventRegMask))
     {
-      LOC_UTIL_LOGE("%s:%d]: Error sending initialization messages\n",
+      LOC_LOGE("%s:%d]: Error sending initialization messages\n",
                   __func__, __LINE__);
       // release the client
       locClientDeInit();
@@ -1692,8 +1697,9 @@ locClientStatusEnumType locClientOpen (
   {
     *pLocClientHandle = LOC_CLIENT_INVALID_HANDLE_VALUE;
   }
-  LOC_UTIL_LOGD("%s:%d]: returning handle = %d, status = %d\n",
-                __func__, __LINE__, *pLocClientHandle, status);
+  LOC_LOGD("%s:%d]: returning handle = %d, status = %d\n",
+           __func__, __LINE__, *pLocClientHandle, status);
+  EXIT_LOG_CALLFLOW(%s, loc_get_v02_client_satus_name(status));
   return(status);
 }
 
@@ -1710,20 +1716,23 @@ locClientStatusEnumType locClientOpen (
 locClientStatusEnumType locClientClose(
   locClientHandleType handle)
 {
-  LOC_UTIL_LOGD("%s:%d]:\n", __func__, __LINE__ );
+  locClientStatusEnumType status = eLOC_CLIENT_SUCCESS;
+
+  LOC_LOGD("%s:%d]:\n", __func__, __LINE__ );
   if(handle != gLocClientState.clientHandle )
   {
-    LOC_UTIL_LOGE("%s:%d]: invalid handle \n",
+    LOC_LOGE("%s:%d]: invalid handle \n",
                   __func__, __LINE__ );
-    return(eLOC_CLIENT_FAILURE_INVALID_HANDLE);
+    status = eLOC_CLIENT_FAILURE_INVALID_HANDLE;
   }
   if (false == locClientDeInit() )
   {
-    LOC_UTIL_LOGE("%s:%d]: locClientDeInit failed \n",
+    LOC_LOGE("%s:%d]: locClientDeInit failed \n",
                   __func__, __LINE__ );
-    return eLOC_CLIENT_FAILURE_INTERNAL;
+    status = eLOC_CLIENT_FAILURE_INTERNAL;
   }
-  return eLOC_CLIENT_SUCCESS;
+  EXIT_LOG_CALLFLOW(%s, loc_get_v02_client_satus_name(status));
+  return status;
 }
 
 /** locClientSendReq
@@ -1760,7 +1769,7 @@ locClientStatusEnumType locClientSendReq(
   // check if client was initialized
   if(false == gLocClientState.isInitialized)
   {
-    LOC_UTIL_LOGE("%s:%d] error client not initialized\n", __func__,
+    LOC_LOGE("%s:%d] error client not initialized\n", __func__,
                 __LINE__);
     return(eLOC_CLIENT_FAILURE_NOT_INITIALIZED);
   }
@@ -1768,7 +1777,7 @@ locClientStatusEnumType locClientSendReq(
   if(handle != gLocClientState.clientHandle)
   {
 
-    LOC_UTIL_LOGE("%s:%d] error invalid handle\n", __func__,
+    LOC_LOGE("%s:%d] error invalid handle\n", __func__,
                 __LINE__);
     return(eLOC_CLIENT_FAILURE_INVALID_PARAMETER);
   }
@@ -1777,22 +1786,21 @@ locClientStatusEnumType locClientSendReq(
   if (validateRequest(reqId, reqPayload, &pReqData, &reqLen) == false)
   {
 
-    LOC_UTIL_LOGE("%s:%d] error invalid request\n", __func__,
+    LOC_LOGE("%s:%d] error invalid request\n", __func__,
                 __LINE__);
     return(eLOC_CLIENT_FAILURE_INVALID_PARAMETER);
   }
 
-  LOC_UTIL_LOGV("%s:%d] sending reqId= %d, len = %d\n", __func__,
+  LOC_LOGV("%s:%d] sending reqId= %d, len = %d\n", __func__,
                 __LINE__, reqId, reqLen);
 
   rc = qmi_client_send_msg_sync(gLocClientState.userHandle, reqId, pReqData,
                                 reqLen, &resp, sizeof(resp), LOC_CLIENT_ACK_TIMEOUT);
-  LOC_UTIL_LOGV("%s:%d] qmi_client_send_msg_sync returned %d\n", __func__,
-                __LINE__, rc);
+  EXIT_LOG_CALLFLOW(%d, rc);
 
   if (rc != QMI_NO_ERR)
   {
-    LOC_UTIL_LOGE("%s:%d]: send_msg_sync error: %d\n",__func__, __LINE__, rc);
+    LOC_LOGE("%s:%d]: send_msg_sync error: %d\n",__func__, __LINE__, rc);
     return(eLOC_CLIENT_FAILURE_INTERNAL);
   }
   status = convertResponseToStatus(&resp);

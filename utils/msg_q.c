@@ -28,7 +28,7 @@
 
 #include "msg_q.h"
 
-#define LOG_TAG "msg_q"
+#define LOG_TAG "LocSvc_utils_q"
 #include "log_util.h"
 
 #include "linked_list.h"

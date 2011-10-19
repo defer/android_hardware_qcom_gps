@@ -32,15 +32,19 @@
 
 #ifdef FEATURE_LOC_API_V02_QNX_MOD
 //error logs
-#define LOC_UTIL_LOGE(...) printf(__VA_ARGS__)
+#define LOC_LOGE(...) printf(__VA_ARGS__)
 //warning logs
-#define LOC_UTIL_LOGW(...) printf(__VA_ARGS__)
+#define LOC_LOGW(...) printf(__VA_ARGS__)
 // debug logs
-#define LOC_UTIL_LOGD(...) printf(__VA_ARGS__)
+#define LOC_LOGD(...) printf(__VA_ARGS__)
 //info logs
-#define LOC_UTIL_LOGI(...) printf(__VA_ARGS__)
+#define LOC_LOGI(...) printf(__VA_ARGS__)
 //verbose logs
-#define LOC_UTIL_LOGV(...) printf(__VA_ARGS__)
+#define LOC_LOGV(...) printf(__VA_ARGS__)
+
+#define MODEM_LOG_CALLFLOW(SPEC, VAL)
+#define EXIT_LOG_CALLFLOW(SPEC, VAL)
+
 #endif //FEATURE_LOC_API_V02_QNX_MOD
 
 #ifdef LOC_UTIL_TARGET_OFF_TARGET
@@ -48,15 +52,15 @@
 #include <stdio.h>
 
 //error logs
-#define LOC_UTIL_LOGE(...) printf(__VA_ARGS__)
+#define LOC_LOGE(...) printf(__VA_ARGS__)
 //warning logs
-#define LOC_UTIL_LOGW(...) printf(__VA_ARGS__)
+#define LOC_LOGW(...) printf(__VA_ARGS__)
 // debug logs
-#define LOC_UTIL_LOGD(...) printf(__VA_ARGS__)
+#define LOC_LOGD(...) printf(__VA_ARGS__)
 //info logs
-#define LOC_UTIL_LOGI(...) printf(__VA_ARGS__)
+#define LOC_LOGI(...) printf(__VA_ARGS__)
 //verbose logs
-#define LOC_UTIL_LOGV(...) printf(__VA_ARGS__)
+#define LOC_LOGV(...) printf(__VA_ARGS__)
 
 // get around strl*: not found in glibc
 // TBD:look for presence of eglibc other libraries
@@ -64,22 +68,12 @@
 #define strlcpy(X,Y,Z) strcpy(X,Y)
 #define strlcat(X,Y,Z) strcat(X,Y)
 
+#define MODEM_LOG_CALLFLOW(SPEC, VAL)
+#define EXIT_LOG_CALLFLOW(SPEC, VAL)
+
 #elif defined(_ANDROID_)
 
-#define LOG_NDEBUG  0
-
-#include <utils/Log.h>
-
-//error logs
-#define LOC_UTIL_LOGE(...)   LOGE(__VA_ARGS__)
-//warning logs
-#define LOC_UTIL_LOGW(...)   LOGW(__VA_ARGS__)
-// debug logs
-#define LOC_UTIL_LOGD(...)   LOGD(__VA_ARGS__)
-// info logs
-#define LOC_UTIL_LOGI(...)   LOGI(__VA_ARGS__)
-// verbose logs
-#define LOC_UTIL_LOGV(...)   LOGV(__VA_ARGS__)
+#include <log_util.h>
 
 #endif //LOC_UTIL_TARGET_OFF_TARGET
 

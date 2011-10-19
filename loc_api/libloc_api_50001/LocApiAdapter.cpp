@@ -27,7 +27,7 @@
  *
  */
 #define LOG_NDDEBUG 0
-#define LOG_TAG "libloc_adapter"
+#define LOG_TAG "LocSvc_adapter"
 
 #include <LocApiAdapter.h>
 #include "loc_eng_msg.h"

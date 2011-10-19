@@ -38,7 +38,7 @@
 #include "loc_api_sync_call.h"
 
 /* Logging */
-#define LOG_TAG "libloc_api_rpc_glue"
+#define LOG_TAG "LocSvc_api_rpc_glue"
 // #define LOG_NDDEBUG 0
 #include <utils/Log.h>
 
@@ -462,8 +462,8 @@ int loc_api_sync_ioctl
 
    if (select_id < 0 || select_id >= loc_sync_data.num_of_slots)
    {
-      LOGE("slot not available ioctl_type = 0x%x",
-            (unsigned) ioctl_type);
+      LOGE("slot not available ioctl_type = %s",
+           loc_get_ioctl_type_name(ioctl_type));
       return rc;
    }
 
@@ -474,18 +474,18 @@ int loc_api_sync_ioctl
 
    if (rc != RPC_LOC_API_SUCCESS)
    {
-      LOGE("loc_ioctl failed select_id = %d, ioctl_type %d, returned %d",
-          select_id, ioctl_type, rc);
+      LOGE("loc_ioctl failed select_id = %d, ioctl_type %s, returned %s",
+           select_id, loc_get_ioctl_type_name(ioctl_type), loc_get_ioctl_status_name(rc));
    }
    else {
-      LOGV("select_id = %d, ioctl_type %d, returned %d",
-          select_id, ioctl_type, rc);
+      LOGV("select_id = %d, ioctl_type %d, returned RPC_LOC_API_SUCCESS",
+          select_id, ioctl_type);
       // Wait for the callback of loc_ioctl
       if ((rc = loc_api_wait_callback(select_id, timeout_msec / 1000, NULL, &callback_data)) != 0)
       {
          // Callback waiting failed
-         LOGE("callback wait failed select_id = %d, ioctl_type %d, returned %d",
-                select_id, ioctl_type, rc);
+         LOGE("callback wait failed select_id = %d, ioctl_type %s, returned %s",
+              select_id, loc_get_ioctl_type_name(ioctl_type), loc_get_ioctl_status_name(rc));
       }
       else
       {
@@ -493,8 +493,8 @@ int loc_api_sync_ioctl
          if (callback_data.status != RPC_LOC_API_SUCCESS)
          {
             rc = callback_data.status;
-            LOGE("callback status failed select_id = %d, ioctl_type %d, returned %d",
-                select_id, ioctl_type, rc);
+            LOGE("callback status failed select_id = %d, ioctl_type %s, returned %s",
+                 select_id, loc_get_ioctl_type_name(ioctl_type), loc_get_ioctl_status_name(rc));
          } else {
             LOGV("callback status success select_id = %d, ioctl_type %d, returned %d",
                 select_id, ioctl_type, rc);

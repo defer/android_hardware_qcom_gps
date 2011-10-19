@@ -17,6 +17,7 @@ LOCAL_SHARED_LIBRARIES := \
 
 LOCAL_SRC_FILES += \
     LocApiV02Adapter.cpp \
+    loc_api_v02_log.c \
     loc_api_v02_client.c \
     loc_api_sync_req.c \
     location_service_v02.c

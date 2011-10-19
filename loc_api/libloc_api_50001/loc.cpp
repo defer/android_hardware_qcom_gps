@@ -28,7 +28,7 @@
  */
 
 #define LOG_NDDEBUG 0
-#define LOG_TAG "libloc_afw"
+#define LOG_TAG "LocSvc_afw"
 
 #include <hardware/gps.h>
 #include <loc_eng.h>
@@ -804,8 +804,8 @@ void loc_if_wakeup(int if_req, unsigned is_supl, unsigned long ipv4_addr, unsign
 static void loc_cb(GpsLocation* location, void* locExt)
 {
     ENTRY_LOG();
-    CALLBACK_LOG_CALLFLOW("location_cb");
     if (NULL != gps_loc_cb && NULL != location) {
+        CALLBACK_LOG_CALLFLOW("location_cb - from", %d, location->position_source);
         gps_loc_cb(location);
     }
     EXIT_LOG(%s, VOID_RET);
@@ -814,8 +814,8 @@ static void loc_cb(GpsLocation* location, void* locExt)
 static void sv_cb(GpsSvStatus* sv_status, void* svExt)
 {
     ENTRY_LOG();
-    CALLBACK_LOG_CALLFLOW("sv_status_cb");
     if (NULL != gps_sv_cb) {
+        CALLBACK_LOG_CALLFLOW("sv_status_cb -", %d, sv_status->num_svs);
         gps_sv_cb(sv_status);
     }
     EXIT_LOG(%s, VOID_RET);

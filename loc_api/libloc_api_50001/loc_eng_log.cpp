@@ -28,7 +28,7 @@
  */
 
 #define LOG_NDDEBUG 0
-#define LOG_TAG "libloc_eng"
+#define LOG_TAG "LocSvc_eng"
 
 #include "hardware/gps.h"
 #include "loc.h"
@@ -265,4 +265,19 @@ static int loc_eng_position_sess_status_num = sizeof(loc_eng_position_sess_statu
 const char* loc_get_position_sess_status_name(enum loc_sess_status status)
 {
     return loc_get_name_from_val(loc_eng_position_sess_status_types, loc_eng_position_sess_status_num, (long) status);
+}
+
+static loc_name_val_s_type loc_eng_agps_status_names[] =
+{
+    NAME_VAL( GPS_REQUEST_AGPS_DATA_CONN ),
+    NAME_VAL( GPS_RELEASE_AGPS_DATA_CONN ),
+    NAME_VAL( GPS_AGPS_DATA_CONNECTED ),
+    NAME_VAL( GPS_AGPS_DATA_CONN_DONE ),
+    NAME_VAL( GPS_AGPS_DATA_CONN_FAILED )
+};
+static int loc_eng_agps_status_num = sizeof(loc_eng_agps_status_names) / sizeof(loc_name_val_s_type);
+
+const char* loc_get_agps_status_name(AGpsStatusValue status)
+{
+    return loc_get_name_from_val(loc_eng_agps_status_names, loc_eng_agps_status_num, (long) status);
 }

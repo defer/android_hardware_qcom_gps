@@ -30,7 +30,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define LOG_TAG "linked_list"
+#define LOG_TAG "LocSvc_utils_ll"
 #include "log_util.h"
 
 #include <stdlib.h>

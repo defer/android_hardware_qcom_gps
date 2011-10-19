@@ -55,7 +55,7 @@
 #include "rpc_inc/loc_apicb_appinit.h"
 
 /* Logging */
-#define LOG_TAG "libloc_api_rpc_glue"
+#define LOG_TAG "LocSvc_api_rpc_glue"
 #define LOG_NDDEBUG 0
 #include <utils/Log.h>
 

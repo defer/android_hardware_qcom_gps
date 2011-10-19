@@ -56,6 +56,14 @@ extern loc_logger_s_type loc_logger;
 // Logging Improvements
 extern const char *loc_logger_boolStr[];
 
+extern const char *boolStr[];
+extern const char VOID_RET[];
+extern const char FROM_AFW[];
+extern const char TO_MODEM[];
+extern const char FROM_MODEM[];
+extern const char TO_AFW[];
+extern const char EXIT_TAG[];
+extern const char ENTRY_TAG[];
 /*=============================================================================
  *
  *                        MODULE EXPORTED FUNCTIONS
@@ -104,70 +112,34 @@ if (loc_logger.DEBUG_LEVEL >= 5) { LOGE("V/"__VA_ARGS__); }
  *                          LOGGING IMPROVEMENT MACROS
  *
  *============================================================================*/
-extern const char *boolStr[];
-#define VOID_RET "None"
-#define FROM_AFW   "===>"
-#define TO_MODEM   "--->"
-#define FROM_MODEM "<---"
-#define TO_AFW     "<==="
+#define LOG_(LOC_LOG, ID, WHAT, SPEC, VAL)                                    \
+    do {                                                                      \
+        if (loc_logger.TIMESTAMP) {                                           \
+            char ts[32];                                                      \
+            LOC_LOG("[%s] %s %s line %d " #SPEC,                              \
+                     get_timestamp(ts, sizeof(ts)), ID, WHAT, __LINE__, VAL); \
+        } else {                                                              \
+            LOC_LOG("%s %s line %d " #SPEC,                                   \
+                     ID, WHAT, __LINE__, VAL);                                \
+        }                                                                     \
+    } while(0)
 
-#define ENTRY_LOG()                                                                                                    \
-do { if (loc_logger.TIMESTAMP) {                                                                                       \
-             char time_stamp[32];                                                                                      \
-             LOC_LOGV("[%s] %s called, line %d", get_timestamp(time_stamp, sizeof(time_stamp)), __func__, __LINE__);   \
-        } else    {                                                                                                    \
-          LOC_LOGV("%s called, line %d", __func__, __LINE__);                                                          \
-          }                                                                                                            \
-    } while (0)
 
-#define EXIT_LOG(SPECIFIER, RETVAL)                                                                                    \
-do { if (loc_logger.TIMESTAMP) {                                                                                       \
-             char time_stamp[32];                                                                                      \
-             LOC_LOGV("[%s] %s finished, line %d", get_timestamp(time_stamp, sizeof(time_stamp)), __func__, __LINE__); \
-        } else {                                                                                                       \
-          LOC_LOGV("%s finished, line %d, returned " #SPECIFIER, __func__, __LINE__, RETVAL);                          \
-          }                                                                                                            \
-    } while (0)
+#define LOG_I(ID, WHAT, SPEC, VAL) LOG_(LOC_LOGI, ID, WHAT, SPEC, VAL)
+#define LOG_V(ID, WHAT, SPEC, VAL) LOG_(LOC_LOGV, ID, WHAT, SPEC, VAL)
+
+#define ENTRY_LOG() LOG_V(ENTRY_TAG, __func__, %s, "")
+#define EXIT_LOG(SPEC, VAL) LOG_V(EXIT_TAG, __func__, SPEC, VAL)
+
 
 // Used for logging callflow from Android Framework
-#define ENTRY_LOG_CALLFLOW()                                                                                                 \
-do { if (loc_logger.TIMESTAMP) {                                                                                             \
-             char time_stamp[32];                                                                                            \
-             LOC_LOGI("[%s] %s %s line %d", get_timestamp(time_stamp, sizeof(time_stamp)), FROM_AFW, __func__, __LINE__);    \
-        } else {                                                                                                             \
-          LOC_LOGI("%s %s line %d", FROM_AFW, __func__, __LINE__);                                                           \
-          }                                                                                                                  \
-    } while (0)
-
+#define ENTRY_LOG_CALLFLOW() LOG_I(FROM_AFW, __func__, %s, "")
 // Used for logging callflow to Modem
-#define EXIT_LOG_CALLFLOW(SPECIFIER, RETVAL)                                                                                 \
-do { if (loc_logger.TIMESTAMP) {                                                                                             \
-             char time_stamp[32];                                                                                            \
-             LOC_LOGI("[%s] %s %s line %d", get_timestamp(time_stamp, sizeof(time_stamp)), TO_MODEM, __func__, __LINE__);    \
-        } else {                                                                                                             \
-          LOC_LOGI("%s %s line %d, returned" #SPECIFIER, TO_MODEM, __func__, __LINE__, RETVAL);                              \
-          }                                                                                                                  \
-    } while (0)
-
-// Used for logging callflow from Modem
-#define MODEM_LOG_CALLFLOW()                                                                                                 \
-do { if (loc_logger.TIMESTAMP) {                                                                                             \
-             char time_stamp[32];                                                                                            \
-             LOC_LOGI("[%s] %s %s line %d", get_timestamp(time_stamp, sizeof(time_stamp)), FROM_MODEM, __func__, __LINE__);  \
-        } else {                                                                                                             \
-          LOC_LOGI("%s %s line %d", FROM_MODEM, __func__, __LINE__);                                                         \
-          }                                                                                                                  \
-    } while (0)
-
+#define EXIT_LOG_CALLFLOW(SPEC, VAL) LOG_I(TO_MODEM, __func__, SPEC, VAL)
+// Used for logging callflow from Modem(TO_MODEM, __func__, %s, "")
+#define MODEM_LOG_CALLFLOW(SPEC, VAL) LOG_I(FROM_MODEM, __func__, SPEC, VAL)
 // Used for logging callflow to Android Framework
-#define CALLBACK_LOG_CALLFLOW(CALLBACK_NAME)                                                                                 \
-do { if (loc_logger.TIMESTAMP) {                                                                                             \
-             char time_stamp[32];                                                                                            \
-             LOC_LOGI("[%s] %s %s line %d", get_timestamp(time_stamp, sizeof(time_stamp)), TO_AFW, CALLBACK_NAME, __LINE__); \
-        } else {                                                                                                             \
-          LOC_LOGI("%s %s line %d", TO_AFW, CALLBACK_NAME, __LINE__);                                                        \
-          }                                                                                                                  \
-    } while (0)
+#define CALLBACK_LOG_CALLFLOW(CB, SPEC, VAL) LOG_I(TO_AFW, CB, SPEC, VAL)
 
 #ifdef __cplusplus
 }

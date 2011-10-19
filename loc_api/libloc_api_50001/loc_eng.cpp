@@ -28,7 +28,7 @@
  */
 
 #define LOG_NDDEBUG 0
-#define LOG_TAG "libloc_eng"
+#define LOG_TAG "LocSvc_eng"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -710,16 +710,14 @@ static void loc_inform_gps_status(loc_eng_data_s_type &loc_eng_data, GpsStatusVa
 
     if (loc_eng_data.status_cb)
     {
-        LOC_LOGD("loc_inform_gps_status, status: %s", loc_get_gps_status_name(status));
-        CALLBACK_LOG_CALLFLOW("status_cb");
+        CALLBACK_LOG_CALLFLOW("status_cb", %s, loc_get_gps_status_name(gs.status));
         loc_eng_data.status_cb(&gs);
 
         // Restore session begin if needed
         if (status == GPS_STATUS_ENGINE_ON && last_status == GPS_STATUS_SESSION_BEGIN)
         {
             GpsStatus gs_sess_begin = { sizeof(gs_sess_begin),GPS_STATUS_SESSION_BEGIN };
-            LOC_LOGD("loc_inform_gps_status, status: GPS_STATUS_SESSION_BEGIN");
-            CALLBACK_LOG_CALLFLOW("status_cb");
+            CALLBACK_LOG_CALLFLOW("status_cb", %s, loc_get_gps_status_name(gs_sess_begin.status));
             loc_eng_data.status_cb(&gs_sess_begin);
         }
     }
@@ -1319,15 +1317,13 @@ static int loc_eng_report_agps_status(loc_eng_data_s_type &loc_eng_data,
        } else {
            memset(agpsStatus.ipv6_addr, 0, 16);
        }
+
+       CALLBACK_LOG_CALLFLOW("agps_status_cb", %s, loc_get_agps_status_name(agpsStatus.status));
+
        switch (status)
        {
        case GPS_REQUEST_AGPS_DATA_CONN:
-           CALLBACK_LOG_CALLFLOW("agps_status_cb");
-           loc_eng_data.agps_status_cb(&agpsStatus);
-           break;
        case GPS_RELEASE_AGPS_DATA_CONN:
-           // This will not close always-on connection. Comment out if it does.
-           CALLBACK_LOG_CALLFLOW("agps_status_cb");
            loc_eng_data.agps_status_cb(&agpsStatus);
            break;
        }
@@ -1728,11 +1724,10 @@ static void loc_eng_deferred_action_thread(void* arg)
         case LOC_ENG_MSG_REPORT_NMEA:
             if (NULL != loc_eng_data_p->nmea_cb) {
                 loc_eng_msg_report_nmea* nmMsg = (loc_eng_msg_report_nmea*)msg;
-                CALLBACK_LOG_CALLFLOW("nmea_cb");
                 struct timeval tv;
                 gettimeofday(&tv, (struct timezone *) NULL);
                 int64_t now = tv.tv_sec * 1000LL + tv.tv_usec / 1000;
-                loc_eng_data_p->nmea_cb(now, nmMsg->nmea, nmMsg->length);
+                CALLBACK_LOG_CALLFLOW("nmea_cb", %p, nmMsg->nmea);
             }
             break;
 

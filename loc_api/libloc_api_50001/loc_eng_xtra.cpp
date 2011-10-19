@@ -28,7 +28,7 @@
  */
 
 #define LOG_NDDEBUG 0
-#define LOG_TAG "libloc_eng"
+#define LOG_TAG "LocSvc_eng"
 
 #include <loc_eng.h>
 #include <loc_eng_msg.h>

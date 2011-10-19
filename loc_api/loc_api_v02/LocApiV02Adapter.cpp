@@ -37,11 +37,12 @@
 #include <utils/SystemClock.h>
 #include "LocApiV02Adapter.h"
 #include "loc_api_v02_client.h"
+#include "loc_api_v02_log.h"
 #include "loc_api_sync_req.h"
 #include "LocApiAdapter.h"
 
 #define LOG_NDEBUG 0
-#define LOG_TAG "LocApiV02Adapter"
+#define LOG_TAG "LocSvc_adapter"
 #include "loc_util_log.h"
 
 
@@ -79,9 +80,10 @@ static LocApiV02Adapter *locApiV02AdapterInstance;
 static void globalEventCb(locClientHandleType client_handle,
   uint32_t loc_event_id, locClientEventIndUnionType loc_event_payload)
 {
+  MODEM_LOG_CALLFLOW(%s, loc_get_v02_event_name(loc_event_id));
   if( NULL == locApiV02AdapterInstance)
   {
-    LOC_UTIL_LOGE("%s:%d]: event callback when loc API adapter was not "
+    LOC_LOGE("%s:%d]: event callback when loc API adapter was not "
                   "instantiated\n", __func__, __LINE__);
     return;
   }
@@ -91,11 +93,12 @@ static void globalEventCb(locClientHandleType client_handle,
 static void globalRespCb(locClientHandleType client_handle,
     uint32_t resp_id, const locClientRespIndUnionType resp_payload)
 {
-  LOC_UTIL_LOGV ("%s:%d] client = %d, resp id = %d\n", __func__,
+  MODEM_LOG_CALLFLOW(%s, loc_get_v02_event_name(resp_id));
+  LOC_LOGV ("%s:%d] client = %d, resp id = %d\n", __func__,
                  __LINE__,  client_handle, resp_id);
   if( NULL == locApiV02AdapterInstance)
   {
-    LOC_UTIL_LOGE("%s:%d]: response callback when loc API adapter was not "
+    LOC_LOGE("%s:%d]: response callback when loc API adapter was not "
                   "instantiated\n", __func__, __LINE__);
     return;
   }
@@ -136,8 +139,8 @@ enum loc_api_adapter_err LocApiV02Adapter :: reinit()
   if (eLOC_CLIENT_SUCCESS != status ||
         clientHandle == LOC_CLIENT_INVALID_HANDLE_VALUE )
   {
-      LOC_UTIL_LOGE ("%s:%d]: locClientOpen failed, status = %d\n", __func__,
-                     __LINE__, status);
+      LOC_LOGE ("%s:%d]: locClientOpen failed, status = %s\n", __func__,
+                __LINE__, loc_get_v02_client_satus_name(status));
       return (LOC_API_ADAPTER_ERR_FAILURE);
   }
 
@@ -161,7 +164,7 @@ enum loc_api_adapter_err LocApiV02Adapter :: startFix()
   memset (&set_mode_msg, 0, sizeof(set_mode_msg));
   memset (&set_mode_ind, 0, sizeof(set_mode_ind));
 
-  LOC_UTIL_LOGV("%s:%d]: start \n", __func__, __LINE__);
+  LOC_LOGV("%s:%d]: start \n", __func__, __LINE__);
 
   // fill in the start request
   switch(fixCriteria.mode)
@@ -195,9 +198,10 @@ enum loc_api_adapter_err LocApiV02Adapter :: startFix()
   if (status != eLOC_CLIENT_SUCCESS ||
       eQMI_LOC_SUCCESS_V02 != set_mode_ind.status)
   {
-    LOC_UTIL_LOGE ("%s:%d]: set opertion mode failed status = %d, "
-                   "ind..status = %d\n", __func__, __LINE__,
-                   status, set_mode_ind.status);
+    LOC_LOGE ("%s:%d]: set opertion mode failed status = %s, "
+                   "ind..status = %s\n", __func__, __LINE__,
+              loc_get_v02_client_satus_name(status),
+              loc_get_v02_qmi_satus_name(set_mode_ind.status));
 
     return LOC_API_ADAPTER_ERR_GENERAL_FAILURE; // error
   }
@@ -266,7 +270,7 @@ enum loc_api_adapter_err LocApiV02Adapter :: stopFix()
 
   qmiLocStopReqMsgT_v02 stop_msg;
 
-  LOC_UTIL_LOGD(" %s:%d]: stop called \n", __func__, __LINE__);
+  LOC_LOGD(" %s:%d]: stop called \n", __func__, __LINE__);
 
   memset(&stop_msg, 0, sizeof(stop_msg));
 
@@ -284,7 +288,8 @@ enum loc_api_adapter_err LocApiV02Adapter :: stopFix()
     return LOC_API_ADAPTER_ERR_SUCCESS;
   }
 
-  LOC_UTIL_LOGE("%s:%d]: error = %d\n",__func__, __LINE__, status);
+  LOC_LOGE("%s:%d]: error = %s\n",__func__, __LINE__,
+           loc_get_v02_client_satus_name(status));
   return (LOC_API_ADAPTER_ERR_GENERAL_FAILURE);
 }
 
@@ -295,7 +300,7 @@ enum loc_api_adapter_err LocApiV02Adapter ::  setPositionMode(
   uint32_t preferred_time)
 {
 
-  LOC_UTIL_LOGV ("%s:%d]: interval = %d, mode = %d, recurrence = %d, preferred_accuracy = %d\n",__func__, __LINE__,
+  LOC_LOGV ("%s:%d]: interval = %d, mode = %d, recurrence = %d, preferred_accuracy = %d\n",__func__, __LINE__,
                  min_interval, mode, recurrence, preferred_accuracy);
 
   //store the fix criteria
@@ -319,7 +324,7 @@ enum loc_api_adapter_err LocApiV02Adapter ::  setPositionMode(
   if(true == navigating)
   {
       //fix is in progress, send a restart
-    LOC_UTIL_LOGD ("%s:%d]: fix is in progress restarting the fix with new "
+    LOC_LOGD ("%s:%d]: fix is in progress restarting the fix with new "
                    "criteria\n", __func__, __LINE__);
 
     return( startFix());
@@ -349,7 +354,7 @@ enum loc_api_adapter_err LocApiV02Adapter ::
 
   req_union.pInjectUtcTimeReq = &inject_time_msg;
 
-  LOC_UTIL_LOGV ("%s:%d]: uncertainty = %d\n", __func__, __LINE__,
+  LOC_LOGV ("%s:%d]: uncertainty = %d\n", __func__, __LINE__,
                  uncertainty);
 
   status = loc_sync_send_req(clientHandle,
@@ -361,8 +366,9 @@ enum loc_api_adapter_err LocApiV02Adapter ::
   if (status != eLOC_CLIENT_SUCCESS ||
       eQMI_LOC_SUCCESS_V02 != inject_time_ind.status)
   {
-    LOC_UTIL_LOGE ("%s:%d] status = %d, ind..status = %d\n", __func__,
-                    __LINE__, status, inject_time_ind.status);
+    LOC_LOGE ("%s:%d] status = %s, ind..status = %s\n", __func__,  __LINE__,
+              loc_get_v02_client_satus_name(status),
+              loc_get_v02_qmi_satus_name(inject_time_ind.status));
 
     return LOC_API_ADAPTER_ERR_GENERAL_FAILURE;
   }
@@ -396,7 +402,7 @@ enum loc_api_adapter_err LocApiV02Adapter ::
   inject_pos_msg.horConfidence = 63; // 63% (1 std dev assumed)
 
     /* Log */
-  LOC_UTIL_LOGD("%s:%d]: Lat=%lf, Lon=%lf, Acc=%.2lf\n", __func__, __LINE__,
+  LOC_LOGD("%s:%d]: Lat=%lf, Lon=%lf, Acc=%.2lf\n", __func__, __LINE__,
                 inject_pos_msg.latitude, inject_pos_msg.longitude,
                 inject_pos_msg.horUncCircular);
 
@@ -411,8 +417,10 @@ enum loc_api_adapter_err LocApiV02Adapter ::
   if (status != eLOC_CLIENT_SUCCESS ||
       eQMI_LOC_SUCCESS_V02 != inject_pos_ind.status)
   {
-    LOC_UTIL_LOGE ("%s:%d]: error! status = %d, inject_pos_ind.status = %d\n",
-                   __func__, __LINE__, status, inject_pos_ind.status);
+    LOC_LOGE ("%s:%d]: error! status = %s, inject_pos_ind.status = %s\n",
+              __func__, __LINE__,
+              loc_get_v02_client_satus_name(status),
+              loc_get_v02_qmi_satus_name(inject_pos_ind.status));
 
    return LOC_API_ADAPTER_ERR_GENERAL_FAILURE;
   }
@@ -455,7 +463,7 @@ enum loc_api_adapter_err LocApiV02Adapter ::  deleteAidingData(GpsAidingData f)
 
       delete_req.deleteSvInfoList_len = curr_sv_len;
 
-      LOC_UTIL_LOGV("%s:%d]: Delete GPS SV info for index %d to %d"
+      LOC_LOGV("%s:%d]: Delete GPS SV info for index %d to %d"
                     "and sv id %d to %d \n",
                     __func__, __LINE__, curr_sv_idx, curr_sv_len - 1,
                     sv_id, sv_id+SV_ID_RANGE);
@@ -573,7 +581,7 @@ enum loc_api_adapter_err LocApiV02Adapter ::  deleteAidingData(GpsAidingData f)
 
       delete_req.deleteSvInfoList_len = curr_sv_len;
 
-      LOC_UTIL_LOGV("%s:%d]: Delete GLO SV info for index %d to %d"
+      LOC_LOGV("%s:%d]: Delete GLO SV info for index %d to %d"
                     "and sv id %d to %d \n",
                     __func__, __LINE__, curr_sv_idx, curr_sv_len - 1,
                     sv_id, sv_id+SV_ID_RANGE);
@@ -637,8 +645,10 @@ enum loc_api_adapter_err LocApiV02Adapter ::  deleteAidingData(GpsAidingData f)
   if (status != eLOC_CLIENT_SUCCESS ||
       eQMI_LOC_SUCCESS_V02 != delete_resp.status)
   {
-    LOC_UTIL_LOGE ("%s:%d]: error! status = %d, delete_resp.status = %d\n",
-                   __func__, __LINE__, status, delete_resp.status);
+    LOC_LOGE ("%s:%d]: error! status = %s, delete_resp.status = %s\n",
+              __func__, __LINE__,
+              loc_get_v02_client_satus_name(status),
+              loc_get_v02_qmi_satus_name(delete_resp.status));
 
    return LOC_API_ADAPTER_ERR_GENERAL_FAILURE;
   }
@@ -679,7 +689,7 @@ enum loc_api_adapter_err LocApiV02Adapter ::
       return LOC_API_ADAPTER_ERR_INVALID_PARAMETER;
   }
 
-  LOC_UTIL_LOGV(" %s:%d]: NI response: %d\n", __func__, __LINE__,
+  LOC_LOGV(" %s:%d]: NI response: %d\n", __func__, __LINE__,
                 ni_resp.userResp);
 
   ni_resp.notificationType = request_pass_back->notificationType;
@@ -729,8 +739,10 @@ enum loc_api_adapter_err LocApiV02Adapter ::
   if (status != eLOC_CLIENT_SUCCESS ||
       eQMI_LOC_SUCCESS_V02 != ni_resp_ind.status)
   {
-    LOC_UTIL_LOGE ("%s:%d]: error! status = %d, ni_resp_ind.status = %d\n",
-                   __func__, __LINE__, status, ni_resp_ind.status);
+    LOC_LOGE ("%s:%d]: error! status = %s, ni_resp_ind.status = %s\n",
+              __func__, __LINE__,
+              loc_get_v02_client_satus_name(status),
+              loc_get_v02_qmi_satus_name(ni_resp_ind.status));
 
    return LOC_API_ADAPTER_ERR_GENERAL_FAILURE;
   }
@@ -749,7 +761,7 @@ enum loc_api_adapter_err LocApiV02Adapter :: setServer(
 
   if(len <=0 || len > sizeof(set_server_req.urlAddr))
   {
-    LOC_UTIL_LOGE("%s:%d]: len = %d greater than max allowed url length\n",
+    LOC_LOGE("%s:%d]: len = %d greater than max allowed url length\n",
                   __func__, __LINE__, len);
 
     return LOC_API_ADAPTER_ERR_INVALID_PARAMETER;
@@ -757,7 +769,7 @@ enum loc_api_adapter_err LocApiV02Adapter :: setServer(
 
   memset(&set_server_req, 0, sizeof(set_server_req));
 
-  LOC_UTIL_LOGD("%s:%d]:, url = %s, len = %d\n", __func__, __LINE__, url, len);
+  LOC_LOGD("%s:%d]:, url = %s, len = %d\n", __func__, __LINE__, url, len);
 
   set_server_req.serverType = eQMI_LOC_SERVER_TYPE_UMTS_SLP_V02;
 
@@ -776,8 +788,10 @@ enum loc_api_adapter_err LocApiV02Adapter :: setServer(
   if (status != eLOC_CLIENT_SUCCESS ||
          eQMI_LOC_SUCCESS_V02 != set_server_ind.status)
   {
-    LOC_UTIL_LOGE ("%s:%d]: error status = %d, set_server_ind.status = %d\n",
-                   __func__,__LINE__,  status, set_server_ind.status);
+    LOC_LOGE ("%s:%d]: error status = %s, set_server_ind.status = %s\n",
+              __func__,__LINE__,
+              loc_get_v02_client_satus_name(status),
+              loc_get_v02_qmi_satus_name(set_server_ind.status));
 
     return LOC_API_ADAPTER_ERR_GENERAL_FAILURE;
   }
@@ -808,7 +822,7 @@ enum loc_api_adapter_err LocApiV02Adapter ::
 
   memset(&set_server_req, 0, sizeof(set_server_req));
 
-  LOC_UTIL_LOGD("%s:%d]:, ip = %u, port = %d\n", __func__, __LINE__, ip, port);
+  LOC_LOGD("%s:%d]:, ip = %u, port = %d\n", __func__, __LINE__, ip, port);
 
   set_server_req.serverType = set_server_cmd;
   set_server_req.ipv4Addr_valid = 1;
@@ -826,8 +840,10 @@ enum loc_api_adapter_err LocApiV02Adapter ::
     if (status != eLOC_CLIENT_SUCCESS ||
          eQMI_LOC_SUCCESS_V02 != set_server_ind.status)
     {
-      LOC_UTIL_LOGE ("%s:%d]: error status = %d, set_server_ind.status = %d\n",
-                     __func__,__LINE__,  status, set_server_ind.status);
+      LOC_LOGE ("%s:%d]: error status = %s, set_server_ind.status = %s\n",
+                __func__,__LINE__,
+                loc_get_v02_client_satus_name(status),
+                loc_get_v02_qmi_satus_name(set_server_ind.status));
 
       return LOC_API_ADAPTER_ERR_GENERAL_FAILURE;
     }
@@ -851,7 +867,7 @@ enum loc_api_adapter_err LocApiV02Adapter :: setXtraData(
 
   req_union.pInjectPredictedOrbitsDataReq = &inject_xtra;
 
-  LOC_UTIL_LOGD("qct_loc_eng_inject_xtra_data, xtra size = %d\n", length);
+  LOC_LOGD("qct_loc_eng_inject_xtra_data, xtra size = %d\n", length);
 
   inject_xtra.formatType_valid = 1;
   inject_xtra.formatType = eQMI_LOC_PREDICTED_ORBITS_XTRA_V02;
@@ -880,7 +896,7 @@ enum loc_api_adapter_err LocApiV02Adapter :: setXtraData(
     // copy data into the message
     memcpy(inject_xtra.partData, data+len_injected, inject_xtra.partData_len);
 
-    LOC_UTIL_LOGD("[%s:%d] part %d/%d, len = %d, total injected = %d\n",
+    LOC_LOGD("[%s:%d] part %d/%d, len = %d, total injected = %d\n",
                   __func__, __LINE__,
                   inject_xtra.partNum, total_parts, inject_xtra.partData_len,
                   len_injected);
@@ -895,17 +911,18 @@ enum loc_api_adapter_err LocApiV02Adapter :: setXtraData(
         eQMI_LOC_SUCCESS_V02 != inject_xtra_ind.status ||
         inject_xtra.partNum != inject_xtra_ind.partNum)
     {
-      LOC_UTIL_LOGE ("%s:%d]: failed status = %d, inject_pos_ind.status = %d,"
+      LOC_LOGE ("%s:%d]: failed status = %s, inject_pos_ind.status = %s,"
                      " part num = %d, ind.partNum = %d\n", __func__, __LINE__,
-                     status, inject_xtra_ind.status, inject_xtra.partNum,
-                     inject_xtra_ind.partNum);
+                loc_get_v02_client_satus_name(status),
+                loc_get_v02_qmi_satus_name(inject_xtra_ind.status),
+                inject_xtra.partNum, inject_xtra_ind.partNum);
 
       return LOC_API_ADAPTER_ERR_GENERAL_FAILURE;
       break;
     }
 
     len_injected += inject_xtra.partData_len;
-    LOC_UTIL_LOGD("loc_ioctl XTRA injected length: %d\n", len_injected);
+    LOC_LOGD("loc_ioctl XTRA injected length: %d\n", len_injected);
   }
 
   return LOC_API_ADAPTER_ERR_SUCCESS;
@@ -920,7 +937,7 @@ enum loc_api_adapter_err LocApiV02Adapter :: atlOpenStatus(
   qmiLocInformLocationServerConnStatusReqMsgT_v02 conn_status_req;
   qmiLocInformLocationServerConnStatusIndMsgT_v02 conn_status_ind;
 
-  LOC_UTIL_LOGI("%s:%d]: ATL open handle = %d, is_succ = %d, "
+  LOC_LOGD("%s:%d]: ATL open handle = %d, is_succ = %d, "
                 "APN = [%s], bearer = %d \n",  __func__, __LINE__,
                 handle, is_succ, apn, bear);
 
@@ -957,7 +974,7 @@ enum loc_api_adapter_err LocApiV02Adapter :: atlOpenStatus(
         break;
 
       default:
-        LOC_UTIL_LOGE("%s:%d]:invalid bearer type\n",__func__,__LINE__);
+        LOC_LOGE("%s:%d]:invalid bearer type\n",__func__,__LINE__);
         return LOC_API_ADAPTER_ERR_INVALID_HANDLE;
     }
 
@@ -979,8 +996,10 @@ enum loc_api_adapter_err LocApiV02Adapter :: atlOpenStatus(
   if(result != eLOC_CLIENT_SUCCESS ||
      eQMI_LOC_SUCCESS_V02 != conn_status_ind.status)
   {
-    LOC_UTIL_LOGE ("%s:%d]: Error status = %d, ind..status = %d ",
-                    __func__, __LINE__, result, conn_status_ind.status);
+    LOC_LOGE ("%s:%d]: Error status = %s, ind..status = %s ",
+              __func__, __LINE__,
+              loc_get_v02_client_satus_name(result),
+              loc_get_v02_qmi_satus_name(conn_status_ind.status));
 
     return LOC_API_ADAPTER_ERR_GENERAL_FAILURE;
   }
@@ -998,7 +1017,7 @@ enum loc_api_adapter_err LocApiV02Adapter :: atlCloseStatus(
   qmiLocInformLocationServerConnStatusReqMsgT_v02 conn_status_req;
   qmiLocInformLocationServerConnStatusIndMsgT_v02 conn_status_ind;
 
-  LOC_UTIL_LOGI("%s:%d]: ATL close handle = %d, is_succ = %d\n",
+  LOC_LOGD("%s:%d]: ATL close handle = %d, is_succ = %d\n",
                  __func__, __LINE__,  handle, is_succ);
 
   memset(&conn_status_req, 0, sizeof(conn_status_req));
@@ -1029,8 +1048,10 @@ enum loc_api_adapter_err LocApiV02Adapter :: atlCloseStatus(
   if(result != eLOC_CLIENT_SUCCESS ||
      eQMI_LOC_SUCCESS_V02 != conn_status_ind.status)
   {
-    LOC_UTIL_LOGE ("%s:%d]: Error status = %d, ind..status = %d ",
-                    __func__, __LINE__, result, conn_status_ind.status);
+    LOC_LOGE ("%s:%d]: Error status = %s, ind..status = %s ",
+              __func__, __LINE__,
+              loc_get_v02_client_satus_name(result),
+              loc_get_v02_qmi_satus_name(conn_status_ind.status));
 
     return LOC_API_ADAPTER_ERR_GENERAL_FAILURE;
   }
@@ -1047,7 +1068,7 @@ enum loc_api_adapter_err LocApiV02Adapter :: setSUPLVersion(uint32_t version)
   qmiLocSetProtocolConfigParametersReqMsgT_v02 supl_config_req;
   qmiLocSetProtocolConfigParametersIndMsgT_v02 supl_config_ind;
 
-  LOC_UTIL_LOGI("%s:%d]: supl version = %d\n",  __func__, __LINE__, version);
+  LOC_LOGD("%s:%d]: supl version = %d\n",  __func__, __LINE__, version);
 
 
   memset(&supl_config_req, 0, sizeof(supl_config_req));
@@ -1071,8 +1092,10 @@ enum loc_api_adapter_err LocApiV02Adapter :: setSUPLVersion(uint32_t version)
   if(result != eLOC_CLIENT_SUCCESS ||
      eQMI_LOC_SUCCESS_V02 != supl_config_ind.status)
   {
-    LOC_UTIL_LOGE ("%s:%d]: Error status = %d, ind..status = %d ",
-                    __func__, __LINE__, result, supl_config_ind.status);
+    LOC_LOGE ("%s:%d]: Error status = %s, ind..status = %s ",
+              __func__, __LINE__,
+              loc_get_v02_client_satus_name(result),
+              loc_get_v02_qmi_satus_name(supl_config_ind.status));
 
     return LOC_API_ADAPTER_ERR_GENERAL_FAILURE;
   }
@@ -1089,7 +1112,7 @@ enum loc_api_adapter_err LocApiV02Adapter :: setSensorControlConfig(int sensorsD
   qmiLocSetSensorControlConfigReqMsgT_v02 sensor_config_req;
   qmiLocSetSensorControlConfigIndMsgT_v02 sensor_config_ind;
 
-  LOC_UTIL_LOGI("%s:%d]: sensors disabled = %d\n",  __func__, __LINE__, sensorsDisabled);
+  LOC_LOGD("%s:%d]: sensors disabled = %d\n",  __func__, __LINE__, sensorsDisabled);
 
   memset(&sensor_config_req, 0, sizeof(sensor_config_req));
   memset(&sensor_config_ind, 0, sizeof(sensor_config_ind));
@@ -1109,8 +1132,10 @@ enum loc_api_adapter_err LocApiV02Adapter :: setSensorControlConfig(int sensorsD
   if(result != eLOC_CLIENT_SUCCESS ||
      eQMI_LOC_SUCCESS_V02 != sensor_config_ind.status)
   {
-    LOC_UTIL_LOGE ("%s:%d]: Error status = %d, ind..status = %d ",
-                    __func__, __LINE__, result, sensor_config_ind.status);
+    LOC_LOGE ("%s:%d]: Error status = %s, ind..status = %s ",
+              __func__, __LINE__,
+              loc_get_v02_client_satus_name(result),
+              loc_get_v02_qmi_satus_name(sensor_config_ind.status));
 
     return LOC_API_ADAPTER_ERR_GENERAL_FAILURE;
   }
@@ -1127,7 +1152,7 @@ enum loc_api_adapter_err LocApiV02Adapter :: setSensorProperties(float gyroBiasV
   qmiLocSetSensorPropertiesReqMsgT_v02 sensor_prop_req;
   qmiLocSetSensorPropertiesIndMsgT_v02 sensor_prop_ind;
 
-  LOC_UTIL_LOGI("%s:%d]: sensors prop gyroBiasRandomWalk = %f\n",  __func__, __LINE__, gyroBiasVarianceRandomWalk);
+  LOC_LOGD("%s:%d]: sensors prop gyroBiasRandomWalk = %f\n",  __func__, __LINE__, gyroBiasVarianceRandomWalk);
 
   memset(&sensor_prop_req, 0, sizeof(sensor_prop_req));
   memset(&sensor_prop_ind, 0, sizeof(sensor_prop_ind));
@@ -1146,8 +1171,10 @@ enum loc_api_adapter_err LocApiV02Adapter :: setSensorProperties(float gyroBiasV
   if(result != eLOC_CLIENT_SUCCESS ||
      eQMI_LOC_SUCCESS_V02 != sensor_prop_ind.status)
   {
-    LOC_UTIL_LOGE ("%s:%d]: Error status = %d, ind..status = %d ",
-                    __func__, __LINE__, result, sensor_prop_ind.status);
+    LOC_LOGE ("%s:%d]: Error status = %s, ind..status = %s ",
+              __func__, __LINE__,
+              loc_get_v02_client_satus_name(result),
+              loc_get_v02_qmi_satus_name(sensor_prop_ind.status));
 
     return LOC_API_ADAPTER_ERR_GENERAL_FAILURE;
   }
@@ -1166,7 +1193,7 @@ enum loc_api_adapter_err LocApiV02Adapter :: setSensorPerfControlConfig(int cont
   qmiLocSetSensorPerformanceControlConfigReqMsgT_v02 sensor_perf_config_req;
   qmiLocSetSensorPerformanceControlConfigIndMsgT_v02 sensor_perf_config_ind;
 
-  LOC_UTIL_LOGI("%s:%d]: Sensor Perf Control Config (performanceControlMode)(%u) "
+  LOC_LOGD("%s:%d]: Sensor Perf Control Config (performanceControlMode)(%u) "
                 "accel(#smp,#batches) (%u,%u) gyro(#smp,#batches) (%u,%u)\n",
                 __FUNCTION__,
                 __LINE__,
@@ -1200,8 +1227,10 @@ enum loc_api_adapter_err LocApiV02Adapter :: setSensorPerfControlConfig(int cont
   if(result != eLOC_CLIENT_SUCCESS ||
      eQMI_LOC_SUCCESS_V02 != sensor_perf_config_ind.status)
   {
-    LOC_UTIL_LOGE ("%s:%d]: Error status = %d, ind..status = %d ",
-                    __func__, __LINE__, result, sensor_perf_config_ind.status);
+    LOC_LOGE ("%s:%d]: Error status = %s, ind..status = %s ",
+              __func__, __LINE__,
+              loc_get_v02_client_satus_name(result),
+              loc_get_v02_qmi_satus_name(sensor_perf_config_ind.status));
 
     return LOC_API_ADAPTER_ERR_GENERAL_FAILURE;
   }
@@ -1365,7 +1394,7 @@ void LocApiV02Adapter :: reportPosition (
                                       NULL,
                                       LOC_SESS_FAILURE);
 
-        LOC_UTIL_LOGD("%s:%d]: Ignoring position report with sess status = %d, "
+        LOC_LOGD("%s:%d]: Ignoring position report with sess status = %d, "
                       "fix id = %u\n", __func__, __LINE__,
                       location_report_ptr->sessionStatus,
                       location_report_ptr->fixId );
@@ -1381,7 +1410,7 @@ void  LocApiV02Adapter :: reportSv (
   int              num_svs_max, i;
   const qmiLocSvInfoStructT_v02 *sv_info_ptr;
 
-  LOC_UTIL_LOGV ("%s:%d]: num of sv = %d\n", __func__, __LINE__,
+  LOC_LOGV ("%s:%d]: num of sv = %d\n", __func__, __LINE__,
                  gnss_report_ptr->svList_len);
 
   num_svs_max = 0;
@@ -1474,7 +1503,7 @@ void  LocApiV02Adapter :: reportSv (
 
   if (SvStatus.num_svs != 0)
   {
-    LOC_UTIL_LOGV ("%s:%d]: firing SV callback\n", __func__, __LINE__);
+    LOC_LOGV ("%s:%d]: firing SV callback\n", __func__, __LINE__);
     LocApiAdapter::reportSv(SvStatus,
                             locEngHandle.extSvInfo((void*)gnss_report_ptr));
   }
@@ -1487,7 +1516,7 @@ void LocApiV02Adapter :: reportEngineState (
 {
   GpsStatusValue status;
 
-  LOC_UTIL_LOGV("%s:%d]: state = %d\n", __func__, __LINE__,
+  LOC_LOGV("%s:%d]: state = %d\n", __func__, __LINE__,
                  engine_state_ptr->engineState);
 
   status = GPS_STATUS_NONE;
@@ -1508,7 +1537,7 @@ void LocApiV02Adapter :: reportFixSessionState (
     const qmiLocEventFixSessionStateIndMsgT_v02 *fix_session_state_ptr)
 {
   GpsStatusValue status;
-  LOC_UTIL_LOGD("%s:%d]: state = %d\n", __func__, __LINE__,
+  LOC_LOGD("%s:%d]: state = %d\n", __func__, __LINE__,
                 fix_session_state_ptr->sessionState);
 
   status = GPS_STATUS_NONE;
@@ -1533,7 +1562,7 @@ void LocApiV02Adapter :: reportNmea (
   LocApiAdapter::reportNmea(nmea_report_ptr->nmea,
                              strlen(nmea_report_ptr->nmea));
 
-  LOC_UTIL_LOGD("%s:%d]: $%c%c%c\n", __func__, __LINE__,
+  LOC_LOGD("%s:%d]: $%c%c%c\n", __func__, __LINE__,
                   nmea_report_ptr->nmea[3], nmea_report_ptr->nmea[4],
                   nmea_report_ptr->nmea[5]);
 }
@@ -1666,11 +1695,11 @@ void LocApiV02Adapter :: reportNiRequest(
       hexcode(notif.text, sizeof(notif.text),
               (char *)supl_req->clientName.formattedString,
               supl_req->clientName.formattedString_len);
-      LOC_UTIL_LOGV("SUPL NI: client_name: %s \n", notif.text);
+      LOC_LOGV("SUPL NI: client_name: %s \n", notif.text);
     }
     else
     {
-      LOC_UTIL_LOGV("SUPL NI: client_name not present.");
+      LOC_LOGV("SUPL NI: client_name not present.");
     }
 
     // Requestor ID
@@ -1680,11 +1709,11 @@ void LocApiV02Adapter :: reportNiRequest(
               (char*)supl_req->requestorId.formattedString,
               supl_req->requestorId.formattedString_len );
 
-      LOC_UTIL_LOGV("SUPL NI: requestor_id: %s \n", notif.requestor_id);
+      LOC_LOGV("SUPL NI: requestor_id: %s \n", notif.requestor_id);
     }
     else
     {
-      LOC_UTIL_LOGV("SUPL NI: requestor_id not present.");
+      LOC_LOGV("SUPL NI: requestor_id not present.");
     }
 
     // Encoding type
@@ -1703,7 +1732,7 @@ void LocApiV02Adapter :: reportNiRequest(
 
   else
   {
-    LOC_UTIL_LOGE("loc_ni_request_handler, unknown request event \n");
+    LOC_LOGE("loc_ni_request_handler, unknown request event \n");
     return;
   }
 
@@ -1721,7 +1750,7 @@ void LocApiV02Adapter :: reportNiRequest(
   }
   else
   {
-    LOC_UTIL_LOGE("%s:%d]: Error copying NI request\n", __func__, __LINE__);
+    LOC_LOGE("%s:%d]: Error copying NI request\n", __func__, __LINE__);
   }
 
 }
@@ -1793,9 +1822,6 @@ bool LocApiV02Adapter :: convertNiNotifyVerifyType (
 void LocApiV02Adapter :: eventCb(locClientHandleType client_handle,
   uint32_t loc_event_id, locClientEventIndUnionType loc_event_payload)
 {
-  LOC_UTIL_LOGD("%s:%d]: event id = %d\n", __func__, __LINE__,
-                loc_event_id);
-
   switch(loc_event_id)
   {
     //Position Report
@@ -1824,21 +1850,21 @@ void LocApiV02Adapter :: eventCb(locClientHandleType client_handle,
 
     // XTRA request
     case QMI_LOC_EVENT_INJECT_PREDICTED_ORBITS_REQ_IND_V02:
-      LOC_UTIL_LOGD("%s:%d]: XTRA download request\n", __func__,
+      LOC_LOGD("%s:%d]: XTRA download request\n", __func__,
                     __LINE__);
       requestXtraData();
       break;
 
     // time request
     case QMI_LOC_EVENT_INJECT_TIME_REQ_IND_V02:
-      LOC_UTIL_LOGD("%s:%d]: Time request\n", __func__,
+      LOC_LOGD("%s:%d]: Time request\n", __func__,
                     __LINE__);
       requestTime();
       break;
 
     //position request
     case QMI_LOC_EVENT_INJECT_POSITION_REQ_IND_V02:
-      LOC_UTIL_LOGD("%s:%d]: Position request\n", __func__,
+      LOC_LOGD("%s:%d]: Position request\n", __func__,
                     __LINE__);
       //requestPosition();
       break;

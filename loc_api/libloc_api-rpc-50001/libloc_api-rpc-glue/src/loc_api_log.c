@@ -28,7 +28,7 @@
  */
 
 #define LOG_NDDEBUG 0
-#define LOG_TAG "libloc_api_rpc_glue"
+#define LOG_TAG "LocSvc_api_rpc_glue"
 
 #include "loc_api_log.h"
 #include "loc_log.h"
@@ -261,29 +261,6 @@ static void log_satellite_report(const rpc_loc_gnss_info_s_type *gnss)
    }
 }
 
-/* Logs a callback event header */
-int loc_callback_log_header(
-      rpc_loc_client_handle_type            client_handle,
-      rpc_loc_event_mask_type               loc_event,              /* event mask           */
-      const rpc_loc_event_payload_u_type*   loc_event_payload       /* payload              */
-)
-{
-   char time_string[64]; /* full time string */
-   const char *event_name = loc_get_event_name(loc_event);
-   if (event_name == NULL)
-   {
-      event_name = UNKNOWN_STR;
-   }
-
-   /* Event header */
-   LOC_LOGD("\nEvent %s (client %d)\n",
-         /* loc_get_time(time_string), */
-         event_name,
-         (int) client_handle);
-
-   return 0;
-}
-
 /* Logs a callback event */
 int loc_callback_log(
       rpc_loc_event_mask_type               loc_event,              /* event mask           */
@@ -353,3 +330,15 @@ const char* loc_get_fix_session_state_name(rpc_loc_fix_session_state_e_type stat
          (long) state);
 }
 
+/* Event names */
+loc_name_val_s_type rpc_reset_event_name[] =
+{
+    NAME_VAL( RPC_SUBSYSTEM_RESTART_BEGIN ),
+    NAME_VAL( RPC_SUBSYSTEM_RESTART_END )
+};
+int rpc_reset_event_num = sizeof rpc_reset_event_name / sizeof(loc_name_val_s_type);
+
+const char* loc_get_rpc_reset_event_name(enum rpc_reset_event event)
+{
+    return loc_get_name_from_val(rpc_reset_event_name, rpc_reset_event_num, event);
+}

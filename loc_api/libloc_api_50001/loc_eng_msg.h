@@ -238,8 +238,8 @@ struct loc_eng_msg_report_nmea : public loc_eng_msg {
         nmea(new char[len]), length(len)
     {
         memcpy((void*)nmea, (void*)data, len);
-        LOC_LOGV("length: %d\n  nmea: %p",
-                 length, nmea);
+        LOC_LOGV("length: %d\n  nmea: %p - %c%c%c",
+                 length, nmea, nmea[3], nmea[4], nmea[5]);
     }
     inline ~loc_eng_msg_report_nmea()
     {
