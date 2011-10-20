@@ -912,6 +912,7 @@ SIDE EFFECTS
 
 ===========================================================================*/
 int loc_eng_atl_open(loc_eng_data_s_type &loc_eng_data,
+                     AGpsType agpsType,
                      const char* apn, AGpsBearerType bearerType)
 {
     ENTRY_LOG_CALLFLOW();
@@ -956,7 +957,8 @@ SIDE EFFECTS
    N/A
 
 ===========================================================================*/
-int loc_eng_atl_closed(loc_eng_data_s_type &loc_eng_data)
+int loc_eng_atl_closed(loc_eng_data_s_type &loc_eng_data,
+                       AGpsType agpsType)
 {
     ENTRY_LOG_CALLFLOW();
     INIT_CHECK(loc_eng_data.context && loc_eng_data.agps_status_cb,
@@ -990,7 +992,8 @@ SIDE EFFECTS
    N/A
 
 ===========================================================================*/
-int loc_eng_atl_open_failed(loc_eng_data_s_type &loc_eng_data)
+int loc_eng_atl_open_failed(loc_eng_data_s_type &loc_eng_data,
+                            AGpsType agpsType)
 {
     ENTRY_LOG_CALLFLOW();
     INIT_CHECK(loc_eng_data.context && loc_eng_data.agps_status_cb,

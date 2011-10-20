@@ -169,9 +169,12 @@ int  loc_eng_update_criteria(loc_eng_data_s_type &loc_eng_data,
 void loc_eng_agps_init(loc_eng_data_s_type &loc_eng_data,
                        AGpsCallbacks* callbacks);
 int  loc_eng_atl_open(loc_eng_data_s_type &loc_eng_data,
+                      AGpsType agpsType,
                       const char* apn, AGpsBearerType bearerType);
-int  loc_eng_atl_closed(loc_eng_data_s_type &loc_eng_data);
-int  loc_eng_atl_open_failed(loc_eng_data_s_type &loc_eng_data);
+int  loc_eng_atl_closed(loc_eng_data_s_type &loc_eng_data,
+                        AGpsType agpsType);
+int  loc_eng_atl_open_failed(loc_eng_data_s_type &loc_eng_data,
+                             AGpsType agpsType);
 int  loc_eng_set_server_proxy(loc_eng_data_s_type &loc_eng_data,
                               LocServerType type, const char *hostname, int port);
 

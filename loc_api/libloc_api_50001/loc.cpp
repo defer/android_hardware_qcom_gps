@@ -72,9 +72,10 @@ static const GpsInterface sLocEngInterface =
 
 // Function declarations for sLocEngAGpsInterface
 static void loc_agps_init(AGpsCallbacks* callbacks);
-static int  loc_agps_open(const char* apn, AGpsBearerType bearerType);
-static int  loc_agps_closed();
-static int  loc_agps_open_failed();
+static int  loc_agps_open(AGpsType agpsType,
+                          const char* apn, AGpsBearerType bearerType);
+static int  loc_agps_closed(AGpsType agpsType);
+static int  loc_agps_open_failed(AGpsType agpsType);
 static int  loc_agps_set_server(AGpsType type, const char *hostname, int port);
 
 static const AGpsInterface sLocEngAGpsInterface =
@@ -542,10 +543,11 @@ SIDE EFFECTS
    N/A
 
 ===========================================================================*/
-static int loc_agps_open(const char* apn, AGpsBearerType bearerType)
+static int loc_agps_open(AGpsType agpsType,
+                         const char* apn, AGpsBearerType bearerType)
 {
     ENTRY_LOG();
-    int ret_val = loc_eng_atl_open(loc_afw_data, apn, bearerType);
+    int ret_val = loc_eng_atl_open(loc_afw_data, agpsType, apn, bearerType);
 
     EXIT_LOG(%d, ret_val);
     return ret_val;
@@ -568,10 +570,10 @@ SIDE EFFECTS
    N/A
 
 ===========================================================================*/
-static int loc_agps_closed()
+static int loc_agps_closed(AGpsType agpsType)
 {
     ENTRY_LOG();
-    int ret_val = loc_eng_atl_closed(loc_afw_data);
+    int ret_val = loc_eng_atl_closed(loc_afw_data, agpsType);
 
     EXIT_LOG(%d, ret_val);
     return ret_val;
@@ -594,10 +596,10 @@ SIDE EFFECTS
    N/A
 
 ===========================================================================*/
-int loc_agps_open_failed()
+int loc_agps_open_failed(AGpsType agpsType)
 {
     ENTRY_LOG();
-    int ret_val = loc_eng_atl_open_failed(loc_afw_data);
+    int ret_val = loc_eng_atl_open_failed(loc_afw_data, agpsType);
 
     EXIT_LOG(%d, ret_val);
     return ret_val;
