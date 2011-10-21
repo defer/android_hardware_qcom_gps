@@ -13,6 +13,8 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE := libloc_adapter
 
+LOCAL_MODULE_TAGS := optional
+
 LOCAL_SHARED_LIBRARIES := \
     libutils \
     libcutils \
@@ -98,6 +100,8 @@ include $(BUILD_SHARED_LIBRARY)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := gps.$(BOARD_VENDOR_QCOM_GPS_LOC_API_HARDWARE)
+
+LOCAL_MODULE_TAGS := optional
 
 ## Libs
 
