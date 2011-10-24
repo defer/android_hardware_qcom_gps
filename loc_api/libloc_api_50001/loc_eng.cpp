@@ -1427,8 +1427,14 @@ static void loc_eng_process_atl_action(loc_eng_data_s_type &loc_eng_data,
 
         }else if (status == GPS_RELEASE_AGPS_DATA_CONN)
         {
-            if(loc_eng_data.atl_conn_info[session_index].conn_state == LOC_CONN_OPEN)
+            if((loc_eng_data.atl_conn_info[session_index].conn_state == LOC_CONN_OPEN)||
+              (loc_eng_data.atl_conn_info[session_index].conn_state == LOC_CONN_OPEN_REQ))
             {
+                if(loc_eng_data.atl_conn_info[session_index].conn_state == LOC_CONN_OPEN_REQ)
+                {
+                   LOC_LOGD("ATL Close req came in for handle %d when in OPEN_REQ state",
+                  (int) loc_eng_data.atl_conn_info[session_index].conn_handle);
+                }
                 loc_eng_data.atl_conn_info[session_index].conn_state = LOC_CONN_CLOSE_REQ;
                 if(check_if_all_connection(loc_eng_data, LOC_CONN_IDLE,session_index))
                 {
@@ -1446,15 +1452,6 @@ static void loc_eng_process_atl_action(loc_eng_data_s_type &loc_eng_data,
                 loc_eng_data.atl_conn_info[session_index].conn_state = LOC_CONN_CLOSE_REQ;
                 //The connection is already closed previously so simply acknowledge the modem.
                 loc_eng_atl_close_status(loc_eng_data, SUCCESS);
-            }else if(loc_eng_data.atl_conn_info[session_index].conn_state == LOC_CONN_OPEN_REQ)
-            {
-                //In this case the close request has come in for a handle which is already in
-                //OPEN_REQ.  In this case we ack the modem a failure for this request as it came in
-                //even before the modem got the ack for the precedding open request for this handle.
-                LOC_LOGE("ATL Close req came in for handle %d when in OPEN_REQ state",
-                         (int) loc_eng_data.atl_conn_info[session_index].conn_handle);
-                loc_eng_data.atl_conn_info[session_index].conn_state = LOC_CONN_CLOSE_REQ;
-                loc_eng_atl_close_status(loc_eng_data, FAILURE);
             }else
             {//In this case the close request has come in for a handle which is already in CLOSE_REQ.
                 //In this case an ack to the modem request will be sent when we get an equivalent ack
@@ -1576,7 +1573,7 @@ static void loc_eng_deferred_action_thread(void* arg)
             pthread_mutex_lock(&(context->lock));
             pthread_cond_signal(&(context->cond));
             pthread_mutex_unlock(&(context->lock));
-            EXIT_LOG(%s, "LOC_ENG_MSG_QUIT, signal the main thread and return"); 
+            EXIT_LOG(%s, "LOC_ENG_MSG_QUIT, signal the main thread and return");
         }
         return;
 
