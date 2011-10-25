@@ -39,8 +39,8 @@ extern "C"
 #include <loc_api_v02_client.h>
 
 const char* loc_get_v02_event_name(uint32_t event);
-const char* loc_get_v02_client_satus_name(locClientStatusEnumType status);
-const char* loc_get_v02_qmi_satus_name(qmiLocStatusEnumT_v02 status);
+const char* loc_get_v02_client_status_name(locClientStatusEnumType status);
+const char* loc_get_v02_qmi_status_name(qmiLocStatusEnumT_v02 status);
 
 
 #ifdef __cplusplus

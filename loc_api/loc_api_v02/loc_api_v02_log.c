@@ -199,7 +199,7 @@ const char* loc_get_v02_event_name(uint32_t event)
     return loc_get_name_from_val(loc_v02_event_name, loc_v02_event_num, (long) event);
 }
 
-static loc_name_val_s_type loc_v02_client_satus_name[] =
+static loc_name_val_s_type loc_v02_client_status_name[] =
 {
     NAME_VAL(eLOC_CLIENT_SUCCESS),
     NAME_VAL(eLOC_CLIENT_FAILURE_GENERAL),
@@ -215,15 +215,15 @@ static loc_name_val_s_type loc_v02_client_satus_name[] =
     NAME_VAL(eLOC_CLIENT_FAILURE_INTERNAL),
     NAME_VAL(eLOC_CLIENT_FAILURE_NOT_INITIALIZED),
 };
-static int loc_v02_client_satus_num = sizeof(loc_v02_client_satus_name) / sizeof(loc_name_val_s_type);
+static int loc_v02_client_status_num = sizeof(loc_v02_client_status_name) / sizeof(loc_name_val_s_type);
 
-const char* loc_get_v02_client_satus_name(locClientStatusEnumType status)
+const char* loc_get_v02_client_status_name(locClientStatusEnumType status)
 {
-    return loc_get_name_from_val(loc_v02_client_satus_name, loc_v02_client_satus_num, (long) status);
+    return loc_get_name_from_val(loc_v02_client_status_name, loc_v02_client_status_num, (long) status);
 }
 
 
-static loc_name_val_s_type loc_v02_qmi_satus_name[] =
+static loc_name_val_s_type loc_v02_qmi_status_name[] =
 {
     QMILOCSTATUSENUMT_MIN_ENUM_VAL_V02,
     eQMI_LOC_SUCCESS_V02,
@@ -235,9 +235,9 @@ static loc_name_val_s_type loc_v02_qmi_satus_name[] =
     eQMI_LOC_TIMEOUT_V02,
     QMILOCSTATUSENUMT_MAX_ENUM_VAL_V02
 };
-static int loc_v02_qmi_satus_num = sizeof(loc_v02_qmi_satus_name) / sizeof(loc_name_val_s_type);
+static int loc_v02_qmi_status_num = sizeof(loc_v02_qmi_status_name) / sizeof(loc_name_val_s_type);
 
-const char* loc_get_v02_qmi_satus_name(qmiLocStatusEnumT_v02 status)
+const char* loc_get_v02_qmi_status_name(qmiLocStatusEnumT_v02 status)
 {
-    return loc_get_name_from_val(loc_v02_qmi_satus_name, loc_v02_qmi_satus_num, (long) status);
+    return loc_get_name_from_val(loc_v02_qmi_status_name, loc_v02_qmi_status_num, (long) status);
 }

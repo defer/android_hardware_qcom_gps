@@ -268,6 +268,10 @@ enum loc_api_adapter_err
 LocApiRpcAdapter::reinit()
 {
     enum loc_api_adapter_err ret_val = LOC_API_ADAPTER_ERR_SUCCESS;
+    if (RPC_LOC_CLIENT_HANDLE_INVALID != client_handle) {
+        loc_clear(client_handle);
+    }
+
     client_handle = loc_open(eMask, loc_event_cb, loc_rpc_global_cb, this);
 
     if (client_handle < 0) {

@@ -41,7 +41,7 @@
 
 /* Logging */
 // Uncomment to log verbose logs
-//#define LOG_NDEBUG 0
+#define LOG_NDEBUG 1
 
 // log debug logs
 #define LOG_NDDEBUG 1
@@ -49,6 +49,10 @@
 #include "loc_util_log.h"
 
 #define LOC_SYNC_REQ_BUFFER_SIZE 8
+
+pthread_mutex_t  loc_sync_call_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+static bool loc_sync_call_initialized = false;
 
 typedef struct {
    pthread_mutex_t         sync_req_lock;
@@ -70,10 +74,7 @@ typedef struct {
 } loc_sync_req_data_s_type;
 
 typedef struct {
-   pthread_mutex_t             array_lock;
-   int                         size;
    bool                        in_use;  /* at least one sync call is active */
-   bool                        initialized; // sync_req framework has been inited
    bool                        slot_in_use[LOC_SYNC_REQ_BUFFER_SIZE];
    loc_sync_req_data_s_type    slots[LOC_SYNC_REQ_BUFFER_SIZE];
 } loc_sync_req_array_s_type;
@@ -103,21 +104,20 @@ SIDE EFFECTS
 void loc_sync_req_init()
 {
    LOC_LOGV(" %s:%d]:\n", __func__, __LINE__);
-   if(true == loc_sync_array.initialized)
+   pthread_mutex_lock(&loc_sync_call_mutex);
+   if(true == loc_sync_call_initialized)
    {
       LOC_LOGD("%s:%d]:already initialized\n", __func__, __LINE__);
+      pthread_mutex_unlock(&loc_sync_call_mutex);
       return;
    }
-   pthread_mutex_init(&loc_sync_array.array_lock, NULL);
-   pthread_mutex_lock(&loc_sync_array.array_lock);
 
-   loc_sync_array.size = LOC_SYNC_REQ_BUFFER_SIZE;
    loc_sync_array.in_use = false;
 
    memset(loc_sync_array.slot_in_use, 0, sizeof(loc_sync_array.slot_in_use));
 
    int i;
-   for (i = 0; i < loc_sync_array.size; i++)
+   for (i = 0; i < LOC_SYNC_REQ_BUFFER_SIZE; i++)
    {
       loc_sync_req_data_s_type *slot = &loc_sync_array.slots[i];
 
@@ -133,8 +133,8 @@ void loc_sync_req_init()
       slot->req_id =  0;   /* req id   */
    }
 
-   pthread_mutex_unlock(&loc_sync_array.array_lock);
-   loc_sync_array.initialized = true;
+   loc_sync_call_initialized = true;
+   pthread_mutex_unlock(&loc_sync_call_mutex);
 }
 
 
@@ -165,20 +165,20 @@ void loc_sync_process_ind(
    LOC_LOGV("%s:%d]: received indication, handle = %d ind_id = %d \n",
                  __func__,__LINE__, client_handle, ind_id);
 
-   pthread_mutex_lock(&loc_sync_array.array_lock);
+   pthread_mutex_lock(&loc_sync_call_mutex);
 
    if (!loc_sync_array.in_use)
    {
       LOC_LOGD("%s:%d]: loc_sync_array not in use \n",
                     __func__, __LINE__);
-      pthread_mutex_unlock(&loc_sync_array.array_lock);
+      pthread_mutex_unlock(&loc_sync_call_mutex);
       return;
    }
 
    bool in_use = false, consumed = false;
    int i;
 
-   for (i = 0; i < loc_sync_array.size && !consumed; i++)
+   for (i = 0; i < LOC_SYNC_REQ_BUFFER_SIZE && !consumed; i++)
    {
       loc_sync_req_data_s_type *slot = &loc_sync_array.slots[i];
 
@@ -229,7 +229,7 @@ void loc_sync_process_ind(
       loc_sync_array.in_use = false;
    }
 
-   pthread_mutex_unlock(&loc_sync_array.array_lock);
+   pthread_mutex_unlock(&loc_sync_call_mutex);
 }
 
 /*===========================================================================
@@ -254,9 +254,9 @@ static int loc_alloc_slot()
 {
    int i, select_id = -1; /* no free buffer */
 
-   pthread_mutex_lock(&loc_sync_array.array_lock);
+   pthread_mutex_lock(&loc_sync_call_mutex);
 
-   for (i = 0; i < loc_sync_array.size; i++)
+   for (i = 0; i < LOC_SYNC_REQ_BUFFER_SIZE; i++)
    {
       if (!loc_sync_array.slot_in_use[i])
       {
@@ -267,7 +267,7 @@ static int loc_alloc_slot()
       }
    }
 
-   pthread_mutex_unlock(&loc_sync_array.array_lock);
+   pthread_mutex_unlock(&loc_sync_call_mutex);
    LOC_LOGV("%s:%d]: returning slot %d\n",
                  __func__, __LINE__, select_id);
    return select_id;
@@ -295,7 +295,7 @@ static void loc_free_slot(int select_id)
    int i;
    loc_sync_req_data_s_type *slot;
 
-   pthread_mutex_lock(&loc_sync_array.array_lock);
+   pthread_mutex_lock(&loc_sync_call_mutex);
 
    LOC_LOGD("%s:%d]: freeing slot %d\n", __func__, __LINE__, select_id);
 
@@ -312,17 +312,17 @@ static void loc_free_slot(int select_id)
    slot->req_id =  0;
 
    // check if all slots are now free
-   for (i = 0; i < loc_sync_array.size; i++)
+   for (i = 0; i < LOC_SYNC_REQ_BUFFER_SIZE; i++)
    {
       if (loc_sync_array.slot_in_use[i]) break;
    }
 
-   if (i >= loc_sync_array.size)
+   if (i >= LOC_SYNC_REQ_BUFFER_SIZE)
    {
       loc_sync_array.in_use = false;
    }
 
-   pthread_mutex_unlock(&loc_sync_array.array_lock);
+   pthread_mutex_unlock(&loc_sync_call_mutex);
 }
 
 /*===========================================================================
@@ -407,7 +407,7 @@ static int loc_sync_wait_for_ind(
       uint32_t ind_id
 )
 {
-   if (select_id < 0 || select_id >= loc_sync_array.size || !loc_sync_array.slot_in_use[select_id])
+   if (select_id < 0 || select_id >= LOC_SYNC_REQ_BUFFER_SIZE || !loc_sync_array.slot_in_use[select_id])
    {
       LOC_LOGE("%s:%d]: invalid select_id: %d \n",
                     __func__, __LINE__, select_id);
@@ -531,7 +531,7 @@ locClientStatusEnumType loc_sync_send_req
             // Callback waiting failed
             LOC_LOGE("%s:%d]: loc_api_wait_for_ind failed, err %d, "
                      "select id %d, status %s", __func__, __LINE__, rc ,
-                     select_id, loc_get_v02_client_satus_name(status));
+                     select_id, loc_get_v02_client_status_name(status));
          }
          else
          {

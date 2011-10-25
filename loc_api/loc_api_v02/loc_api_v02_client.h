@@ -56,7 +56,7 @@ extern "C" {
 @{ */
 
 /** Specific value of #locClientHandleType, indicating an invalid handle. */
-#define LOC_CLIENT_INVALID_HANDLE_VALUE (-1)
+#define LOC_CLIENT_INVALID_HANDLE_VALUE (NULL)
 
 /** @} */ /* end_addtogroup constants_macros */
 
@@ -65,7 +65,7 @@ extern "C" {
 
 /** Location client handle used to represent a specific client. Negative values
     are invalid handles. */
-typedef int locClientHandleType;
+typedef void* locClientHandleType;
 
 /** Data type for events and event masks.
     @newpage */
@@ -116,6 +116,19 @@ typedef enum
   /**< Failed because the service has not been initialized. */
 
 }locClientStatusEnumType;
+
+/** Loc Client error values
+*/
+
+typedef enum
+{
+  eLOC_CLIENT_ERROR_SERVICE_UNAVAILABLE            = 1
+  /**< Service is no longer available, the client should
+       close the existing connection and reopen the connection
+       upon getting this error.
+       */
+}locClientErrorEnumType;
+
 
 /** @} */ /* end_addtogroup data_types */
 
@@ -966,11 +979,14 @@ typedef union
                            this callback.
   @param eventIndId        ID of the event indication.
   @param eventIndPayload   Event indication payload.
+  @param pClientCookie     Pointer to the cookie the client specified during
+                           registration.
 */
 typedef void (*locClientEventIndCbType)(
       locClientHandleType handle,
       uint32_t eventIndId,
-      const locClientEventIndUnionType eventIndPayload
+      const locClientEventIndUnionType eventIndPayload,
+      void *pClientCookie
 );
 
 /** Location response indication callback function type. The Location service can
@@ -991,14 +1007,53 @@ typedef void (*locClientEventIndCbType)(
   @param respIndId        ID of the response. It is the same value as the ID
                           of request sent to the engine.
   @param respIndPayload   Payload of the response indication.
+  @param pClientCookie    Pointer to the cookie the client specified during
+                          registration.
 
   @newpage
 */
 typedef void  (*locClientRespIndCbType)(
       locClientHandleType handle,
       uint32_t respIndId,
-      const locClientRespIndUnionType respIndPayload
+      const locClientRespIndUnionType respIndPayload,
+      void *pClientCookie
 );
+
+/** Location error callback function type. This function will be
+    called to inform the client that the service is no longer
+    available. When the client receives this callback it must
+    close the existing connection  and reopen the client connection.
+
+
+  @vertspace
+  @param handle           Location client who sent the request for which this
+                          error indication is generated.
+  @param errorId          Error ID.
+  @param errorCbdata      Payload associated with the error indication.
+
+  @newpage
+*/
+typedef void  (*locClientErrorCbType)(
+      locClientHandleType handle,
+      locClientErrorEnumType errorId,
+      void* pClientCookie
+ );
+
+
+/** Callback functions to be registered during locClientOpen
+*/
+
+typedef struct
+{
+    uint32_t size;
+    /**< Size of the structure */
+    locClientEventIndCbType eventIndCb;
+    /**< Event Indication callback */
+    locClientRespIndCbType respIndCb;
+    /**< Response Indication callback */
+    locClientErrorCbType errorCb;
+    /**< Error Indication callback */
+}locClientCallbacksType;
 
 /** @} */ /* end_addtogroup data_types */
 
@@ -1020,18 +1075,19 @@ typedef void  (*locClientRespIndCbType)(
   @datatype
   #locClientStatusEnumType\n
   #locClientEventMaskType\n
-  #locClientEventIndCbType\n
-  #locClientRespIndCbType\n
-  #locClientHandleType
+  #locClientCallbacksType *\n
+  #locClientHandleType *\n
+  #void *
 
   @vertspace
-  @param[in]  eventRegMask      Mask of asynchronous events the client is
-                                interested in receiving.
-  @param[in]  eventIndCb        Function to be invoked to handle an event.
-  @param[in]  respIndCb         Function to be invoked to handle a response
-                                indication.
-  @param[out] pLocClientHandle  Pointer to the handle to be used by the client
-                                for any subsequent requests.
+  @param[in]  eventRegMask          Mask of asynchronous events the client is
+                                    interested in receiving.
+  @param[in]  pLocClientCallbacks   Pointer to structure containing the
+                                    callbacks.
+  @param[out] pLocClientHandle      Pointer to the handle to be used by the
+                                    client for any subsequent requests.
+  @param[in]  pLocClientCookie      Pointer to a "cookie" to be returned to the
+                                    client along with the callbacks.
 
   @return
   One of the following error codes:
@@ -1043,10 +1099,10 @@ typedef void  (*locClientRespIndCbType)(
   @newpage
 */
 extern locClientStatusEnumType locClientOpen (
-      locClientEventMaskType      eventRegMask,
-      locClientEventIndCbType     eventIndCb,
-      locClientRespIndCbType      respIndCb,
-      locClientHandleType*        pLocClientHandle
+      locClientEventMaskType            eventRegMask,
+      const locClientCallbacksType*     pLocClientCallbacks,
+      locClientHandleType*              pLocClientHandle,
+      const void*                       pLocClientCookie
 );
 
 /** @} */ /* end_addtogroup open_client */
@@ -1057,14 +1113,16 @@ extern locClientStatusEnumType locClientOpen (
     locClientClose */
 /**
   @latexonly\label{hdr:locClientCloseFunction}@endlatexonly Disconnects a client
-  from the location engine.
+  from the location engine and sets the handle to
+  LOC_CLIENT_INVALID_HANDLE_VALUE.
 
   @datatype
   #locClientStatusEnumType\n
   #locClientHandleType
 
   @vertspace
-  @param[in] handle  Handle returned by the locClientOpen() function.
+  @param[in] pLocClientHandle  Pointer to the handle returned by the
+                               locClientOpen() function.
 
   @return
   One of the following error codes:
@@ -1076,7 +1134,7 @@ extern locClientStatusEnumType locClientOpen (
   @newpage
 */
 extern locClientStatusEnumType locClientClose (
-      locClientHandleType handle
+      locClientHandleType* pLocClientHandle
 );
 
 /** @} */ /* end_addtogroup close_client */
@@ -1140,8 +1198,8 @@ extern locClientStatusEnumType locClientSendReq(
   @param[out] pEventIndSize   Pointer to the size of the structure.
 
   @return
-  TRUE -- The event ID was found.\n
-  FALSE -- Otherwise.
+  true -- The event ID was found.\n
+  false -- Otherwise.
 
   @dependencies
   None.
@@ -1172,8 +1230,8 @@ extern bool locClientGetSizeByEventIndId(
   @param[out] pRespIndSize   Pointer to the size of the structure.
 
   @return
-  TRUE -- The response ID was found.\n
-  FALSE -- Otherwise.
+  true -- The response ID was found.\n
+  false -- Otherwise.
 
   @dependencies
   None.

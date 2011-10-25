@@ -130,25 +130,34 @@ public:
 
   /* event callback registered with the loc_api v02 interface */
   void eventCb(locClientHandleType client_handle,
-  uint32_t loc_event_id, locClientEventIndUnionType loc_event_payload);
+               uint32_t loc_event_id,
+               locClientEventIndUnionType loc_event_payload);
 
-  /* response callback registered with the loc_api_v02 interface */
-  void respCb (locClientHandleType client_handle,
-    uint32_t resp_id, const locClientRespIndUnionType resp_payload);
+  /* error callback, this function handles the  service unavailable
+     error */
+  void errorCb(locClientHandleType handle,
+               locClientErrorEnumType errorId);
 
   virtual enum loc_api_adapter_err reinit();
+
   virtual enum loc_api_adapter_err startFix();
+
   virtual enum loc_api_adapter_err stopFix();
+
   virtual enum loc_api_adapter_err
     setPositionMode(LocPositionMode mode, GpsPositionRecurrence recurrence,
                     uint32_t min_interval, uint32_t preferred_accuracy,
                     uint32_t preferred_time);
+
   virtual enum loc_api_adapter_err
     setTime(GpsUtcTime time, int64_t timeReference, int uncertainty);
+
   virtual enum loc_api_adapter_err
     injectPosition(double latitude, double longitude, float accuracy);
+
   virtual enum loc_api_adapter_err
     deleteAidingData(GpsAidingData f);
+
   virtual enum loc_api_adapter_err
     informNiResponse(GpsUserResponseType userResponse,
                      const void* passThroughData);
@@ -167,11 +176,16 @@ public:
 
   virtual enum loc_api_adapter_err
     setSensorControlConfig(int sensorUsage);
+
   virtual enum loc_api_adapter_err
     setSensorProperties(float gyroBiasVarianceRandomWalk);
+
   virtual enum loc_api_adapter_err
-    setSensorPerfControlConfig(int controlMode, int accelSamplesPerBatch, int accelBatchesPerSec,
-                               int gyroSamplesPerBatch, int gyroBatchesPerSec);
+    setSensorPerfControlConfig(int controlMode,
+                               int accelSamplesPerBatch,
+                               int accelBatchesPerSec,
+                               int gyroSamplesPerBatch,
+                               int gyroBatchesPerSec);
 };
 
 #endif //LOC_API_V_0_2_ADAPTER_H
