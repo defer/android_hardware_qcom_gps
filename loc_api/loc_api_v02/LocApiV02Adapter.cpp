@@ -381,8 +381,10 @@ enum loc_api_adapter_err LocApiV02Adapter ::
 
   memset(&inject_pos_msg, 0, sizeof(inject_pos_msg));
 
+  inject_pos_msg.latitude_valid = 1;
   inject_pos_msg.latitude = latitude;
 
+  inject_pos_msg.longitude_valid = 1;
   inject_pos_msg.longitude = longitude;
 
   inject_pos_msg.horUncCircular_valid = 1;

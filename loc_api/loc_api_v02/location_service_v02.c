@@ -1074,10 +1074,15 @@ static const uint8_t qmiLocInjectPositionReqMsgT_data_v02[] = {
   QMI_IDL_GENERIC_8_BYTE,
   QMI_IDL_OFFSET8(qmiLocInjectPositionReqMsgT_v02, timestampUtc),
 
-  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(qmiLocInjectPositionReqMsgT_v02, timestampAge) - QMI_IDL_OFFSET8(qmiLocInjectPositionReqMsgT_v02, timestampAge_valid)),
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(qmiLocInjectPositionReqMsgT_v02, timestampAge) - QMI_IDL_OFFSET8(qmiLocInjectPositionReqMsgT_v02, timestampAge_valid)),
   0x1C,
   QMI_IDL_GENERIC_4_BYTE,
-  QMI_IDL_OFFSET8(qmiLocInjectPositionReqMsgT_v02, timestampAge)
+  QMI_IDL_OFFSET8(qmiLocInjectPositionReqMsgT_v02, timestampAge),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(qmiLocInjectPositionReqMsgT_v02, positionSrc) - QMI_IDL_OFFSET8(qmiLocInjectPositionReqMsgT_v02, positionSrc_valid)),
+  0x1D,
+  QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(qmiLocInjectPositionReqMsgT_v02, positionSrc)
 };
 
 static const uint8_t qmiLocInjectPositionIndMsgT_data_v02[] = {
@@ -2035,7 +2040,7 @@ static const qmi_idl_service_message_table_entry loc_service_command_messages_v0
   {QMI_LOC_GET_PREDICTED_ORBITS_DATA_SOURCE_REQ_V02, TYPE16(0, 27), 0},
   {QMI_LOC_GET_PREDICTED_ORBITS_DATA_VALIDITY_REQ_V02, TYPE16(0, 29), 0},
   {QMI_LOC_INJECT_UTC_TIME_REQ_V02, TYPE16(0, 31), 18},
-  {QMI_LOC_INJECT_POSITION_REQ_V02, TYPE16(0, 33), 105},
+  {QMI_LOC_INJECT_POSITION_REQ_V02, TYPE16(0, 33), 112},
   {QMI_LOC_SET_ENGINE_LOCK_REQ_V02, TYPE16(0, 35), 7},
   {QMI_LOC_GET_ENGINE_LOCK_REQ_V02, TYPE16(0, 37), 0},
   {QMI_LOC_SET_SBAS_CONFIG_REQ_V02, TYPE16(0, 39), 4},

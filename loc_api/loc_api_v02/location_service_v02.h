@@ -25,7 +25,6 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
 #ifndef LOC_SERVICE_H
 #define LOC_SERVICE_H
 /**
@@ -83,7 +82,7 @@ extern "C" {
 /** Major Version Number of the IDL used to generate this file */
 #define LOC_V02_IDL_MAJOR_VERS 0x02
 /** Revision Number of the IDL used to generate this file */
-#define LOC_V02_IDL_MINOR_VERS 0x03
+#define LOC_V02_IDL_MINOR_VERS 0x04
 /** Major Version Number of the qmi_idl_compiler used to generate this file */
 #define LOC_V02_IDL_TOOL_VERS 0x02
 /** Maximum Defined Message ID */
@@ -2777,6 +2776,25 @@ typedef struct {
     @}
   */
 
+/** @addtogroup loc_qmi_enums
+    @{
+  */
+typedef enum {
+  QMILOCPOSITIONSRCENUMT_MIN_ENUM_VAL_V02 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
+  eQMI_LOC_POSITION_SRC_GNSS_V02 = 0, /**<  Position Source is GNSS.  */
+  eQMI_LOC_POSITION_SRC_CELLID_V02 = 1, /**<  Position Source is Cell ID.  */
+  eQMI_LOC_POSITION_SRC_ENH_CELLID_V02 = 2, /**<  Position Source is Enhanced Cell ID.  */
+  eQMI_LOC_POSITION_SRC_WIFI_V02 = 3, /**<  Position Source is WiFi.  */
+  eQMI_LOC_POSITION_SRC_TERRESTRIAL_V02 = 4, /**<  Position Source is Terrestrial.  */
+  eQMI_LOC_POSITION_SRC_GNSS_TERRESTRIAL_HYBRID_V02 = 5, /**<  Position Source is GNSS Terrestrial Hybrid.
+ Other sources.   */
+  eQMI_LOC_POSITION_SRC_OTHER_V02 = 6,
+  QMILOCPOSITIONSRCENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
+}qmiLocPositionSrcEnumT_v02;
+/**
+    @}
+  */
+
 /** @addtogroup loc_qmi_messages
     @{
   */
@@ -2915,6 +2933,27 @@ typedef struct {
   /**<   Position age, which is an estimate of how long ago this fix was made. \n
         - Type: Signed integer \n
         - Units: Milliseconds  */
+
+  /* Optional */
+  /*  Position Source */
+  uint8_t positionSrc_valid;  /**< Must be set to true if positionSrc is being passed */
+  qmiLocPositionSrcEnumT_v02 positionSrc;
+  /**<   Source from where this position was obtained.
+        Valid values: \n
+          - 0x00000000 -- eQMI_LOC_POSITION_SRC_GNSS \n
+          - 0x00000001 -- eQMI_LOC_POSITION_SRC_CELLID \n
+          - 0x00000002 -- eQMI_LOC_POSITION_SRC_ENH_CELLID  \n
+          - 0x00000003 -- eQMI_LOC_POSITION_SRC_WIFI \n
+          - 0x00000004 -- eQMI_LOC_POSITION_SRC_TERRESTRIAL \n
+          - 0x00000005 -- eQMI_LOC_POSITION_SRC_GNSS_TERRESTRIAL_HYBRID \n
+          - 0x00000006 -- eQMI_LOC_POSITION_SRC_OTHER \n
+
+       If altitude is specified and altitude source is not specified, the engine
+       assumes that altitude was obtained using the specified Position source.
+       If altitude and altitude source both are specified then the engine assumes
+       that only latitude, longitude were obtained using the specified Position
+       Source.
+    */
 }qmiLocInjectPositionReqMsgT_v02;  /* Message */
 /**
     @}
