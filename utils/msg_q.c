@@ -151,8 +151,7 @@ msq_q_err_type msg_q_destroy(void** msg_q_data)
 
    msg_q* p_msg_q = (msg_q*)*msg_q_data;
 
-   msg_q_flush(p_msg_q);
-
+   linked_list_destroy(&p_msg_q->msg_list);
    pthread_mutex_destroy(&p_msg_q->list_mutex);
    pthread_cond_destroy(&p_msg_q->list_cond);
 
