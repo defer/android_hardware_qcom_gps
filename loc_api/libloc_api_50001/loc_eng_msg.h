@@ -29,10 +29,6 @@
 #ifndef LOC_ENG_MSG_H
 #define LOC_ENG_MSG_H
 
-// #ifdef __cplusplus
-// extern "C" {
-// #endif /* __cplusplus */
-
 
 #include <hardware/gps.h>
 #include <stdlib.h>
@@ -41,6 +37,11 @@
 #include "loc.h"
 #include "loc_eng_log.h"
 #include "loc_eng_msg_id.h"
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 struct loc_eng_msg {
     const void* owner;
@@ -247,6 +248,66 @@ struct loc_eng_msg_report_nmea : public loc_eng_msg {
     }
 };
 
+struct loc_eng_msg_request_bit : public loc_eng_msg {
+    const unsigned int isSupl;
+    const int ipv4Addr;
+    char* const ipv6Addr;
+    inline loc_eng_msg_request_bit(void* instance,
+                                   unsigned int is_supl,
+                                   int ipv4,
+                                   char* ipv6) :
+        loc_eng_msg(instance, LOC_ENG_MSG_REQUEST_BIT),
+        isSupl(is_supl), ipv4Addr(ipv4),
+        ipv6Addr(NULL == ipv6 ? NULL : new char[16])
+    {
+        if (NULL != ipv6Addr)
+            memcpy(ipv6Addr, ipv6, 16);
+        LOC_LOGV("isSupl: %d, ipv4: %d.%d.%d.%d, ipv6: %s", isSupl,
+                 (unsigned char)ipv4>>24,
+                 (unsigned char)ipv4>>16,
+                 (unsigned char)ipv4>>8,
+                 (unsigned char)ipv4,
+                 NULL != ipv6Addr ? ipv6Addr : "");
+    }
+
+    inline ~loc_eng_msg_request_bit()
+    {
+        if (NULL != ipv6Addr) {
+            delete[] ipv6Addr;
+        }
+    }
+};
+
+struct loc_eng_msg_release_bit : public loc_eng_msg {
+    const unsigned int isSupl;
+    const int ipv4Addr;
+    char* const ipv6Addr;
+    inline loc_eng_msg_release_bit(void* instance,
+                                   unsigned int is_supl,
+                                   int ipv4,
+                                   char* ipv6) :
+        loc_eng_msg(instance, LOC_ENG_MSG_RELEASE_BIT),
+        isSupl(is_supl), ipv4Addr(ipv4),
+        ipv6Addr(NULL == ipv6 ? NULL : new char[16])
+    {
+        if (NULL != ipv6Addr)
+            memcpy(ipv6Addr, ipv6, 16);
+        LOC_LOGV("isSupl: %d, ipv4: %d.%d.%d.%d, ipv6: %s", isSupl,
+                 (unsigned char)ipv4>>24,
+                 (unsigned char)ipv4>>16,
+                 (unsigned char)ipv4>>8,
+                 (unsigned char)ipv4,
+                 NULL != ipv6Addr ? ipv6Addr : "");
+    }
+
+    inline ~loc_eng_msg_release_bit()
+    {
+        if (NULL != ipv6Addr) {
+            delete[] ipv6Addr;
+        }
+    }
+};
+
 struct loc_eng_msg_request_atl : public loc_eng_msg {
     const int handle;
     const AGpsType type;
@@ -384,26 +445,54 @@ struct loc_eng_msg_inject_xtra_data : public loc_eng_msg {
     }
 };
 
-struct loc_eng_msg_atl_open_status : public loc_eng_msg {
+struct loc_eng_msg_atl_open_success : public loc_eng_msg {
+    const AGpsStatusValue agpsType;
     const int length;
     char* const apn;
     const AGpsBearerType bearerType;
-    inline loc_eng_msg_atl_open_status(void* instance,
-                                       const char* name,
-                                       int len,
-                                       AGpsBearerType type) :
-        loc_eng_msg(instance, LOC_ENG_MSG_ATL_OPEN_STATUS),
-        length(len), apn(new char[len+1]), bearerType(type)
+    inline loc_eng_msg_atl_open_success(void* instance,
+                                        AGpsStatusValue atype,
+                                        const char* name,
+                                        int len,
+                                        AGpsBearerType btype) :
+        loc_eng_msg(instance, LOC_ENG_MSG_ATL_OPEN_SUCCESS),
+        agpsType(atype), length(len),
+        apn(new char[len+1]), bearerType(btype)
     {
         memcpy((void*)apn, (void*)name, len);
         apn[len] = 0;
-        LOC_LOGV("apn: %s\n  bearer type: %s",
+        LOC_LOGV("agps type: %s\n  apn: %s\n  bearer type: %s",
+                 loc_get_agps_type_name(agpsType),
                  apn,
                  loc_get_agps_bear_name(bearerType));
     }
-    inline ~loc_eng_msg_atl_open_status()
+    inline ~loc_eng_msg_atl_open_success()
     {
         delete[] apn;
+    }
+};
+
+struct loc_eng_msg_atl_open_failed : public loc_eng_msg {
+    const AGpsStatusValue agpsType;
+    inline loc_eng_msg_atl_open_failed(void* instance,
+                                       AGpsStatusValue atype) :
+        loc_eng_msg(instance, LOC_ENG_MSG_ATL_OPEN_FAILED),
+        agpsType(atype)
+    {
+        LOC_LOGV("agps type %s",
+                 loc_get_agps_type_name(agpsType));
+    }
+};
+
+struct loc_eng_msg_atl_closed : public loc_eng_msg {
+    const AGpsStatusValue agpsType;
+    inline loc_eng_msg_atl_closed(void* instance,
+                                  AGpsStatusValue atype) :
+        loc_eng_msg(instance, LOC_ENG_MSG_ATL_CLOSED),
+        agpsType(atype)
+    {
+        LOC_LOGV("agps type %s",
+                 loc_get_agps_type_name(agpsType));
     }
 };
 
@@ -428,6 +517,7 @@ struct loc_eng_msg_set_data_enable : public loc_eng_msg {
     }
 };
 
+void loc_eng_msg_sender(void* loc_eng_data_p, void* msg);
 int loc_eng_msgget(int * p_req_msgq);
 int loc_eng_msgremove(int req_msgq);
 int loc_eng_msgsnd(int msgqid, void * msgp);
@@ -437,8 +527,8 @@ int loc_eng_msgrcv_raw(int msgqid, void *msgp, unsigned int msgsz);
 int loc_eng_msgflush(int msgqid);
 int loc_eng_msgunblock(int msgqid);
 
-// #ifdef __cplusplus
-// }
-// #endif /* __cplusplus */
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* LOC_ENG_MSG_H */

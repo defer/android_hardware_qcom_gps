@@ -32,22 +32,28 @@
 #include <unistd.h>
 
 #include "log_util.h"
-
+#include "loc_eng_msg.h"
 #include "loc_eng_dmn_conn.h"
 #include "loc_eng_dmn_conn_handler.h"
 
-#ifndef DEBUG_DMN_LOC_API
-extern "C" void loc_if_wakeup(int if_req, unsigned is_supl, unsigned long ipv4_addr, unsigned char * ipv6_addr);
-#endif
+void* loc_api_handle = NULL;
 
 int loc_eng_dmn_conn_loc_api_server_if_request_handler(struct ctrl_msgbuf *pmsg, int len)
 {
     LOC_LOGD("%s:%d]\n", __func__, __LINE__);
 #ifndef DEBUG_DMN_LOC_API
-    loc_if_wakeup( 1,
-                       pmsg->cmsg.cmsg_if_request.is_supl,
-                       pmsg->cmsg.cmsg_if_request.ipv4_addr,
-                       pmsg->cmsg.cmsg_if_request.ipv6_addr);
+    if (NULL == loc_api_handle) {
+        LOC_LOGE("%s:%d] NO agps data handle\n", __func__, __LINE__);
+        return 1;
+    }
+
+    loc_eng_msg_request_bit *msg(
+        new loc_eng_msg_request_bit(loc_api_handle,
+                                    pmsg->cmsg.cmsg_if_request.is_supl,
+                                    pmsg->cmsg.cmsg_if_request.ipv4_addr,
+                                    (char*)pmsg->cmsg.cmsg_if_request.ipv6_addr));
+    loc_eng_msg_sender(loc_api_handle, msg);
+
 #else
    loc_eng_dmn_conn_loc_api_server_data_conn(GPSONE_LOC_API_IF_REQUEST_SUCCESS);
 #endif
@@ -58,10 +64,12 @@ int loc_eng_dmn_conn_loc_api_server_if_release_handler(struct ctrl_msgbuf *pmsg,
 {
     LOC_LOGD("%s:%d]\n", __func__, __LINE__);
 #ifndef DEBUG_DMN_LOC_API
-    loc_if_wakeup( 0,
-                       pmsg->cmsg.cmsg_if_request.is_supl,
-                       pmsg->cmsg.cmsg_if_request.ipv4_addr,
-                       pmsg->cmsg.cmsg_if_request.ipv6_addr);
+    loc_eng_msg_release_bit *msg(
+            new loc_eng_msg_release_bit(loc_api_handle,
+                                        pmsg->cmsg.cmsg_if_request.is_supl,
+                                        pmsg->cmsg.cmsg_if_request.ipv4_addr,
+                                        (char*)pmsg->cmsg.cmsg_if_request.ipv6_addr));
+        loc_eng_msg_sender(loc_api_handle, msg);
 #else
    loc_eng_dmn_conn_loc_api_server_data_conn(GPSONE_LOC_API_IF_RELEASE_SUCCESS);
 #endif

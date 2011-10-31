@@ -38,6 +38,7 @@ LOCAL_COPY_HEADERS:= \
    loc_eng.h \
    loc_eng_xtra.h \
    loc_eng_ni.h \
+   loc_eng_agps.h \
    loc_eng_msg.h \
    loc_eng_msg_id.h \
    loc_eng_log.h
@@ -61,9 +62,10 @@ LOCAL_SHARED_LIBRARIES := \
 
 LOCAL_SRC_FILES += \
     loc_eng.cpp \
-    loc.cpp \
+    loc_eng_agps.cpp \
     loc_eng_xtra.cpp \
-    loc_eng_ni.cpp
+    loc_eng_ni.cpp \
+    loc_eng_log.cpp
 
 ifeq ($(FEATURE_GNSS_BIT_API), true)
 LOCAL_CFLAGS += -DFEATURE_GNSS_BIT_API
@@ -107,9 +109,14 @@ LOCAL_MODULE_TAGS := optional
 
 ## Libs
 
-LOCAL_SHARED_LIBRARIES :=  libloc_eng
+LOCAL_SHARED_LIBRARIES := \
+    libutils \
+    libcutils \
+    libloc_eng \
+    libgps.utils
 
 LOCAL_SRC_FILES += \
+    loc.cpp \
     gps.c
 
 LOCAL_CFLAGS += \

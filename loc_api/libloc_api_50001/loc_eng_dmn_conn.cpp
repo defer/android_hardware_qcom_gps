@@ -129,9 +129,11 @@ static int loc_eng_dmn_conn_unblock_proc(void)
 static struct loc_eng_dmn_conn_thelper thelper;
 
 int loc_eng_dmn_conn_loc_api_server_launch(thelper_create_thread   create_thread_cb,
-    const char * loc_api_q_path, const char * resp_q_path)
+    const char * loc_api_q_path, const char * resp_q_path, void *agps_handle)
 {
     int result;
+
+    loc_api_handle = agps_handle;
 
     if (loc_api_q_path) global_loc_api_q_path = loc_api_q_path;
     if (resp_q_path)    global_loc_api_resp_q_path = resp_q_path;

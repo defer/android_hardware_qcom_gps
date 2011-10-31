@@ -157,16 +157,7 @@ static void loc_eng_report_status(loc_eng_data_s_type &loc_eng_data,
                                   GpsStatusValue status);
 static void loc_eng_process_conn_request(loc_eng_data_s_type &loc_eng_data,
                                          int connHandle, AGpsType agps_type);
-static void loc_eng_process_atl_action(loc_eng_data_s_type &loc_eng_data, int conn_handle,
-                                       AGpsStatusValue status, AGpsType agps_type);
-
-/* Helper functions to manage the state machine for each ATL session*/
-static boolean check_if_any_connection(loc_eng_data_s_type &loc_eng_data,
-                                       loc_eng_atl_session_state_e_type conn_state,int session_index);
-static boolean check_if_all_connection(loc_eng_data_s_type &loc_eng_data,
-                                       loc_eng_atl_session_state_e_type conn_state,int session_index);
-static int loc_eng_get_index(loc_eng_data_s_type &loc_eng_data, int active_conn_handle);
-static void loc_eng_atl_close_status(loc_eng_data_s_type &loc_eng_data, int is_succ);
+static void loc_eng_agps_close_status(loc_eng_data_s_type &loc_eng_data, int is_succ);
 static void loc_eng_handle_engine_down(loc_eng_data_s_type &loc_eng_data) ;
 static void loc_eng_handle_engine_up(loc_eng_data_s_type &loc_eng_data) ;
 
@@ -266,16 +257,6 @@ int loc_eng_init(loc_eng_data_s_type &loc_eng_data, LocCallbacks* callbacks,
     // loc_eng_data.mute_session_state -- LOC_MUTE_SESS_NONE;
 
     loc_eng_ulp_init(&loc_eng_data);
-#ifdef FEATURE_GNSS_BIT_API
-    {
-        char baseband[PROPERTY_VALUE_MAX];
-        property_get("ro.baseband", baseband, "msm");
-        if ((strcmp(baseband,"svlte2a") == 0))
-        {
-            loc_eng_dmn_conn_loc_api_server_launch(callbacks->create_thread_cb, NULL, NULL);
-        }
-    }
-#endif /* FEATURE_GNSS_BIT_API */
 
     LocEng locEngHandle(&loc_eng_data, event, loc_eng_data.acquire_wakelock_cb,
                         loc_eng_data.release_wakelock_cb, loc_eng_msg_sender,
@@ -372,6 +353,14 @@ void loc_eng_cleanup(loc_eng_data_s_type &loc_eng_data)
     // we need to check and clear NI
 
     // we need to check and clear ATL
+    if (NULL != loc_eng_data.agnss_nif) {
+        delete loc_eng_data.agnss_nif;
+        loc_eng_data.agnss_nif = NULL;
+    }
+    if (NULL != loc_eng_data.internet_nif) {
+        delete loc_eng_data.internet_nif;
+        loc_eng_data.internet_nif = NULL;
+    }
 
     if (loc_eng_data.navigating)
     {
@@ -746,17 +735,6 @@ SIDE EFFECTS
 static void loc_eng_agps_reinit(loc_eng_data_s_type &loc_eng_data)
 {
     ENTRY_LOG();
-    // Data connection for AGPS
-    loc_eng_data.data_connection_bearer = AGPS_APN_BEARER_INVALID;
-    int i=0;
-    for(i=0;i < MAX_NUM_ATL_CONNECTIONS; i++ )
-    {
-        loc_eng_data.atl_conn_info[i].active = FALSE;
-        loc_eng_data.atl_conn_info[i].conn_state = LOC_CONN_IDLE;
-        loc_eng_data.atl_conn_info[i].conn_handle = INVALID_ATL_CONNECTION_HANDLE; //since connection handles can be 0
-        loc_eng_data.atl_conn_info[i].agps_type = AGPS_TYPE_INVALID;
-        loc_eng_data.atl_conn_info[i].apn[0] = NULL;
-    }
 
     // Set server addresses which came before init
     if (loc_eng_data.supl_host_set)
@@ -799,105 +777,33 @@ void loc_eng_agps_init(loc_eng_data_s_type &loc_eng_data, AGpsCallbacks* callbac
                 return);
     loc_eng_data.agps_status_cb = callbacks->status_cb;
 
+    loc_eng_data.agnss_nif = new AgpsStateMachine(loc_eng_data.agps_status_cb,
+                                                  AGPS_TYPE_SUPL);
+    loc_eng_data.internet_nif = new AgpsStateMachine(loc_eng_data.agps_status_cb,
+                                                     AGPS_TYPE_WWAN_ANY);
+
+#ifdef FEATURE_GNSS_BIT_API
+    {
+        char baseband[PROPERTY_VALUE_MAX];
+        property_get("ro.baseband", baseband, "msm");
+        if ((strcmp(baseband,"svlte2a") == 0))
+        {
+            loc_eng_dmn_conn_loc_api_server_launch(callbacks->create_thread_cb,
+                                                   NULL, NULL, &loc_eng_data);
+        }
+    }
+#endif /* FEATURE_GNSS_BIT_API */
+
     loc_eng_agps_reinit(loc_eng_data);
     EXIT_LOG(%p, VOID_RET);
 }
 
-void loc_eng_atl_open_status(loc_eng_data_s_type &loc_eng_data,
-                             int is_succ, const char* apn, unsigned int length)
-{
-    ENTRY_LOG();
-    //Go through all the active connection states to determine which command to send to LOC MW and the
-    //state machine updates that need to be done
-    for (int i=0;i< MAX_NUM_ATL_CONNECTIONS;i++)
-    {
-        LOC_LOGD("loc_eng_atl_open_status, is_active = %d, handle = %d, state = %d, bearer: %d, apn: %s\n",
-                 loc_eng_data.atl_conn_info[i].active,
-                 (int) loc_eng_data.atl_conn_info[i].conn_handle,
-                 loc_eng_data.atl_conn_info[i].conn_state,
-                 loc_eng_data.data_connection_bearer,
-                 loc_eng_data.atl_conn_info[i].apn);
-
-        if ((loc_eng_data.atl_conn_info[i].active == TRUE) &&
-            (loc_eng_data.atl_conn_info[i].conn_state == LOC_CONN_OPEN_REQ))
-        {
-            if (is_succ) {
-                //update the session states
-                loc_eng_data.atl_conn_info[i].conn_state = LOC_CONN_OPEN;
-
-                if (NULL != apn && length <= MAX_APN_LEN) {
-                    int len = smaller_of(MAX_APN_LEN, length);
-                    memcpy(loc_eng_data.atl_conn_info[i].apn, apn, len);
-                    loc_eng_data.atl_conn_info[i].apn[len] = NULL;
-                }
-            } else {
-                loc_eng_data.atl_conn_info[i].conn_state = LOC_CONN_IDLE;
-                loc_eng_data.atl_conn_info[i].apn[0] = NULL;
-            }
-
-            loc_eng_data.client_handle->atlOpenStatus(loc_eng_data.atl_conn_info[i].conn_handle,
-                                                      is_succ,
-                                                      (char*)loc_eng_data.atl_conn_info[i].apn,
-                                                      loc_eng_data.data_connection_bearer,
-                                                      loc_eng_data.atl_conn_info[i].agps_type);
-        }
-    }
-    EXIT_LOG(%s, VOID_RET);
-}
 /*===========================================================================
-FUNCTION    loc_eng_atl_close_status
-
-DESCRIPTION
-   This function makes an IOCTL call to return data call close status to modem
-
-DEPENDENCIES
-
-RETURN VALUE
-   None
-
-SIDE EFFECTS
-   N/A
-
-===========================================================================*/
-static void loc_eng_atl_close_status(loc_eng_data_s_type &loc_eng_data, int is_succ)
-{
-    ENTRY_LOG();
-
-    for (int i=0;i< MAX_NUM_ATL_CONNECTIONS;i++)
-    {
-        LOC_LOGD("loc_eng_atl_close_status, active = %d, handle = %d, state = %d, bearer: %d\n",
-                 loc_eng_data.atl_conn_info[i].active,
-                 (int) loc_eng_data.atl_conn_info[i].conn_handle,
-                 loc_eng_data.atl_conn_info[i].conn_state,
-                 loc_eng_data.data_connection_bearer);
-
-        if ( loc_eng_data.atl_conn_info[i].active == TRUE &&
-             ((loc_eng_data.atl_conn_info[i].conn_state == LOC_CONN_CLOSE_REQ )||
-              (loc_eng_data.atl_conn_info[i].conn_state == LOC_CONN_IDLE)))
-        {
-            int conn_handle = loc_eng_data.atl_conn_info[i].conn_handle;
-
-            //update the session states
-            loc_eng_data.atl_conn_info[i].conn_state = LOC_CONN_IDLE;
-            loc_eng_data.atl_conn_info[i].active = FALSE;
-            loc_eng_data.atl_conn_info[i].conn_handle = INVALID_ATL_CONNECTION_HANDLE;
-            loc_eng_data.atl_conn_info[i].agps_type = AGPS_TYPE_INVALID;
-            loc_eng_data.atl_conn_info[i].apn[0] = NULL;
-
-            loc_eng_data.client_handle->atlCloseStatus(conn_handle,
-                                                       is_succ);
-        }
-    }
-
-    EXIT_LOG(%s, VOID_RET);
-}
-
-/*===========================================================================
-FUNCTION    loc_eng_atl_open
+FUNCTION    loc_eng_agps_open
 
 DESCRIPTION
    This function is called when on-demand data connection opening is successful.
-It should inform ARM 9 about the data open result.
+It should inform engine about the data open result.
 
 DEPENDENCIES
    NONE
@@ -909,8 +815,7 @@ SIDE EFFECTS
    N/A
 
 ===========================================================================*/
-int loc_eng_atl_open(loc_eng_data_s_type &loc_eng_data,
-                     AGpsType agpsType,
+int loc_eng_agps_open(loc_eng_data_s_type &loc_eng_data, AGpsType agpsType,
                      const char* apn, AGpsBearerType bearerType)
 {
     ENTRY_LOG_CALLFLOW();
@@ -923,13 +828,11 @@ int loc_eng_atl_open(loc_eng_data_s_type &loc_eng_data,
         return 0;
     }
 
-    LOC_LOGD("loc_eng_atl_open APN name = [%s]", apn);
-#ifdef FEATURE_GNSS_BIT_API
-    loc_eng_dmn_conn_loc_api_server_data_conn(GPSONE_LOC_API_IF_REQUEST_SUCCESS);
-#endif
+    LOC_LOGD("loc_eng_agps_open APN name = [%s]", apn);
+
     int apn_len = smaller_of(strlen (apn), MAX_APN_LEN);
-    loc_eng_msg_atl_open_status *msg(
-        new loc_eng_msg_atl_open_status(&loc_eng_data, apn,
+    loc_eng_msg_atl_open_success *msg(
+        new loc_eng_msg_atl_open_success(&loc_eng_data, agpsType, apn,
                                         apn_len, bearerType));
     msg_q_snd((void*)((LocEngContext*)(loc_eng_data.context))->deferred_q,
               msg, loc_eng_free_msg);
@@ -939,11 +842,11 @@ int loc_eng_atl_open(loc_eng_data_s_type &loc_eng_data,
 }
 
 /*===========================================================================
-FUNCTION    loc_eng_atl_closed
+FUNCTION    loc_eng_agps_closed
 
 DESCRIPTION
    This function is called when on-demand data connection closing is done.
-It should inform ARM 9 about the data close result.
+It should inform engine about the data close result.
 
 DEPENDENCIES
    NONE
@@ -955,17 +858,13 @@ SIDE EFFECTS
    N/A
 
 ===========================================================================*/
-int loc_eng_atl_closed(loc_eng_data_s_type &loc_eng_data,
-                       AGpsType agpsType)
+int loc_eng_agps_closed(loc_eng_data_s_type &loc_eng_data, AGpsType agpsType)
 {
     ENTRY_LOG_CALLFLOW();
     INIT_CHECK(loc_eng_data.context && loc_eng_data.agps_status_cb,
                return -1);
 
-#ifdef FEATURE_GNSS_BIT_API
-    loc_eng_dmn_conn_loc_api_server_data_conn(GPSONE_LOC_API_IF_RELEASE_SUCCESS);
-#endif
-    loc_eng_msg *msg(new loc_eng_msg(&loc_eng_data, LOC_ENG_MSG_ATL_CLOSE_STATUS));
+    loc_eng_msg_atl_closed *msg(new loc_eng_msg_atl_closed(&loc_eng_data, agpsType));
     msg_q_snd((void*)((LocEngContext*)(loc_eng_data.context))->deferred_q,
               msg, loc_eng_free_msg);
 
@@ -974,11 +873,11 @@ int loc_eng_atl_closed(loc_eng_data_s_type &loc_eng_data,
 }
 
 /*===========================================================================
-FUNCTION    loc_eng_atl_open_failed
+FUNCTION    loc_eng_agps_open_failed
 
 DESCRIPTION
    This function is called when on-demand data connection opening has failed.
-It should inform ARM 9 about the data open result.
+It should inform engine about the data open result.
 
 DEPENDENCIES
    NONE
@@ -990,17 +889,13 @@ SIDE EFFECTS
    N/A
 
 ===========================================================================*/
-int loc_eng_atl_open_failed(loc_eng_data_s_type &loc_eng_data,
-                            AGpsType agpsType)
+int loc_eng_agps_open_failed(loc_eng_data_s_type &loc_eng_data, AGpsType agpsType)
 {
     ENTRY_LOG_CALLFLOW();
     INIT_CHECK(loc_eng_data.context && loc_eng_data.agps_status_cb,
                return -1);
 
-#ifdef FEATURE_GNSS_BIT_API
-    loc_eng_dmn_conn_loc_api_server_data_conn(GPSONE_LOC_API_IF_FAILURE);
-#endif
-    loc_eng_msg *msg(new loc_eng_msg(&loc_eng_data, LOC_ENG_MSG_ATL_OPEN_FAILED));
+    loc_eng_msg_atl_open_failed *msg(new loc_eng_msg_atl_open_failed(&loc_eng_data, agpsType));
     msg_q_snd((void*)((LocEngContext*)(loc_eng_data.context))->deferred_q,
               msg, loc_eng_free_msg);
 
@@ -1264,207 +1159,6 @@ static void loc_eng_report_status (loc_eng_data_s_type &loc_eng_data, GpsStatusV
 }
 
 /*===========================================================================
-FUNCTION    loc_eng_report_agps_status
-
-DESCRIPTION
-   This functions calls the native callback function for GpsLocationProvider
-to update AGPS status. The expected behavior from GpsLocationProvider is the following.
-
-   For status GPS_REQUEST_AGPS_DATA_CONN, GpsLocationProvider will inform the open
-   status of the data connection if it is already open, or try to bring up a data
-   connection when it is not.
-
-   For status GPS_RELEASE_AGPS_DATA_CONN, GpsLocationProvider will try to bring down
-   the data connection when it is open. (use this carefully)
-
-   Currently, no actions are taken for other status, such as GPS_AGPS_DATA_CONNECTED,
-   GPS_AGPS_DATA_CONN_DONE or GPS_AGPS_DATA_CONN_FAILED.
-
-DEPENDENCIES
-   None
-
-RETURN VALUE
-   None
-
-SIDE EFFECTS
-   N/A
-
-===========================================================================*/
-static int loc_eng_report_agps_status(loc_eng_data_s_type &loc_eng_data,
-                                       AGpsType type,
-                                       AGpsStatusValue status,
-                                       unsigned long ipv4_addr,
-                                       unsigned char * ipv6_addr)
-{
-    ENTRY_LOG();
-    int ret = 1;
-
-   AGpsStatus agpsStatus;
-   if (loc_eng_data.agps_status_cb == NULL)
-   {
-       LOC_LOGE("loc_eng_report_agps_status, callback not initialized.\n");
-       ret = 0;
-   } else {
-       LOC_LOGD("loc_eng_report_agps_status, type = %d, status = %d, ipv4_addr = %d\n",
-                (int) type, (int) status,  (int) ipv4_addr);
-
-       agpsStatus.size      = sizeof(agpsStatus);
-       agpsStatus.type      = (AGPS_TYPE_INVALID == type) ? AGPS_TYPE_SUPL : type;
-       agpsStatus.status    = status;
-       agpsStatus.ipv4_addr = ipv4_addr;
-       if (ipv6_addr != NULL) {
-           memcpy(agpsStatus.ipv6_addr, ipv6_addr, 16);
-       } else {
-           memset(agpsStatus.ipv6_addr, 0, 16);
-       }
-
-       CALLBACK_LOG_CALLFLOW("agps_status_cb", %s, loc_get_agps_status_name(agpsStatus.status));
-
-       switch (status)
-       {
-       case GPS_REQUEST_AGPS_DATA_CONN:
-       case GPS_RELEASE_AGPS_DATA_CONN:
-           loc_eng_data.agps_status_cb(&agpsStatus);
-           break;
-       }
-   }
-
-    EXIT_LOG(%d, ret);
-    return ret;
-}
-
-
-/*===========================================================================
-FUNCTION    loc_eng_process_atl_action
-
-DESCRIPTION
-   This is used to inform the location engine of the processing status for
-   data connection open/close request.
-
-DEPENDENCIES
-   None
-
-RETURN VALUE
-   NONE
-
-SIDE EFFECTS
-   N/A
-
-===========================================================================*/
-static void loc_eng_process_atl_action(loc_eng_data_s_type &loc_eng_data,
-                                       int conn_handle,
-                                       AGpsStatusValue status,
-                                       AGpsType agps_type)
-
-{
-    ENTRY_LOG();
-    boolean                             ret_val;
-
-    LOC_LOGD("loc_eng_process_atl_action,handle = 0x%lx; status = %d; agps_type = %d\n", (long) conn_handle, status, agps_type);
-
-    //Check if the incoming connection handle already has a atl state which exists and get associated session index
-    int session_index = 0;
-    session_index = loc_eng_get_index(loc_eng_data, conn_handle);
-    if (session_index == MAX_NUM_ATL_CONNECTIONS)
-    {
-        //An error has occured and so print out an error message and return. End the call flow
-        LOC_LOGE("loc_eng_process_conn_request- session index error %d\n",
-                 session_index);
-    } else {
-        LOC_LOGD("loc_eng_process_atl_action.session_index = %x, active_session_state = %x ,"
-                 "active_session_handle = %x session_active = %d agps_type = %d apn = %s\n",
-                 session_index,
-                 loc_eng_data.atl_conn_info[session_index].conn_state,
-                 (int) loc_eng_data.atl_conn_info[session_index].conn_handle,
-                 loc_eng_data.atl_conn_info[session_index].active,
-                 loc_eng_data.atl_conn_info[session_index].agps_type,
-                 loc_eng_data.atl_conn_info[session_index].apn);
-        //ATL data connection open request from modem
-        if(status == GPS_REQUEST_AGPS_DATA_CONN )
-        {
-            //Go into Open request state only if current state is in IDLE
-            if(loc_eng_data.atl_conn_info[session_index].conn_state == LOC_CONN_IDLE)
-            {
-                loc_eng_data.atl_conn_info[session_index].conn_state = LOC_CONN_OPEN_REQ;
-                loc_eng_data.atl_conn_info[session_index].conn_handle = conn_handle;
-                loc_eng_data.atl_conn_info[session_index].agps_type = agps_type;
-                if (check_if_any_connection(loc_eng_data, LOC_CONN_OPEN, session_index))
-                {
-                    //PPP connection has already been opened for some other handle. So simply acknowledge the modem.
-                    loc_eng_atl_open_status(loc_eng_data, SUCCESS, NULL, 0);
-                }else if (check_if_any_connection(loc_eng_data, LOC_CONN_OPEN_REQ, session_index))
-                {
-                    //When COnnectivity Manger acknowledges the reqest all ATL requests will be acked
-                    LOC_LOGD("PPP Open has been requested already for some other handle /n");
-                }else
-                {//Request connectivity manager to bringup a data connection
-                    loc_eng_report_agps_status(loc_eng_data, agps_type,status,INADDR_NONE,NULL);
-                }
-            }
-            else if(loc_eng_data.atl_conn_info[session_index].conn_state == LOC_CONN_OPEN)
-            {
-                //PPP connection has already been opened for this handle. So simply acknowledge the modem.
-                loc_eng_data.atl_conn_info[session_index].conn_state = LOC_CONN_OPEN_REQ;
-                loc_eng_atl_open_status(loc_eng_data, SUCCESS, NULL, 0);
-            }
-            else if(loc_eng_data.atl_conn_info[session_index].conn_state == LOC_CONN_CLOSE_REQ)
-            {
-                //In this case the open request has come in for a handle which is already in
-                //CLOSE_REQ.  Here we ack the modem a failure for this request as it came in
-                //even before the modem got the ack for the precedding close request for this handle.
-                LOC_LOGE("ATL Open req came in for handle %d when in CLOSE_REQ state",
-                         (int) loc_eng_data.atl_conn_info[session_index].conn_handle);
-                loc_eng_data.atl_conn_info[session_index].conn_state = LOC_CONN_OPEN_REQ;
-                loc_eng_atl_open_status(loc_eng_data, FAILURE, NULL, 0);
-            }else
-            {//In this case the open request has come in for a handle which is already in OPEN_REQ.
-                //Here ack to the modem request will be sent when we get an equivalent ack from
-                //the Connectivity Manager.
-                LOC_LOGD("ATL Open req came in for handle %d when in OPEN_REQ state",
-                         (int) loc_eng_data.atl_conn_info[session_index].conn_handle);
-            }
-
-        }else if (status == GPS_RELEASE_AGPS_DATA_CONN)
-        {
-            if((loc_eng_data.atl_conn_info[session_index].conn_state == LOC_CONN_OPEN)||
-              (loc_eng_data.atl_conn_info[session_index].conn_state == LOC_CONN_OPEN_REQ))
-            {
-                if(loc_eng_data.atl_conn_info[session_index].conn_state == LOC_CONN_OPEN_REQ)
-                {
-                   LOC_LOGD("ATL Close req came in for handle %d when in OPEN_REQ state",
-                  (int) loc_eng_data.atl_conn_info[session_index].conn_handle);
-                }
-                loc_eng_data.atl_conn_info[session_index].conn_state = LOC_CONN_CLOSE_REQ;
-                if(check_if_all_connection(loc_eng_data, LOC_CONN_IDLE,session_index))
-                {
-                    loc_eng_report_agps_status(loc_eng_data,
-                                               loc_eng_data.atl_conn_info[session_index].agps_type,
-                                               status,INADDR_NONE,NULL);
-                }else
-                {
-                    //Simply acknowledge to the modem that the connection is closed even through we dont pass
-                    //that message to the connectivity manager
-                    loc_eng_atl_close_status(loc_eng_data, SUCCESS);
-                }
-            }else if(loc_eng_data.atl_conn_info[session_index].conn_state == LOC_CONN_IDLE)
-            {
-                loc_eng_data.atl_conn_info[session_index].conn_state = LOC_CONN_CLOSE_REQ;
-                //The connection is already closed previously so simply acknowledge the modem.
-                loc_eng_atl_close_status(loc_eng_data, SUCCESS);
-            }else
-            {//In this case the close request has come in for a handle which is already in CLOSE_REQ.
-                //In this case an ack to the modem request will be sent when we get an equivalent ack
-                //from the Connectivity Manager.
-                LOC_LOGD("ATL Open req came in for handle %d when in CLOSE_REQ state",
-                         (int) loc_eng_data.atl_conn_info[session_index].conn_handle);
-            }
-        }
-    }
-
-    EXIT_LOG(%s, VOID_RET);
-}
-
-/*===========================================================================
 FUNCTION loc_eng_handle_engine_down
          loc_eng_handle_engine_up
 
@@ -1497,6 +1191,9 @@ void loc_eng_handle_engine_up(loc_eng_data_s_type &loc_eng_data)
     loc_eng_reinit(loc_eng_data);
 
     if (loc_eng_data.agps_status_cb != NULL) {
+        loc_eng_data.agnss_nif->dropAllSubscribers();
+        loc_eng_data.internet_nif->dropAllSubscribers();
+
         loc_eng_agps_reinit(loc_eng_data);
     }
 
@@ -1731,19 +1428,58 @@ static void loc_eng_deferred_action_thread(void* arg)
             }
             break;
 
+        case LOC_ENG_MSG_REQUEST_BIT:
+        {
+            loc_eng_msg_request_bit* brqMsg = (loc_eng_msg_request_bit*)msg;
+            AgpsStateMachine* stateMachine = (brqMsg->isSupl) ?
+                                             loc_eng_data_p->agnss_nif :
+                                             loc_eng_data_p->internet_nif;
+            BITSubscriber subscriber(stateMachine, brqMsg->ipv4Addr, brqMsg->ipv6Addr);
+
+            stateMachine->subscribeRsrc((Subscriber*)&subscriber);
+        }
+        break;
+
+        case LOC_ENG_MSG_RELEASE_BIT:
+        {
+            loc_eng_msg_release_bit* brlMsg = (loc_eng_msg_release_bit*)msg;
+            AgpsStateMachine* stateMachine = (brlMsg->isSupl) ?
+                                             loc_eng_data_p->agnss_nif :
+                                             loc_eng_data_p->internet_nif;
+            BITSubscriber subscriber(stateMachine, brlMsg->ipv4Addr, brlMsg->ipv6Addr);
+
+            stateMachine->unsubscribeRsrc((Subscriber*)&subscriber);
+        }
+        break;
+
         case LOC_ENG_MSG_REQUEST_ATL:
         {
             loc_eng_msg_request_atl* arqMsg = (loc_eng_msg_request_atl*)msg;
-            loc_eng_process_atl_action(*loc_eng_data_p, arqMsg->handle,
-                                       GPS_REQUEST_AGPS_DATA_CONN, arqMsg->type);
+            AgpsStateMachine* stateMachine = (AGPS_TYPE_SUPL == arqMsg->type) ?
+                                             loc_eng_data_p->agnss_nif :
+                                             loc_eng_data_p->internet_nif;
+            ATLSubscriber subscriber(arqMsg->handle,
+                                     stateMachine,
+                                     loc_eng_data_p->client_handle);
+
+            stateMachine->subscribeRsrc((Subscriber*)&subscriber);
         }
         break;
 
         case LOC_ENG_MSG_RELEASE_ATL:
         {
             loc_eng_msg_release_atl* arlMsg = (loc_eng_msg_release_atl*)msg;
-            loc_eng_process_atl_action(*loc_eng_data_p, arlMsg->handle,
-                                       GPS_RELEASE_AGPS_DATA_CONN, AGPS_TYPE_ANY);
+            ATLSubscriber s1(arlMsg->handle,
+                             loc_eng_data_p->agnss_nif,
+                             loc_eng_data_p->client_handle);
+            // attempt to unsubscribe from agnss_nif first
+            if (! loc_eng_data_p->agnss_nif->unsubscribeRsrc((Subscriber*)&s1)) {
+                ATLSubscriber s2(arlMsg->handle,
+                                 loc_eng_data_p->internet_nif,
+                                 loc_eng_data_p->client_handle);
+                // if unsuccessful, try internet_nif
+                loc_eng_data_p->internet_nif->unsubscribeRsrc((Subscriber*)&s2);
+            }
         }
         break;
 
@@ -1779,31 +1515,40 @@ static void loc_eng_deferred_action_thread(void* arg)
         }
         break;
 
-        case LOC_ENG_MSG_ATL_OPEN_STATUS:
+        case LOC_ENG_MSG_ATL_OPEN_SUCCESS:
         {
-            loc_eng_msg_atl_open_status *aosMsg = (loc_eng_msg_atl_open_status*)msg;
-            loc_eng_data_p->data_connection_bearer = aosMsg->bearerType;
-            loc_eng_data_p->client_handle->setAPN(aosMsg->apn, aosMsg->length);
-            loc_eng_atl_open_status(*loc_eng_data_p, SUCCESS, aosMsg->apn, aosMsg->length);
+            loc_eng_msg_atl_open_success *aosMsg = (loc_eng_msg_atl_open_success*)msg;
+            AgpsStateMachine* stateMachine = (AGPS_TYPE_SUPL == aosMsg->agpsType) ?
+                                             loc_eng_data_p->agnss_nif :
+                                             loc_eng_data_p->internet_nif;
+
+            stateMachine->setBearer(aosMsg->bearerType);
+            stateMachine->setAPN(aosMsg->apn, aosMsg->length);
+            stateMachine->onRsrcEvent(RSRC_GRANTED);
         }
         break;
 
-        case LOC_ENG_MSG_ATL_CLOSE_STATUS:
+        case LOC_ENG_MSG_ATL_CLOSED:
         {
-            loc_eng_atl_close_status(*loc_eng_data_p, SUCCESS);
-            loc_eng_data_p->data_connection_bearer = AGPS_APN_BEARER_INVALID;
+            loc_eng_msg_atl_closed *acsMsg = (loc_eng_msg_atl_closed*)msg;
+            AgpsStateMachine* stateMachine = (AGPS_TYPE_SUPL == acsMsg->agpsType) ?
+                                             loc_eng_data_p->agnss_nif :
+                                             loc_eng_data_p->internet_nif;
+
+            stateMachine->onRsrcEvent(RSRC_RELEASED);
         }
         break;
 
         case LOC_ENG_MSG_ATL_OPEN_FAILED:
-            if(loc_eng_data_p->data_connection_bearer == AGPS_APN_BEARER_INVALID)
-            {
-                loc_eng_atl_open_status(*loc_eng_data_p, FAILURE, NULL, 0);
-            } else {
-                loc_eng_atl_close_status(*loc_eng_data_p, FAILURE);
-            }
-            loc_eng_data_p->data_connection_bearer = AGPS_APN_BEARER_INVALID;
-            break;
+        {
+            loc_eng_msg_atl_open_failed *aofMsg = (loc_eng_msg_atl_open_failed*)msg;
+            AgpsStateMachine* stateMachine = (AGPS_TYPE_SUPL == aofMsg->agpsType) ?
+                                             loc_eng_data_p->agnss_nif :
+                                             loc_eng_data_p->internet_nif;
+
+            stateMachine->onRsrcEvent(RSRC_DENIED);
+        }
+        break;
 
         case LOC_ENG_MSG_ENGINE_DOWN:
             loc_eng_handle_engine_down(*loc_eng_data_p);
@@ -1819,8 +1564,8 @@ static void loc_eng_deferred_action_thread(void* arg)
         }
 
         if ( (msg->msgid == LOC_ENG_MSG_ATL_OPEN_FAILED)  |
-             (msg->msgid == LOC_ENG_MSG_ATL_CLOSE_STATUS)  |
-             (msg->msgid == LOC_ENG_MSG_ATL_OPEN_STATUS) )
+             (msg->msgid == LOC_ENG_MSG_ATL_CLOSED)  |
+             (msg->msgid == LOC_ENG_MSG_ATL_OPEN_SUCCESS) )
         {
             loc_eng_data_p->agps_request_pending = false;
             if (loc_eng_data_p->stop_request_pending) {
@@ -1841,190 +1586,6 @@ static void loc_eng_deferred_action_thread(void* arg)
     }
 
     EXIT_LOG(%s, VOID_RET);
-}
-
-/*===========================================================================
-FUNCTION loc_eng_if_wakeup
-
-DESCRIPTION
-   For loc_eng_dmn_conn_handler.c to call to bring up or down
-   network interface
-
-DEPENDENCIES
-   None
-
-RETURN VALUE
-   None
-
-SIDE EFFECTS
-   N/A
-
-===========================================================================*/
-void loc_eng_if_wakeup(loc_eng_data_s_type &loc_eng_data,
-                       int if_req, unsigned is_supl,
-                       unsigned long ipv4_addr, unsigned char * ipv6_addr)
-{
-    ENTRY_LOG();
-
-    AGpsType agps_type = is_supl? AGPS_TYPE_SUPL : AGPS_TYPE_WWAN_ANY;  // No C2k?
-    AGpsStatusValue status = if_req ? GPS_REQUEST_AGPS_DATA_CONN : GPS_RELEASE_AGPS_DATA_CONN;
-    int tries = 3;
-
-    while (tries > 0 &&
-           NULL != loc_eng_data.context &&
-           (0 == loc_eng_report_agps_status(loc_eng_data,
-                                            agps_type,
-                                            status,
-                                            ipv4_addr,
-                                            ipv6_addr))) {
-        tries--;
-        LOC_LOGD("loc_eng_if_wakeup loc_eng not initialized, sleep for 1 second, %d more tries", tries);
-        sleep(1);
-    }
-
-    if (0 == tries) {
-#ifdef FEATURE_GNSS_BIT_API
-        loc_eng_dmn_conn_loc_api_server_data_conn(GPSONE_LOC_API_IF_FAILURE);
-#endif
-    }
-
-    EXIT_LOG(%s, VOID_RET);
-}
-
-/*===========================================================================
-FUNCTION loc_eng_get_index
-
-DESCRIPTION
-   Function which is used to determine the index to access the session
-   information associated with that patciular connection handle
-
-DEPENDENCIES
-   None
-
-RETURN VALUE
-   None
-
-SIDE EFFECTS
-   N/A
-
-===========================================================================*/
-static int loc_eng_get_index(loc_eng_data_s_type &loc_eng_data,
-                             int active_conn_handle)
-{
-    ENTRY_LOG();
-    int ret_val;
-
-   int i = 0;
-   //search through all the active sessions to determine the correct session index
-    for (i=0;i < MAX_NUM_ATL_CONNECTIONS;i++)
-    {
-      LOC_LOGD("In loc_eng_get_index Index: %d Active: %d ConnHandle: %d\n", i, loc_eng_data.atl_conn_info[i].active,
-               (int) loc_eng_data.atl_conn_info[i].conn_handle);
-      if((loc_eng_data.atl_conn_info[i].active == TRUE) &&
-         (loc_eng_data.atl_conn_info[i].conn_handle == active_conn_handle)) {
-         ret_val = i;
-            goto exit;
-        }
-    }
-   //If we come here there is no exiting record for this connection handle and so we create a new one
-    for (i=0;i < MAX_NUM_ATL_CONNECTIONS;i++)
-    {
-      if(loc_eng_data.atl_conn_info[i].active == FALSE)
-      {
-         //set session status to active
-         loc_eng_data.atl_conn_info[i].active = TRUE;
-         loc_eng_data.atl_conn_info[i].conn_handle = active_conn_handle;
-         LOC_LOGD("In loc_eng_get_index Index: %d Active: %d ConnHandle: %d \n", i, loc_eng_data.atl_conn_info[i].active,
-               (int) loc_eng_data.atl_conn_info[i].conn_handle);
-         ret_val = i;
-         goto exit;
-      }
-    }
-   //If we reach this point an error has occurred
-   ret_val = MAX_NUM_ATL_CONNECTIONS;
-
-exit:
-    EXIT_LOG(%d, ret_val);
-    return ret_val;
-}
-
-/*===========================================================================
-FUNCTION check_if_any_connection
-
-DESCRIPTION
-   Function which is used to determine if any of the other sessions have the state
-   passed in
-
-DEPENDENCIES
-   None
-
-RETURN VALUE
-   TRUE/FALSE
-
-SIDE EFFECTS
-   N/A
-
-===========================================================================*/
-static boolean check_if_any_connection(loc_eng_data_s_type &loc_eng_data,
-                                       loc_eng_atl_session_state_e_type conn_state,
-                                       int session_index)
-{
-    ENTRY_LOG();
-    boolean ret_val = FALSE;
-
-    int i=0;
-    for(i=0;i < MAX_NUM_ATL_CONNECTIONS; i++)
-    {
-        if(i == session_index)
-            continue; //skip this record as we want to check all others
-
-        if(loc_eng_data.atl_conn_info[i].active == TRUE && loc_eng_data.atl_conn_info[i].conn_state == conn_state) {
-            ret_val = TRUE;
-            break;
-        }
-    }
-
-    EXIT_LOG(%s, loc_logger_boolStr[ret_val!=0]);
-    return ret_val;
-}
-
-/*===========================================================================
-FUNCTION check_if_all_connection
-
-DESCRIPTION
-   Function which is used to determine if all the other sessions have the state
-   passed in
-
-DEPENDENCIES
-   None
-
-RETURN VALUE
-   TRUE/FALSE
-
-SIDE EFFECTS
-   N/A
-
-===========================================================================*/
-static boolean check_if_all_connection(loc_eng_data_s_type &loc_eng_data,
-                                       loc_eng_atl_session_state_e_type conn_state,
-                                       int session_index)
-{
-    ENTRY_LOG();
-    boolean ret_val = TRUE;
-
-    for(int i=0;i < MAX_NUM_ATL_CONNECTIONS; i++)
-    {
-        if(i == session_index)
-            continue; //skip this record as we want to check all others
-
-        if(loc_eng_data.atl_conn_info[i].conn_state != conn_state) {
-            ret_val = FALSE;
-            break;
-        }
-    }
-
-    EXIT_LOG(%s, loc_logger_boolStr[ret_val!=0]);
-    return ret_val;
 }
 
 /*===========================================================================

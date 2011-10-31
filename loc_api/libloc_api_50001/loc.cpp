@@ -547,7 +547,7 @@ static int loc_agps_open(AGpsType agpsType,
                          const char* apn, AGpsBearerType bearerType)
 {
     ENTRY_LOG();
-    int ret_val = loc_eng_atl_open(loc_afw_data, agpsType, apn, bearerType);
+    int ret_val = loc_eng_agps_open(loc_afw_data, agpsType, apn, bearerType);
 
     EXIT_LOG(%d, ret_val);
     return ret_val;
@@ -573,7 +573,7 @@ SIDE EFFECTS
 static int loc_agps_closed(AGpsType agpsType)
 {
     ENTRY_LOG();
-    int ret_val = loc_eng_atl_closed(loc_afw_data, agpsType);
+    int ret_val = loc_eng_agps_closed(loc_afw_data, agpsType);
 
     EXIT_LOG(%d, ret_val);
     return ret_val;
@@ -599,7 +599,7 @@ SIDE EFFECTS
 int loc_agps_open_failed(AGpsType agpsType)
 {
     ENTRY_LOG();
-    int ret_val = loc_eng_atl_open_failed(loc_afw_data, agpsType);
+    int ret_val = loc_eng_agps_open_failed(loc_afw_data, agpsType);
 
     EXIT_LOG(%d, ret_val);
     return ret_val;
@@ -793,13 +793,6 @@ static bool loc_inject_raw_command(char* command, int length)
     return ret_val;
 }
 
-
-void loc_if_wakeup(int if_req, unsigned is_supl, unsigned long ipv4_addr, unsigned char * ipv6_addr)
-{
-    ENTRY_LOG();
-    loc_eng_if_wakeup(loc_afw_data, if_req, is_supl, ipv4_addr, ipv6_addr);
-    EXIT_LOG(%s, VOID_RET);
-}
 
 static void loc_cb(GpsLocation* location, void* locExt)
 {

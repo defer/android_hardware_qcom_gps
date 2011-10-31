@@ -30,6 +30,10 @@
 #ifndef LOC_ENG_H
 #define LOC_ENG_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 // Uncomment to keep all LOG messages (LOGD, LOGI, LOGV, etc.)
 #define MAX_NUM_ATL_CONNECTIONS  2
 // Define boolean type to be used by libgps on loc api module
@@ -46,10 +50,12 @@ typedef unsigned char boolean;
 #include <loc.h>
 #include <loc_eng_xtra.h>
 #include <loc_eng_ni.h>
+#include <loc_eng_agps.h>
 #include <loc_cfg.h>
 #include <loc_log.h>
 #include <log_util.h>
 #include <loc_eng_msg.h>
+#include <loc_eng_agps.h>
 #include <LocApiAdapter.h>
 
 // The data connection minimal open time
@@ -70,23 +76,6 @@ enum loc_mute_session_e_type {
    LOC_MUTE_SESS_WAIT,
    LOC_MUTE_SESS_IN_SESSION
 };
-
-enum loc_eng_atl_session_state_e_type{
-   LOC_CONN_IDLE = 0,
-   LOC_CONN_OPEN_REQ,
-   LOC_CONN_OPEN,
-   LOC_CONN_CLOSE_REQ
-};
-
-typedef struct
-{
-   // ATL variables
-   loc_eng_atl_session_state_e_type conn_state;
-   int                              conn_handle;
-   AGpsType                         agps_type;
-   boolean                          active;
-   char                             apn[MAX_APN_LEN+1];
-}loc_eng_atl_info_s_type;
 
 // Module data
 typedef struct
@@ -109,12 +98,11 @@ typedef struct
     loc_eng_ni_data_s_type         loc_eng_ni_data;
 
     boolean                        navigating;
-    AGpsBearerType                 data_connection_bearer;
 
-    // ATL variables
-    // Adequate instances of ATL variables for cases where we have simultaneous
-    // connections to MPC & PDE
-    loc_eng_atl_info_s_type        atl_conn_info[MAX_NUM_ATL_CONNECTIONS];
+    // AGPS state machines
+    AgpsStateMachine*              agnss_nif;
+    AgpsStateMachine*              internet_nif;
+
     // GPS engine status
     GpsStatusValue                 engine_status;
     GpsStatusValue                 fix_session_status;
@@ -168,13 +156,10 @@ int  loc_eng_update_criteria(loc_eng_data_s_type &loc_eng_data,
 
 void loc_eng_agps_init(loc_eng_data_s_type &loc_eng_data,
                        AGpsCallbacks* callbacks);
-int  loc_eng_atl_open(loc_eng_data_s_type &loc_eng_data,
-                      AGpsType agpsType,
+int  loc_eng_agps_open(loc_eng_data_s_type &loc_eng_data, AGpsType agpsType,
                       const char* apn, AGpsBearerType bearerType);
-int  loc_eng_atl_closed(loc_eng_data_s_type &loc_eng_data,
-                        AGpsType agpsType);
-int  loc_eng_atl_open_failed(loc_eng_data_s_type &loc_eng_data,
-                             AGpsType agpsType);
+int  loc_eng_agps_closed(loc_eng_data_s_type &loc_eng_data, AGpsType agpsType);
+int  loc_eng_agps_open_failed(loc_eng_data_s_type &loc_eng_data, AGpsType agpsType);
 int  loc_eng_set_server_proxy(loc_eng_data_s_type &loc_eng_data,
                               LocServerType type, const char *hostname, int port);
 
@@ -188,12 +173,6 @@ bool loc_eng_inject_raw_command(loc_eng_data_s_type &loc_eng_data,
 
 
 void loc_eng_mute_one_session(loc_eng_data_s_type &loc_eng_data);
-
-void loc_eng_if_wakeup(loc_eng_data_s_type &loc_eng_data,
-                       int if_req, unsigned is_supl,
-                       unsigned long ipv4_addr, unsigned char * ipv6_addr);
-
-void loc_eng_msg_sender(void* loc_eng_data_p, void* msg);
 
 int loc_eng_xtra_init (loc_eng_data_s_type &loc_eng_data,
                        GpsXtraCallbacks* callbacks);
@@ -209,5 +188,9 @@ extern void loc_eng_ni_request_handler(loc_eng_data_s_type &loc_eng_data,
                                    const GpsNiNotification *notif,
                                    const void* passThrough);
 extern void loc_eng_ni_reset_on_engine_restart(loc_eng_data_s_type &loc_eng_data);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif // LOC_ENG_H

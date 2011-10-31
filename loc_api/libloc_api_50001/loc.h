@@ -79,8 +79,6 @@ enum loc_sess_status {
 };
 
 
-void loc_if_wakeup(int if_req, unsigned is_supl, unsigned long ipv4_addr, unsigned char * ipv6_addr);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -74,6 +74,8 @@ struct ctrl_msgbuf {
     } cmsg;
 };
 
+extern void* loc_api_handle;
+
 int loc_eng_dmn_conn_loc_api_server_if_request_handler(struct ctrl_msgbuf *pmsg, int len);
 int loc_eng_dmn_conn_loc_api_server_if_release_handler(struct ctrl_msgbuf *pmsg, int len);
 
