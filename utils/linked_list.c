@@ -292,8 +292,6 @@ linked_list_err_type linked_list_search(void* list_data, void **data_p,
      if ((*equal)(data_0, tmp->data_ptr)) {
        if (NULL != data_p) {
          *data_p = tmp->data_ptr;
-       } else if (NULL != tmp->dealloc_func) {
-           tmp->dealloc_func(tmp->data_ptr);
        }
 
        if (rm_if_found) {
@@ -310,9 +308,15 @@ linked_list_err_type linked_list_search(void* list_data, void **data_p,
          }
 
          tmp->prev = tmp->next = NULL;
+
+         // dealloc data if it is not copied out && caller
+         // has given us a dealloc function pointer.
+         if (NULL == data_p && NULL != tmp->dealloc_func) {
+             tmp->dealloc_func(tmp->data_ptr);
+         }
+         free(tmp);
        }
 
-       free(tmp);
        tmp = NULL;
      } else {
        tmp = tmp->next;
