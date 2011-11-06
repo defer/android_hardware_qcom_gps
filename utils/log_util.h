@@ -78,20 +78,23 @@ extern char* get_timestamp(char* str, unsigned long buf_size);
 #ifndef DEBUG_DMN_LOC_API
 
 /* LOGGING MACROS */
-#define LOC_LOGE(...) \
-if (loc_logger.DEBUG_LEVEL >= 1) { LOGE("E/"__VA_ARGS__); }
+#define LOC_LOGE(...) LOGE("E/"__VA_ARGS__)
 
 #define LOC_LOGW(...) \
-if (loc_logger.DEBUG_LEVEL >= 2) { LOGE("W/"__VA_ARGS__); }
+if (loc_logger.DEBUG_LEVEL >= 2) { LOGE("W/"__VA_ARGS__); } \
+else if (loc_logger.DEBUG_LEVEL <= 0) { LOGW("W/"__VA_ARGS__); }
 
 #define LOC_LOGI(...) \
-if (loc_logger.DEBUG_LEVEL >= 3) { LOGE("I/"__VA_ARGS__); }
+if (loc_logger.DEBUG_LEVEL >= 3) { LOGE("I/"__VA_ARGS__); } \
+else if (loc_logger.DEBUG_LEVEL <= 0) { LOGI("W/"__VA_ARGS__); }
 
 #define LOC_LOGD(...) \
-if (loc_logger.DEBUG_LEVEL >= 4) { LOGE("D/"__VA_ARGS__); }
+if (loc_logger.DEBUG_LEVEL >= 4) { LOGE("D/"__VA_ARGS__); } \
+else if (loc_logger.DEBUG_LEVEL <= 0) { LOGD("W/"__VA_ARGS__); }
 
 #define LOC_LOGV(...) \
-if (loc_logger.DEBUG_LEVEL >= 5) { LOGE("V/"__VA_ARGS__); }
+if (loc_logger.DEBUG_LEVEL >= 5) { LOGE("V/"__VA_ARGS__); } \
+else if (loc_logger.DEBUG_LEVEL <= 0) { LOGV("W/"__VA_ARGS__); }
 
 #else /* DEBUG_DMN_LOC_API */
 

@@ -1582,6 +1582,7 @@ locClientStatusEnumType locClientOpen (
      */
 
 
+    EXIT_LOG_CALLFLOW(%s, "loc client open");
     status = locClientQmiCtrlPointInit(pCallbackData);
 
     LOC_LOGV ("%s:%d] locClientQmiCtrlPointInit returned %d\n",
@@ -1639,8 +1640,6 @@ locClientStatusEnumType locClientOpen (
                 __func__, __LINE__, *pLocClientHandle,
                 pCallbackData->userHandle, status);
 
-  EXIT_LOG_CALLFLOW(%s, loc_get_v02_client_status_name(status));
-
   return(status);
 }
 
@@ -1666,7 +1665,6 @@ locClientStatusEnumType locClientClose(
                   __func__, __LINE__);
 
     return(eLOC_CLIENT_FAILURE_INVALID_PARAMETER);
-    EXIT_LOG_CALLFLOW(%s, loc_get_v02_client_status_name(eLOC_CLIENT_FAILURE_INVALID_PARAMETER));
   }
 
   // convert handle to callback data
@@ -1683,20 +1681,23 @@ locClientStatusEnumType locClientClose(
     LOC_LOGE("%s:%d]: invalid handle \n",
                   __func__, __LINE__);
 
-    EXIT_LOG_CALLFLOW(%s, loc_get_v02_client_status_name(eLOC_CLIENT_FAILURE_INVALID_HANDLE));
     return(eLOC_CLIENT_FAILURE_INVALID_HANDLE);
   }
 
   LOC_LOGV("locClientClose releasing handle 0x%x, user handle 0x%x\n",
       *pLocClientHandle, pCallbackData->userHandle );
 
+  // NEXT call goes out to modem. We log the callflow before it
+  // actually happens to ensure the this comes before resp callflow
+  // back from the modem, to avoid confusing log order. We trust
+  // that the QMI framework is robust.
+  EXIT_LOG_CALLFLOW(%s, "loc client close");
   // release the handle
   rc = qmi_client_release(pCallbackData->userHandle);
   if(QMI_NO_ERR != rc )
   {
     LOC_LOGW("%s:%d]: qmi_client_release error %d for client %p\n",
                    __func__, __LINE__, rc, pCallbackData->userHandle);
-    EXIT_LOG_CALLFLOW(%s, loc_get_v02_client_status_name(eLOC_CLIENT_FAILURE_INTERNAL));
     return(eLOC_CLIENT_FAILURE_INTERNAL);
   }
 
@@ -1712,7 +1713,7 @@ locClientStatusEnumType locClientClose(
 
   // set the handle to invalid value
   *pLocClientHandle = LOC_CLIENT_INVALID_HANDLE_VALUE;
-  EXIT_LOG_CALLFLOW(%s, loc_get_v02_client_status_name(eLOC_CLIENT_SUCCESS));
+
   return eLOC_CLIENT_SUCCESS;
 }
 
@@ -1772,6 +1773,13 @@ locClientStatusEnumType locClientSendReq(
 
   LOC_LOGV("%s:%d] sending reqId= %d, len = %d\n", __func__,
                 __LINE__, reqId, reqLen);
+
+  // NEXT call goes out to modem. We log the callflow before it
+  // actually happens to ensure the this comes before resp callflow
+  // back from the modem, to avoid confusing log order. We trust
+  // that the QMI framework is robust.
+  EXIT_LOG_CALLFLOW(%s, loc_get_v02_event_name(reqId));
+
   rc = qmi_client_send_msg_sync(
       pCallbackData->userHandle,
       reqId,
@@ -1783,7 +1791,6 @@ locClientStatusEnumType locClientSendReq(
 
   LOC_LOGV("%s:%d] qmi_client_send_msg_sync returned %d\n", __func__,
                 __LINE__, rc);
-  EXIT_LOG_CALLFLOW(%d, rc);
 
   if (rc != QMI_NO_ERR)
   {

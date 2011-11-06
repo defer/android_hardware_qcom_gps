@@ -95,6 +95,7 @@ loc_glue_cb_entry_s_type loc_glue_callback_table[LOC_API_CB_MAX_CLIENTS];
 
 #define LOC_GLUE_CHECK_RESULT(stat, ret_type) \
   if (stat != RPC_SUCCESS) { \
+      LOC_LOGE("%s:%d] failure code %d", __func__, __LINE__, stat); \
       return (ret_type)((stat == RPC_SUBSYSTEM_RESTART) ? \
                         RPC_LOC_API_RPC_MODEM_RESTART : RPC_LOC_API_RPC_FAILURE); \
   }
@@ -344,8 +345,7 @@ rpc_loc_client_handle_type loc_open (
     if (i == LOC_API_CB_MAX_CLIENTS)
     {
         LOC_LOGE("Too many clients opened at once...\n");
-        ret_val = RPC_LOC_CLIENT_HANDLE_INVALID;
-        goto exit;
+        return RPC_LOC_CLIENT_HANDLE_INVALID;
     }
 
     args.event_callback = loc_glue_callback_table[i].cb_id;
@@ -354,6 +354,7 @@ rpc_loc_client_handle_type loc_open (
     rpc_loc_open_rets rets;
     enum clnt_stat stat = RPC_SUCCESS;
 
+    EXIT_LOG_CALLFLOW(%s, "loc client open");
     stat = RPC_FUNC_VERSION(rpc_loc_open_, RPC_LOC_OPEN_VERSION)(&args, &rets, loc_api_clnt);
     LOC_GLUE_CHECK_RESULT(stat, int32);
 
@@ -362,8 +363,6 @@ rpc_loc_client_handle_type loc_open (
 
     ret_val = (rpc_loc_client_handle_type) rets.loc_open_result;
 
-exit:
-    EXIT_LOG_CALLFLOW(%d, ret_val);
     return ret_val;
 
 }
@@ -384,6 +383,7 @@ int32 loc_close
     rpc_loc_close_rets rets;
     enum clnt_stat stat = RPC_SUCCESS;
 
+    EXIT_LOG_CALLFLOW(%s, "loc client close");
     stat = RPC_FUNC_VERSION(rpc_loc_close_, RPC_LOC_CLOSE_VERSION)(&args, &rets, loc_api_clnt);
 
     loc_clear(handle);
@@ -391,7 +391,6 @@ int32 loc_close
     LOC_GLUE_CHECK_RESULT(stat, int32);
     ret_val = (int32) rets.loc_close_result;
 
-    EXIT_LOG_CALLFLOW(%d, ret_val);
     return ret_val;
 }
 
@@ -432,12 +431,12 @@ int32 loc_start_fix
     rpc_loc_start_fix_rets rets;
     enum clnt_stat stat = RPC_SUCCESS;
 
+    EXIT_LOG_CALLFLOW(%s, "loc start fix");
     stat = RPC_FUNC_VERSION(rpc_loc_start_fix_, RPC_LOC_START_FIX_VERSION)(&args, &rets, loc_api_clnt);
     LOC_GLUE_CHECK_RESULT(stat, int32);
 
     ret_val = (int32) rets.loc_start_fix_result;
 
-    EXIT_LOG_CALLFLOW(%d, ret_val);
     return ret_val;
 }
 
@@ -457,12 +456,12 @@ int32 loc_stop_fix
     rpc_loc_stop_fix_rets rets;
     enum clnt_stat stat = RPC_SUCCESS;
 
+    EXIT_LOG_CALLFLOW(%s, "loc stop fix");
     stat = RPC_FUNC_VERSION(rpc_loc_stop_fix_, RPC_LOC_STOP_FIX_VERSION)(&args, &rets, loc_api_clnt);
     LOC_GLUE_CHECK_RESULT(stat, int32);
 
     ret_val = (int32) rets.loc_stop_fix_result;
 
-    EXIT_LOG_CALLFLOW(%d, ret_val);
     return ret_val;
 }
 
@@ -557,12 +556,12 @@ int32 loc_ioctl
     rpc_loc_ioctl_rets rets;
     enum clnt_stat stat = RPC_SUCCESS;
 
+    EXIT_LOG_CALLFLOW(%s, loc_get_ioctl_type_name(ioctl_type));
     stat = RPC_FUNC_VERSION(rpc_loc_ioctl_, RPC_LOC_IOCTL_VERSION)(&args, &rets, loc_api_clnt);
     LOC_GLUE_CHECK_RESULT(stat, int32);
 
     ret_val = (int32) rets.loc_ioctl_result;
 
-    EXIT_LOG_CALLFLOW(%d, ret_val);
     return ret_val;
 }
 
