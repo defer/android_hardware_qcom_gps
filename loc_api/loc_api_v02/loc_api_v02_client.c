@@ -33,6 +33,10 @@
 #if defined( _ANDROID_)
 #include "qmi_cci_target.h"
 #include "qmi_cci_common.h"
+#elif defined(LOC_UTIL_TARGET_OFF_TARGET)
+#include <stdlib.h>
+#include <sys/time.h>
+#include <errno.h>
 #endif //_ANDROID_
 
 #include <string.h>
