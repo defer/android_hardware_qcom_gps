@@ -6,6 +6,8 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE := libloc_api_v02
 
+LOCAL_MODULE_TAGS := optional
+
 LOCAL_SHARED_LIBRARIES := \
     libutils \
     libcutils \
